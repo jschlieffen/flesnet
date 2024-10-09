@@ -242,8 +242,6 @@ if(CLANG_TIDY)
 endif()
 
 add_subdirectory(app/mstool)
-add_subdirectory(app/archive_validator)
-add_subdirectory(app/archive_validator_Autosource)
 add_subdirectory(app/memory_test)
 add_subdirectory(app/msconsumer)
 add_subdirectory(app/tsclient)
