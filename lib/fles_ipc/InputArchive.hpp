@@ -4,8 +4,12 @@
 #pragma once
 
 #include "ArchiveDescriptor.hpp"
+#include "MicrosliceDescriptor.hpp"
+#include "Microslice.hpp"
 #include "Source.hpp"
+#include "StorableMicrosliceDescriptor.hpp"
 #include <boost/archive/binary_iarchive.hpp>
+#include <type_traits>
 #ifdef BOOST_IOS_HAS_ZSTD
   #include <boost/iostreams/filter/zstd.hpp>
 #endif
@@ -13,6 +17,7 @@
 #include <fstream>
 #include <memory>
 #include <string>
+#include <iostream>
 
 namespace fles {
 
@@ -38,7 +43,6 @@ public:
     iarchive_ = std::make_unique<boost::archive::binary_iarchive>(*ifstream_);
 
     *iarchive_ >> descriptor_;
-
     if (descriptor_.archive_type() != archive_type) {
       throw std::runtime_error("File \"" + filename +
                                "\" is not of correct archive type");
@@ -93,7 +97,19 @@ private:
     Storable* sts = nullptr;
     try {
       sts = new Storable(); // NOLINT
+      // while (...) {
+      //  MyMSDesc desc;
+      //  auto file_ptr = iarchive_.get_pointer();
+      //  if (!file_ptr)
+      //    break;
+      //  desc.deserialize(file_ptr);
+      //  file_ptr += desc.size;
+      // }
+      //auto file_ptr = iarchive_.get_pointer();
       *iarchive_ >> *sts;
+      // std::shared_ptr<Microslice> t = reinterpret_cast<std::shared_ptr<Microslice>>(sts); 
+      // std::cout<<t->desc().idx <<std::endl;
+      //std::cout<<typeid(sts).name()<<std::endl;
     } catch (boost::archive::archive_exception& e) {
       if (e.code == boost::archive::archive_exception::input_stream_error) {
         delete sts; // NOLINT

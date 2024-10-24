@@ -4,6 +4,7 @@
 #pragma once
 
 #include <memory>
+#include <iostream>
 
 namespace fles {
 
@@ -16,6 +17,7 @@ namespace fles {
 template <class T> class Sink {
 public:
   /// Receive an item to sink.
+  
   virtual void put(std::shared_ptr<const T> item) = 0;
 
   virtual void end_stream(){};
@@ -25,12 +27,15 @@ public:
 
 class Microslice;
 class Timeslice;
+class MicrosliceDescriptor;
 
 /**
  * \brief The MicrosliceSink base class implements the generic
  * microslice-based output interface.
  */
 using MicrosliceSink = Sink<Microslice>;
+
+using MicrosliceDescriptorSink = Sink<MicrosliceDescriptor>;
 
 /**
  * \brief The TimesliceSink base class implements the generic
