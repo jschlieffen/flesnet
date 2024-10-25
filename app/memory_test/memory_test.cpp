@@ -39,8 +39,8 @@ void memory_test_options::parse_options(int argc, char* argv[]){
     << "Usage:" << std::endl
     << "\t memory_test -I input1.tsa [ input2.tsa ... ] -O output.csv -A 1 || 0" << std::endl << std::endl
     << "This program checks the RAM usage of certain ways to read timeslice archive files and writes the data into a csv file" << std::endl
-    << "Input data is defined by timeslice archive files (*.tsa)." << std::endl
-    << "Output data is defined by microslice archive files (*.msa)" << std::endl
+    << "Input data is defined by timeslice archives (*.tsa)." << std::endl
+    << "Output data is defined by a csv file" << std::endl
     << "Use the python file plotting.py if you want to plot the data"
     << std::endl << std::endl
     << "Command line options";
@@ -58,7 +58,7 @@ void memory_test_options::parse_options(int argc, char* argv[]){
           )
           ("AutoVSManuell,A", 
               boost::program_options::value<bool>(&AutoVSManuell),
-              "decide how to read the input files. \nA = 1:   The program will use TimesliceAutosource  \nA = 0:    The programm will use the method of the achive validator"
+              "decide how to read the input files. \nA = 1:   The program will use TimesliceAutosource  \nA = 0:    The programm will use the method of the archive validator"
           );
 
   boost::program_options::variables_map vm;
