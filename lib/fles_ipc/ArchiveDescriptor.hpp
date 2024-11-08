@@ -27,7 +27,7 @@ enum class ArchiveCompression { None, Zstd };
 template <class Base, class Derived, ArchiveType archive_type>
 class InputArchive;
 template <class Base, class Derived, ArchiveType archive_type>
-class InputArchive_test;
+class InputArchive_alloc;
 
 /**
  * \brief The ArchiveDescriptor class contains metadata on an archive.
@@ -76,7 +76,9 @@ private:
   template <class Base, class Derived, ArchiveType archive_type>
   friend class InputArchive;
   template <class Base, class Derived, ArchiveType archive_type>
-  friend class InputArchive_test;
+  friend class InputArchive_alloc;
+  template <class Base, class Derived, ArchiveType archive_type>
+  friend class InputArchive_alloc_MS;
   template <class Base, class Derived, ArchiveType archive_type>
   friend class InputArchiveLoop;
   template <class Base, class Derived, ArchiveType archive_type>

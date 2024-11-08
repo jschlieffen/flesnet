@@ -25,7 +25,7 @@ namespace fles {
  * \brief The InputArchive class deserializes data sets from an input file.
  */
 template <class Base, class Storable, ArchiveType archive_type>
-class InputArchive : public Source<Base> {
+class InputArchive_alloc : public Source<Base> {
 public:
   /**
    * \brief Construct an input archive object, open the given archive file for
@@ -33,7 +33,7 @@ public:
    *
    * \param filename File name of the archive file
    */
-  explicit InputArchive(const std::string& filename) {
+  explicit InputArchive_alloc(const std::string& filename) {
     ifstream_ =
         std::make_unique<std::ifstream>(filename.c_str(), std::ios::binary);
     if (!*ifstream_) {
@@ -70,11 +70,11 @@ public:
   }
 
   /// Delete copy constructor (non-copyable).
-  InputArchive(const InputArchive&) = delete;
+  InputArchive_alloc(const InputArchive_alloc&) = delete;
   /// Delete assignment operator (non-copyable).
-  void operator=(const InputArchive&) = delete;
+  void operator=(const InputArchive_alloc&) = delete;
 
-  ~InputArchive() override = default;
+  ~InputArchive_alloc() override = default;
 
   /// Read the next data set.
   std::unique_ptr<Storable> get() {
@@ -87,15 +87,22 @@ public:
   };
 
   [[nodiscard]] bool eos() const override { return eos_; }
+  int it_counter = 0;
+  int c1 = 0;
+  uint64_t idx_old = 1;
+  uint64_t idx_new = 2;
+  unsigned long long pos1 = 113;
 
 private:
   Storable* do_get() override {
+    //std::cout<<"test"<<std::endl;
     if (eos_) {
       return nullptr;
     }
     //int i = 0;
     Storable* sts = nullptr;
     try {
+      //std::cout<<"test"<<std::endl;
       sts = new Storable(); // NOLINT
       //i++;
       //std::cout<<i<< " test"<<std::endl;
@@ -109,10 +116,34 @@ private:
       //
       //auto file_ptr = iarchive_.get_pointer();
       *iarchive_ >> *sts;
-      //std::cout<<typeid(sts).name()<<std::endl;
-      // std::shared_ptr<Microslice> t = reinterpret_cast<std::shared_ptr<Microslice>>(sts); 
-      // std::cout<<t->desc().idx <<std::endl;
-      //std::cout<<typeid(sts).name()<<std::endl;
+      //idx_new = sts->desc().idx;
+      // if (idx_old >= idx_new){
+      //   unsigned long long pos_test_2 = static_cast<unsigned long long>(ifstream_->tellg());
+      //   unsigned long long pos_test = pos_test_2+sts->desc().size;
+      //   std::cout<<"pos:    "<<unsigned(ifstream_->tellg())+sts->desc().size<<std::endl;
+      //   std::cout<<"pos_t:  "<<pos_test<<std::endl;
+      //   std::cout<<"size:   "<<sts->desc().size<<std::endl;
+      //   std::cout<<"offset: "<<sts->desc().offset<<std::endl;
+      //   std::cout<<"index:  "<<sts->desc().idx<<std::endl;
+      //   //std::cout<<"test1123"<<std::endl;
+      //   std::cout<<"it_c:   "<<it_counter<<std::endl;
+      //   std::cout<<std::endl;
+      //   c1++;
+      // }
+      it_counter++;
+      
+      //idx_old = idx_new;
+      //std::cout<<it_counter<<std::endl;
+      //unsigned long long pos = static_cast<unsigned long long>(ifstream_->tellg());
+      //ifstream_->seekg(pos+sts->desc().size+8);
+      pos1= pos1 + sts->desc().size+40;
+      //std::cout<<"test"<<std::endl;
+      // if (it_counter < 10){
+      //   std::cout<<"current pos:  "<<unsigned(ifstream_->tellg())<<std::endl;
+      //   std::cout<<"calc. pos:    "<<pos1<<std::endl;
+      //   std::cout<<"diff:         "<<unsigned(ifstream_->tellg())-pos1<<std::endl<<std::endl;
+      // } 
+      ifstream_->seekg(pos1);
     } catch (boost::archive::archive_exception& e) {
       if (e.code == boost::archive::archive_exception::input_stream_error) {
         delete sts; // NOLINT
