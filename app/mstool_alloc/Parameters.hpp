@@ -28,6 +28,7 @@ struct Parameters {
   std::string input_shm;
   std::string input_archive;
   bool descriptor_source = 0;
+  bool use_alloc = 0;
 
   // sink selection
   bool analyze = false;
@@ -35,4 +36,5 @@ struct Parameters {
   std::string output_shm;
   std::string output_archive;
   bool create_dmsa_file = false;
+  long long malloc_size = 10000000000;
 };

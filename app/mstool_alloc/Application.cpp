@@ -4,10 +4,10 @@
 #include "FlesnetPatternGenerator.hpp"
 #include "MicrosliceAnalyzer.hpp"
 #include "MicrosliceInputArchive.hpp"
+#include "MicrosliceInputArchive_alloc.hpp"
 #include "MicrosliceOutputArchive.hpp"
 #include "MicrosliceDescribtorOutputArchive.hpp"
 #include "MicrosliceReceiver.hpp"
-#include "MicrosliceDescriptorTransmitter.hpp"
 #include "MicrosliceDescriptorInputArchive.hpp"
 #include "MicrosliceTransmitter.hpp"
 #include "TimesliceDebugger.hpp"
@@ -17,7 +17,6 @@
 #include <cstdint>
 #include <iostream>
 #include <memory>
-#include <ratio>
 #include <thread>
 
 Application::Application(Parameters const& par) : par_(par) {
@@ -49,14 +48,17 @@ Application::Application(Parameters const& par) : par_(par) {
 
   if (data_source_) {
     source_ = std::make_unique<fles::MicrosliceReceiver>(*data_source_);
-  } else if (!par_.input_archive.empty()&&!par_.descriptor_source) {
+  } else if (!par_.input_archive.empty()&&!par_.descriptor_source&&!par_.use_alloc) {
     source_ =
         std::make_unique<fles::MicrosliceInputArchive>(par_.input_archive);
-  }else if (!par_.input_archive.empty()&&par_.descriptor_source){
+  } else if (!par_.input_archive.empty()&&!par_.descriptor_source&&par_.use_alloc){
+    source_descriptors = 
+        std::make_unique<fles::MicrosliceInputArchive_alloc>(par_.input_archive);
+
+  } else if (!par_.input_archive.empty()&&par_.descriptor_source){
     source_descriptors =
         std::make_unique<fles::MicrosliceDescriptorInputArchive>(par_.input_archive);
   }
-
   // Sink setup
 
   if (par_.analyze) {
@@ -107,10 +109,15 @@ void Application::run() {
   const auto t1 = std::chrono::high_resolution_clock::now();
   uint64_t current_index = 0;
   uint64_t last_index = 0;
-  if (par_.descriptor_source){
+  uint8_t* content_ptr = nullptr;
+  long acc_size = 0;  
+  if (par_.descriptor_source||par_.use_alloc){
+    content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
+    uint8_t* free_pointer = content_ptr;
+    if(content_ptr == nullptr){
+      std::cout<<"failed"<<std::endl;
+    }
     while (auto microslicedescriptor = source_descriptors->get()) {
-      //std::cout<<microslicedescriptor->idx<<" test2"<<std::endl;
-      //std::cout<<microslicedescriptor->eq_id<<" test3"<<std::endl;
       std::shared_ptr<const fles::MicrosliceDescriptor> ms_desc(std::move(microslicedescriptor));
       current_index = ms_desc->idx;
       last_index = current_index;
@@ -121,36 +128,35 @@ void Application::run() {
       const auto current_time_long = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
       uint64_t current_time = to_uint64_t(current_time_long.count());
       while (current_index - last_index > current_time){
-        std::cout<<"test"<<std::endl;
-          const auto t2 = std::chrono::high_resolution_clock::now();
-          const auto current_time_long = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
-          current_time = to_uint64_t(current_time_long.count());
+        std::cout<<"test1"<<std::endl;
+        const auto t2 = std::chrono::high_resolution_clock::now();
+        const auto current_time_long = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
+        current_time = to_uint64_t(current_time_long.count());
       }
 
-      // if(par_.create_dmsa_file){
       for (auto& sink : sinks_) {
         fles::MicrosliceDescriptor desc_ = *ms_desc.get();
         long data_size = desc_.size;
-        uint8_t* content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*data_size));
-         //std::cout<<"test1"<<std::endl;
-        //uint8_t* content_ptr = new uint8_t(data_size);
-        //std::cout<<"test2"<<std::endl;
+        if (par_.malloc_size<=desc_.size){
+          std::cout<<"warning"<<std::endl;
+        }
         if(content_ptr == nullptr){
           std::cout<<"null"<<std::endl;
+          break;
         }
         std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(desc_, content_ptr); 
-        //std::cout<<"test3"<<std::endl; 
-        //std::cout<<data_size<<std::endl;
-        //std::cout<<ms->desc().idx<<std::endl;
         sink->put(ms);
-        //std::cout<<"test4"<<std::endl;
+        acc_size += data_size;
+        if (acc_size <= par_.malloc_size){
+          content_ptr = content_ptr+data_size;
+        }
+        else{
+          acc_size = 0;
+          free(free_pointer);
+          content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
+          free_pointer=content_ptr;
+        }
       }
-      // }
-      // else{
-      //   for (auto& sink : sinks_) {
-      //     sink->put(ms);
-      //   }
-      // }
       
       ++count_;
       if (count_ == limit) {
@@ -161,6 +167,7 @@ void Application::run() {
     for (auto& sink : sinks_) {
       sink->end_stream();
     }
+    free(free_pointer);
   }
   else{
     while (auto microslice = source_->get()) {
