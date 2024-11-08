@@ -243,6 +243,7 @@ endif()
 
 add_subdirectory(app/mstool)
 add_subdirectory(app/mstool_alloc)
+add_subdirectory(app/msa2dmsa)
 add_subdirectory(app/msconsumer)
 add_subdirectory(app/tsclient)
 add_subdirectory(app/flesnet)
