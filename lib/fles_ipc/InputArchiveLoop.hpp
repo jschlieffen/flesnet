@@ -14,6 +14,7 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <iostream>
 
 namespace fles {
 
@@ -103,7 +104,6 @@ private:
     if (eos_) {
       return nullptr;
     }
-
     Storable* sts = nullptr;
     try {
       sts = new Storable(); // NOLINT

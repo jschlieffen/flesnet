@@ -5,6 +5,7 @@
 #include <cassert>
 #include <chrono>
 #include <thread>
+#include <iostream>
 
 namespace fles {
 
@@ -36,6 +37,8 @@ bool MicrosliceTransmitter::try_put(
       &data_sink_.data_buffer().at(write_index_.data + item_size.data);
 
   if (data_begin <= data_end) {
+    //std::cout<<typeid(item->content()).name()<<" test"<<std::endl;
+    //std::cout<<item->desc().idx<<std::endl;
     std::copy_n(item->content(), item_size.data, data_begin);
   } else {
     size_t part1_size =

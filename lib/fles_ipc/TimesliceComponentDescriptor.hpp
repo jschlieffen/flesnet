@@ -29,6 +29,7 @@ struct TimesliceComponentDescriptor {
 
   /// Number of microslices.
   uint64_t num_microslices;
+  //uint64_t idx;
 
   friend class boost::serialization::access;
   /// Provide boost serialization access.
@@ -38,6 +39,7 @@ struct TimesliceComponentDescriptor {
     ar& offset;
     ar& size;
     ar& num_microslices;
+    //ar& idx;
   }
 };
 

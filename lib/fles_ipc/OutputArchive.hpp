@@ -76,7 +76,9 @@ private:
   std::unique_ptr<boost::archive::binary_oarchive> oarchive_;
   ArchiveDescriptor descriptor_;
 
-  void do_put(const Derived& item) { *oarchive_ << item; }
+  void do_put(const Derived& item) { 
+    *oarchive_ << item; 
+  }
   // TODO(Jan): Solve this without the additional alloc/copy operation
 };
 
