@@ -88,6 +88,7 @@ void Application::run() {
 
   while (auto microslice = source_->get()) {
     std::shared_ptr<const fles::Microslice> ms(std::move(microslice));
+    //std::cout<<ms->desc().idx<<std::endl;
     for (auto& sink : sinks_) {
       sink->put(ms);
     }
