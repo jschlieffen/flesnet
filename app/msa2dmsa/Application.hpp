@@ -17,8 +17,8 @@ public:
 private:
     Parameters const& par_;
 
-    std::unique_ptr<fles::MicrosliceSource> source_;
-    std::vector<std::unique_ptr<fles::MicrosliceDescriptorSink>> sinks_;
+    std::vector<std::shared_ptr<fles::MicrosliceSource>> sources_;
+    std::vector<std::shared_ptr<fles::MicrosliceDescriptorSink>> sinks_;
 
     uint64_t count_ = 0;
 };

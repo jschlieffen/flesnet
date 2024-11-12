@@ -3,6 +3,7 @@
 #include "log.hpp"
 #include <cstdlib>
 
+
 int main(int argc, char* argv[]){
     try {
         Parameters par(argc, argv);

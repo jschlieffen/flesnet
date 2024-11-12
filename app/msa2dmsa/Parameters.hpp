@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 /// Run parameters exception class.
 class ParametersException : public std::runtime_error {
@@ -15,7 +16,6 @@ struct Parameters {
     Parameters(int argc, char* argv[]) { parse_options(argc, argv); }
     void parse_options(int argc, char* argv[]);
 
-    std::string input_archive;
-
-    std::string output_archive;
+    std::vector<std::string> input_archives;
+    std::string output_folder;
 };
