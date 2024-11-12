@@ -87,62 +87,19 @@ public:
   };
 
   [[nodiscard]] bool eos() const override { return eos_; }
-  int it_counter = 0;
-  int c1 = 0;
-  uint64_t idx_old = 1;
-  uint64_t idx_new = 2;
   unsigned long long pos1 = 113;
 
 private:
   Storable* do_get() override {
-    //std::cout<<"test"<<std::endl;
     if (eos_) {
       return nullptr;
     }
-    //int i = 0;
     Storable* sts = nullptr;
     try {
-      //std::cout<<"test"<<std::endl;
+
       sts = new Storable(); // NOLINT
-      //i++;
-      //std::cout<<i<< " test"<<std::endl;
-      //
-      //  MyMSDesc desc;
-      //  auto file_ptr = iarchive_.get_pointer();
-      //  if (!file_ptr)
-      //    break;
-      //  desc.deserialize(file_ptr);
-      //  file_ptr += desc.size;
-      //
-      //auto file_ptr = iarchive_.get_pointer();
       *iarchive_ >> *sts;
-      //idx_new = sts->desc().idx;
-      // if (idx_old >= idx_new){
-      //   unsigned long long pos_test_2 = static_cast<unsigned long long>(ifstream_->tellg());
-      //   unsigned long long pos_test = pos_test_2+sts->desc().size;
-      //   std::cout<<"pos:    "<<unsigned(ifstream_->tellg())+sts->desc().size<<std::endl;
-      //   std::cout<<"pos_t:  "<<pos_test<<std::endl;
-      //   std::cout<<"size:   "<<sts->desc().size<<std::endl;
-      //   std::cout<<"offset: "<<sts->desc().offset<<std::endl;
-      //   std::cout<<"index:  "<<sts->desc().idx<<std::endl;
-      //   //std::cout<<"test1123"<<std::endl;
-      //   std::cout<<"it_c:   "<<it_counter<<std::endl;
-      //   std::cout<<std::endl;
-      //   c1++;
-      // }
-      it_counter++;
-      
-      //idx_old = idx_new;
-      //std::cout<<it_counter<<std::endl;
-      //unsigned long long pos = static_cast<unsigned long long>(ifstream_->tellg());
-      //ifstream_->seekg(pos+sts->desc().size+8);
       pos1= pos1 + sts->desc().size+40;
-      //std::cout<<"test"<<std::endl;
-      // if (it_counter < 10){
-      //   std::cout<<"current pos:  "<<unsigned(ifstream_->tellg())<<std::endl;
-      //   std::cout<<"calc. pos:    "<<pos1<<std::endl;
-      //   std::cout<<"diff:         "<<unsigned(ifstream_->tellg())-pos1<<std::endl<<std::endl;
-      // } 
       ifstream_->seekg(pos1);
     } catch (boost::archive::archive_exception& e) {
       if (e.code == boost::archive::archive_exception::input_stream_error) {

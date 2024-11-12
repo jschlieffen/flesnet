@@ -93,26 +93,10 @@ private:
     if (eos_) {
       return nullptr;
     }
-    //int i = 0;
     Storable* sts = nullptr;
     try {
       sts = new Storable(); // NOLINT
-      //i++;
-      //std::cout<<i<< " test"<<std::endl;
-      //
-      //  MyMSDesc desc;
-      //  auto file_ptr = iarchive_.get_pointer();
-      //  if (!file_ptr)
-      //    break;
-      //  desc.deserialize(file_ptr);
-      //  file_ptr += desc.size;
-      //
-      //auto file_ptr = iarchive_.get_pointer();
       *iarchive_ >> *sts;
-      //std::cout<<typeid(sts).name()<<std::endl;
-      // std::shared_ptr<Microslice> t = reinterpret_cast<std::shared_ptr<Microslice>>(sts); 
-      // std::cout<<t->desc().idx <<std::endl;
-      //std::cout<<typeid(sts).name()<<std::endl;
     } catch (boost::archive::archive_exception& e) {
       if (e.code == boost::archive::archive_exception::input_stream_error) {
         delete sts; // NOLINT
