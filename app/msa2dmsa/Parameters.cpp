@@ -31,7 +31,8 @@ void Parameters::parse_options(int argc, char* argv[]){
 
     po::options_description sink("Sink options");
     auto sink_add = sink.add_options();
-    sink_add("output-folder,o",po::value<std::string>(&output_folder),
+    sink_add("output-folder,o",po::value<std::string>(&output_folder)
+                                                ->implicit_value(output_folder),
             "name of an output file archive to write");
     
 

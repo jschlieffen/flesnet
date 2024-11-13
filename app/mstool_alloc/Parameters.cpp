@@ -66,7 +66,8 @@ void Parameters::parse_options(int argc, char* argv[]) {
           po::value<long long>(&malloc_size)
             ->default_value(malloc_size),
           "set the approximated size of the call for malloc. Default value is 10GB.\n"
-          "Caution: If the value is larger than the free ");
+          "Caution: If the value is larger than the free memory, the program will fail. If the value is smaller "
+          "then the biggest microslice the program will also fail. Thus this parameter has to be choosen carefully");
 
   po::options_description desc;
   desc.add(general).add(source).add(sink);

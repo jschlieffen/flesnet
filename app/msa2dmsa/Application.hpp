@@ -21,4 +21,4 @@ private:
     std::vector<std::shared_ptr<fles::MicrosliceDescriptorSink>> sinks_;
 
     uint64_t count_ = 0;
-};
+}; 

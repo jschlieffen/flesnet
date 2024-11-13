@@ -17,7 +17,7 @@ Application::Application(Parameters const& par) : par_(par){
             sources_.push_back(std::make_shared<fles::MicrosliceInputArchive>(input_archive));
             output_string = std::filesystem::path(input_archive).filename().string();
             output_string.resize(output_string.find(".msa"));
-            output_string = par_.output_folder +"/"+output_string + ".dmsa";
+            output_string = par_.output_folder +output_string + ".dmsa";
             //std::cout<<output_string<<std::endl;
             output_archives.push_back(output_string);
         }
