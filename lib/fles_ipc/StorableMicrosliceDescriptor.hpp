@@ -105,8 +105,6 @@ private:
     crc = desc_.crc;    
     size = desc_.size;   
     offset = desc_.offset; 
-
-
   }
 
   MicrosliceDescriptor desc_{};
