@@ -19,6 +19,7 @@ private:
 
     std::vector<std::shared_ptr<fles::MicrosliceSource>> sources_;
     std::vector<std::shared_ptr<fles::MicrosliceDescriptorSink>> sinks_;
+    int dirExists(const char *path);
 
     uint64_t count_ = 0;
 }; 

@@ -34,6 +34,9 @@ void Parameters::parse_options(int argc, char* argv[]){
     sink_add("output-folder,o",po::value<std::string>(&output_folder)
                                                 ->implicit_value(output_folder),
             "name of an output file archive to write");
+    sink_add("create-folder,c",po::value<bool>(&create_folder)
+                                                ->implicit_value(create_folder),
+                "decides whether the output-folder should be created");
     
 
     po::options_description desc(desc_sstr.str());
