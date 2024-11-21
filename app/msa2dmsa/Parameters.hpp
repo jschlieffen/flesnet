@@ -18,5 +18,5 @@ struct Parameters {
 
     std::vector<std::string> input_archives;
     std::string output_folder;
-    bool create_folder;
+    bool create_folder = 0;
 };

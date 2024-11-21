@@ -15,7 +15,7 @@ Application::Application(Parameters const& par) : par_(par){
 
     std::vector<std::string> output_archives;
     std::string output_string;
-    if (!dirExists(par_.output_folder.c_str())){
+    if (!dirExists(par_.output_folder.c_str()) && par_.output_folder != ""){
         if(par_.create_folder){
             std::filesystem::create_directories(par_.output_folder);
         }
