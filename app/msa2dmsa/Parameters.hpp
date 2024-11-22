@@ -18,5 +18,10 @@ struct Parameters {
 
     std::vector<std::string> input_archives;
     std::string output_folder;
+    std::string output_archive;
     bool create_folder = 0;
+    bool create_dmsa = 0;
+    unsigned long num_ms = 10000;
+    unsigned int content_size_min = 1000000;
+    unsigned int content_size_max = 1000000;
 };

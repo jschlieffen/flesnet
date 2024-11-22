@@ -33,10 +33,28 @@ void Parameters::parse_options(int argc, char* argv[]){
     auto sink_add = sink.add_options();
     sink_add("output-folder,o",po::value<std::string>(&output_folder)
                                                 ->implicit_value(output_folder),
-            "name of an output file archive to write");
+            "name of an output folder to store the archives");
     sink_add("create-folder,c",po::value<bool>(&create_folder)
                                                 ->implicit_value(create_folder),
                 "decides whether the output-folder should be created");
+    sink_add("output-archive,O",po::value<std::string>(&output_archive)
+                                                ->implicit_value(output_archive),
+            "name of an output archive to write");
+    sink_add("create-dmsa,d",po::value<bool>(&create_dmsa)
+                                                ->implicit_value(create_dmsa),
+            "enabel/disable if the dmsa-files should be created, rather than transformed");
+    sink_add("num-ms,n",po::value<unsigned long>(&num_ms)
+                                                ->implicit_value(num_ms),
+            "gives the number of microslices."
+            "\nUsage only if you want to create new files");
+    sink_add("contentsize-min,m",po::value<unsigned int>(&content_size_min)
+                                                ->implicit_value(content_size_min),
+            "gives the minimum content size of a microslice." 
+            "\nUsage only if you want to create new files");
+    sink_add("content_size_max,M",po::value<unsigned int>(&content_size_max)
+                                                ->implicit_value(content_size_max),
+            "gives the maximum content size of a microslice." 
+            "\nUsage only if you want to create new files");
     
 
     po::options_description desc(desc_sstr.str());
@@ -68,11 +86,11 @@ void Parameters::parse_options(int argc, char* argv[]){
                         static_cast<severity_level>(log_syslog));
 
     }
-    size_t input_sources = vm.count("input-archives");
-    if (input_sources == 0) {
-        throw ParametersException("no input source specified");
-    }
-    if (input_sources > 1) {
-        throw ParametersException("more than one input source specified");
-    }
+    // size_t input_sources = vm.count("input-archives");
+    // if (input_sources == 0) {
+    //     throw ParametersException("no input source specified");
+    // }
+    // if (input_sources > 1) {
+    //     throw ParametersException("more than one input source specified");
+    // }
 }

@@ -3,10 +3,13 @@
 #include "MicrosliceDescribtorOutputArchive.hpp"
 #include "MicrosliceReceiver.hpp"
 #include "log.hpp"
+#include "PatternGenerator.hpp"
+#include <cstdint>
 #include <memory>
 #include <filesystem>
 #include <sys/stat.h>
 #include <sys/types.h>
+
 
 
 
@@ -32,12 +35,31 @@ Application::Application(Parameters const& par) : par_(par){
             output_archives.push_back(output_string);
         }
     }
+    if (par_.create_dmsa){
+        uint64_t offset = 0;
+        for (uint64_t i = 0; i < par_.num_ms; i++){
+            generated_descriptors.push_back(std::make_shared<fles::MicrosliceDescriptor>(
+                static_cast<fles::MicrosliceDescriptor>(PatternGenerator(i,
+                                                                        par_.content_size_min,
+                                                                        par_.content_size_max,
+                                                                        offset))
+                )
+            );
+            offset += generated_descriptors[i]->size;
+        
+        }
+    }
 
     if (!output_archives.empty()){
         for (auto output_archive : output_archives){
             sinks_.push_back(std::shared_ptr<fles::MicrosliceDescriptorSink>(
                new fles::MicrosliceDescriptorOutputArchive(output_archive)));
         }
+    }
+    else if (!par_.output_archive.empty()){
+        std::string output_archive = par_.output_folder + par_.output_archive;
+        sink = std::shared_ptr<fles::MicrosliceDescriptorSink>(
+               new fles::MicrosliceDescriptorOutputArchive(output_archive));
     }
 
 };
@@ -54,17 +76,26 @@ Application::~Application(){
 }
 
 void Application::run() {
-    int i = 0;
-    for(auto source_ : sources_){
-        auto sink = sinks_[i];
-        L_(info) << "current file: "<<par_.input_archives[i];
-        while (auto microslice = source_->get()){
-            std::shared_ptr<const fles::Microslice> ms(std::move(microslice));
-            sink->put(std::make_shared<fles::MicrosliceDescriptor>(ms->desc()));
-            ++count_;   
-        }
-        i++;
 
+    if (par_.create_dmsa){
+        std::cout<< typeid(sink).name()<<std::endl;
+        for (auto ms_desc : generated_descriptors){
+            sink->put(ms_desc);
+            count_++;
+        }
+    }else{
+    int i = 0;
+        for(auto source_ : sources_){
+            auto sink = sinks_[i];
+            L_(info) << "current file: "<<par_.input_archives[i];
+            while (auto microslice = source_->get()){
+                std::shared_ptr<const fles::Microslice> ms(std::move(microslice));
+                sink->put(std::make_shared<fles::MicrosliceDescriptor>(ms->desc()));
+                ++count_;   
+            }
+            i++;
+
+        }
     }
     for (auto& sink : sinks_){
         sink->end_stream();
