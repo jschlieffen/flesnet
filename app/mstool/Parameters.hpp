@@ -27,10 +27,12 @@ struct Parameters {
   size_t channel_idx = 0;
   std::string input_shm;
   std::string input_archive;
+  bool descriptor_source = 0;
 
   // sink selection
   bool analyze = false;
   size_t dump_verbosity = 0;
   std::string output_shm;
   std::string output_archive;
+  long long malloc_size = 10000000000;
 };

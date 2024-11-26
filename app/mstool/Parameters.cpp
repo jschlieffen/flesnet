@@ -45,6 +45,8 @@ void Parameters::parse_options(int argc, char* argv[]) {
              "name of a shared memory to use as data source");
   source_add("input-archive,i", po::value<std::string>(&input_archive),
              "name of an input file archive to read");
+  source_add("descriptor_source,D",po::value<bool>(&descriptor_source),
+            "defines if an .dmsa file is used as an input or not");
 
   po::options_description sink("Sink options");
   auto sink_add = sink.add_options();
@@ -56,6 +58,13 @@ void Parameters::parse_options(int argc, char* argv[]) {
            "name of a shared memory to write to");
   sink_add("output-archive,o", po::value<std::string>(&output_archive),
            "name of an output file archive to write");
+  sink_add("malloc_size,m" , 
+        po::value<long long>(&malloc_size)
+          ->default_value(malloc_size),
+        "set the approximated size of the call for malloc. Default value is 10GB.\n"
+        "Caution: If the value is larger than the free memory, the program will fail. If the value is smaller "
+        "then the biggest microslice the program will also fail. Thus this parameter has to be choosen carefully");
+
 
   po::options_description desc;
   desc.add(general).add(source).add(sink);

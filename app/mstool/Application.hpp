@@ -3,6 +3,7 @@
 
 #include "DualRingBuffer.hpp"
 #include "MicrosliceSource.hpp"
+#include "MicrosliceDescriptorSource.hpp"
 #include "Parameters.hpp"
 #include "Sink.hpp"
 #include "shm_device_client.hpp"
@@ -31,6 +32,7 @@ private:
 
   std::unique_ptr<fles::MicrosliceSource> source_;
   std::vector<std::unique_ptr<fles::MicrosliceSink>> sinks_;
+  std::unique_ptr<fles::MicrosliceDescriptorSource> source_descriptors;
 
   uint64_t count_ = 0;
 };

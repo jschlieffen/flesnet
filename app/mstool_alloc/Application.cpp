@@ -4,9 +4,7 @@
 #include "FlesnetPatternGenerator.hpp"
 #include "MicrosliceAnalyzer.hpp"
 #include "MicrosliceInputArchive.hpp"
-#include "MicrosliceInputArchive_alloc.hpp"
 #include "MicrosliceOutputArchive.hpp"
-#include "MicrosliceDescribtorOutputArchive.hpp"
 #include "MicrosliceReceiver.hpp"
 #include "MicrosliceDescriptorInputArchive.hpp"
 #include "MicrosliceTransmitter.hpp"
@@ -14,9 +12,11 @@
 #include "log.hpp"
 #include "shm_channel_client.hpp"
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <memory>
+#include <new>
 #include <thread>
 
 Application::Application(Parameters const& par) : par_(par) {
@@ -48,13 +48,9 @@ Application::Application(Parameters const& par) : par_(par) {
 
   if (data_source_) {
     source_ = std::make_unique<fles::MicrosliceReceiver>(*data_source_);
-  } else if (!par_.input_archive.empty()&&!par_.descriptor_source&&!par_.use_alloc) {
+  } else if (!par_.input_archive.empty()&&!par_.descriptor_source) {
     source_ =
         std::make_unique<fles::MicrosliceInputArchive>(par_.input_archive);
-  } else if (!par_.input_archive.empty()&&!par_.descriptor_source&&par_.use_alloc){
-    source_descriptors = 
-        std::make_unique<fles::MicrosliceInputArchive_alloc>(par_.input_archive);
-
   } else if (!par_.input_archive.empty()&&par_.descriptor_source){
     source_descriptors =
         std::make_unique<fles::MicrosliceDescriptorInputArchive>(par_.input_archive);
@@ -71,12 +67,7 @@ Application::Application(Parameters const& par) : par_(par) {
         new MicrosliceDumper(std::cout, par_.dump_verbosity)));
   }
 
-  if (!par_.output_archive.empty()&&par_.create_dmsa_file) {
-    //std::cout<<"t1"<<std::endl;
-    sinks_Descriptors.push_back(std::unique_ptr<fles::MicrosliceDescriptorSink>(
-          new fles::MicrosliceDescriptorOutputArchive(par_.output_archive)));
-  }
-  else if (!par_.output_archive.empty()&&!par_.create_dmsa_file) {
+  if (!par_.output_archive.empty()) {
     sinks_.push_back(std::unique_ptr<fles::MicrosliceSink>(
         new fles::MicrosliceOutputArchive(par_.output_archive)));  
   }
@@ -111,12 +102,14 @@ void Application::run() {
   uint64_t last_index = 0;
   uint8_t* content_ptr = nullptr;
   long acc_size = 0;  
-  if (par_.descriptor_source||par_.use_alloc){
+  if (par_.descriptor_source){
     content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
-    uint8_t* free_pointer = content_ptr;
-    if(content_ptr == nullptr){
-      std::cout<<"failed"<<std::endl;
+
+    if (content_ptr == nullptr){
+      std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
+      throw std::bad_alloc();
     }
+    uint8_t* free_pointer = content_ptr;
     while (auto microslicedescriptor = source_descriptors->get()) {
       std::shared_ptr<const fles::MicrosliceDescriptor> ms_desc(std::move(microslicedescriptor));
       current_index = ms_desc->idx;
@@ -128,7 +121,6 @@ void Application::run() {
       const auto current_time_long = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
       uint64_t current_time = to_uint64_t(current_time_long.count());
       while (current_index - last_index > current_time){
-        std::cout<<"test1"<<std::endl;
         const auto t2 = std::chrono::high_resolution_clock::now();
         const auto current_time_long = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
         current_time = to_uint64_t(current_time_long.count());
@@ -138,11 +130,12 @@ void Application::run() {
         fles::MicrosliceDescriptor desc_ = *ms_desc.get();
         long data_size = desc_.size;
         if (par_.malloc_size<=desc_.size){
-          std::cout<<"warning"<<std::endl;
+          std::cout<<"malloc call is smaller than size of ms"<<std::endl;
+          throw;
         }
-        if(content_ptr == nullptr){
-          std::cout<<"null"<<std::endl;
-          break;
+        if (content_ptr == nullptr){
+          std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
+          throw std::bad_alloc();
         }
         std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(desc_, content_ptr); 
         sink->put(ms);
@@ -185,17 +178,9 @@ void Application::run() {
           const auto current_time_long = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
           current_time = to_uint64_t(current_time_long.count());
       }
-
-      if (par_.create_dmsa_file){
-        for(auto& sink : sinks_Descriptors){
-          sink->put(std::make_shared<fles::MicrosliceDescriptor>(ms->desc()));
-        }
-      }
-      else{
         for (auto& sink : sinks_) {
           sink->put(ms);
         } 
-      }
       ++count_;
       if (count_ == limit) {
         break;

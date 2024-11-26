@@ -33,7 +33,7 @@ private:
   std::unique_ptr<fles::MicrosliceSource> source_;
   std::unique_ptr<fles::MicrosliceDescriptorSource> source_descriptors;
   std::vector<std::unique_ptr<fles::MicrosliceSink>> sinks_;
-  std::vector<std::unique_ptr<fles::MicrosliceDescriptorSink>> sinks_Descriptors;
+
 
   uint64_t count_ = 0;
 };

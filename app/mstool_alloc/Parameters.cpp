@@ -47,8 +47,6 @@ void Parameters::parse_options(int argc, char* argv[]) {
              "name of an input file archive to read");
   source_add("descriptor_source,D",po::value<bool>(&descriptor_source),
               "defines if an .dmsa file is used as an input or not");
-  source_add("use-alloc,u",po::value<bool>(&use_alloc),
-            "enable/disable usage of alloc");
 
   po::options_description sink("Sink options");
   auto sink_add = sink.add_options();
@@ -60,8 +58,6 @@ void Parameters::parse_options(int argc, char* argv[]) {
            "name of a shared memory to write to");
   sink_add("output-archive,o", po::value<std::string>(&output_archive),
            "name of an output file archive to write");
-  sink_add("create-dmsa_file,d", po::value<bool>(&create_dmsa_file),
-          "create an Descriptor file instead of an msa file");
   sink_add("malloc_size,m" , 
           po::value<long long>(&malloc_size)
             ->default_value(malloc_size),
