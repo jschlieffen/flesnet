@@ -78,7 +78,6 @@ Application::~Application(){
 void Application::run() {
 
     if (par_.create_dmsa){
-        std::cout<< typeid(sink).name()<<std::endl;
         for (auto ms_desc : generated_descriptors){
             sink->put(ms_desc);
             count_++;

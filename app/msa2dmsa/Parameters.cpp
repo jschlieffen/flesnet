@@ -86,11 +86,5 @@ void Parameters::parse_options(int argc, char* argv[]){
                         static_cast<severity_level>(log_syslog));
 
     }
-    // size_t input_sources = vm.count("input-archives");
-    // if (input_sources == 0) {
-    //     throw ParametersException("no input source specified");
-    // }
-    // if (input_sources > 1) {
-    //     throw ParametersException("more than one input source specified");
-    // }
+
 }
