@@ -73,9 +73,6 @@ public:
 
 private:
   friend class boost::serialization::access;
-  friend class InputArchive_alloc<MicrosliceDescriptor,
-                            StorableMicrosliceDescriptor,
-                            ArchiveType::MicrosliceArchive>;
   friend class InputArchive<MicrosliceDescriptor,
                             StorableMicrosliceDescriptor,
                             ArchiveType::MicrosliceDescriptorArchive>;

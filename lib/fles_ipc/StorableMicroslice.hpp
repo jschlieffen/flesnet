@@ -13,10 +13,6 @@
 namespace fles {
 
 template <class Base, class Storable, ArchiveType archive_type>
-class InputArchive_alloc;
-template <class Base, class Storable, ArchiveType archive_type>
-class InputArchive_alloc_MS;
-template <class Base, class Storable, ArchiveType archive_type>
 class InputArchive;
 template <class Base, class Storable, ArchiveType archive_type>
 class InputArchiveLoop;
@@ -75,9 +71,6 @@ public:
 
 private:
   friend class boost::serialization::access;
-  friend class InputArchive_alloc_MS<Microslice,
-                                  StorableMicroslice,
-                                  ArchiveType::MicrosliceArchive>;
   friend class InputArchive<Microslice,
                             StorableMicroslice,
                             ArchiveType::MicrosliceArchive>;
