@@ -6,6 +6,7 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <iostream>
+#include <ostream>
 
 namespace po = boost::program_options;
 
@@ -17,7 +18,10 @@ void Parameters::parse_options(int argc, char* argv[]){
     desc_sstr << std::endl
         << "Usage:"<<std::endl
         << "\t msa2dmsa -i input1.msa [input2.msa] -o output_folder"<<std::endl <<std::endl
-        << "This program reads the given msa files and write the descriptors into a seperat file" <<std::endl;
+        << "This program reads the given msa files and write the descriptors into a seperat file" <<std::endl
+        << "It can also create dmsa files without an input ms-Archive. For this execute:"<<std::endl<<std::endl
+        << "\t msa2dmsa -d 1 -O output.dmsa"<<std::endl<<std::endl
+        << "This line will create an dmsa file for 10000 ms with size 1 MB";
     po::options_description general("General options");
     auto general_add = general.add_options();
     general_add("version,V","print version string");
