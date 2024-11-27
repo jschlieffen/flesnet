@@ -51,7 +51,7 @@ void Parameters::parse_options(int argc, char* argv[]){
                                                 ->implicit_value(content_size_min),
             "gives the minimum content size of a microslice." 
             "\nUsage only if you want to create new files");
-    sink_add("content_size_max,M",po::value<unsigned int>(&content_size_max)
+    sink_add("contentsize-max,M",po::value<unsigned int>(&content_size_max)
                                                 ->implicit_value(content_size_max),
             "gives the maximum content size of a microslice." 
             "\nUsage only if you want to create new files");
