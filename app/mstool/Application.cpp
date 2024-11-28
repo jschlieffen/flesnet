@@ -14,7 +14,9 @@
 #include <chrono>
 #include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <thread>
+#include<cstdlib>
 
 Application::Application(Parameters const& par) : par_(par) {
 
@@ -100,7 +102,8 @@ void Application::run() {
   uint64_t current_index = 0;
   uint64_t last_index = 0;
   uint8_t* content_ptr = nullptr;
-  long acc_size = 0;  
+  long long acc_size = 0; 
+  long test = 0; 
   if (par_.descriptor_source){
     content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
 
@@ -129,24 +132,22 @@ void Application::run() {
         fles::MicrosliceDescriptor desc_ = *ms_desc.get();
         long data_size = desc_.size;
         if (par_.malloc_size<=desc_.size){
-          std::cout<<"malloc call is smaller than size of ms"<<std::endl;
-          throw;
+          throw std::invalid_argument("malloc call is smaller than size of ms");
         }
-        if (content_ptr == nullptr){
-          std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
-          throw std::bad_alloc();
-        }
-        std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(desc_, content_ptr); 
-        sink->put(ms);
+        test += desc_.size;
         acc_size += data_size;
-        if (acc_size <= par_.malloc_size){
-          content_ptr = content_ptr+data_size;
-        }
-        else{
+        if (acc_size >= par_.malloc_size) {
           acc_size = 0;
           free(free_pointer);
           content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
           free_pointer=content_ptr;
+        }
+        std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(desc_, content_ptr); 
+        sink->put(ms);
+        content_ptr = content_ptr+data_size;
+        if (content_ptr == nullptr){
+          std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
+          throw std::bad_alloc();
         }
       }
       
