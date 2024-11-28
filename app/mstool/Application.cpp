@@ -103,7 +103,6 @@ void Application::run() {
   uint64_t last_index = 0;
   uint8_t* content_ptr = nullptr;
   long long acc_size = 0; 
-  long test = 0; 
   if (par_.descriptor_source){
     content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
 
@@ -134,10 +133,9 @@ void Application::run() {
         if (par_.malloc_size<=desc_.size){
           throw std::invalid_argument("malloc call is smaller than size of ms");
         }
-        test += desc_.size;
         acc_size += data_size;
         if (acc_size >= par_.malloc_size) {
-          acc_size = 0;
+          acc_size = data_size;
           free(free_pointer);
           content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
           free_pointer=content_ptr;
