@@ -36,7 +36,7 @@ Application::Application(Parameters const& par) : par_(par) {
   } else if (par_.use_pattern_generator) {
     L_(info) << "using pattern generator as data source";
 
-    constexpr uint32_t typical_content_size = 10000;
+    uint32_t typical_content_size = par_.content_size;
     constexpr std::size_t desc_buffer_size_exp = 19; // 512 ki entries
     constexpr std::size_t data_buffer_size_exp = 27; // 128 MiB
 

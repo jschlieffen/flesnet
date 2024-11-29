@@ -4,6 +4,7 @@
 #include "GitRevision.hpp"
 #include "log.hpp"
 #include <boost/program_options.hpp>
+#include <cstdint>
 #include <iostream>
 
 namespace po = boost::program_options;
@@ -39,6 +40,9 @@ void Parameters::parse_options(int argc, char* argv[]) {
   auto source_add = source.add_options();
   source_add("pattern-generator,p", po::value<uint32_t>(&pattern_generator),
              "use pattern generator to produce timeslices");
+  source_add("conten-size,s",po::value<uint32_t>(&content_size),
+            "defines the average content size.\n"
+            "Usage only if you want to create a ms-Archive.");
   source_add("channel,c", po::value<size_t>(&channel_idx),
              "use given channel/component index for source/sink");
   source_add("input-shm,I", po::value<std::string>(&input_shm),
