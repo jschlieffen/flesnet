@@ -151,10 +151,8 @@ void Application::create_input_channel_senders() {
               shm_devices_.at(shm_identifier), channel)));
     } else if (scheme == "pgen") {
       uint32_t datasize = 27; // 128 MiB
-      std::cout<<datasize<<std::endl;
       if (param.count("datasize") != 0u) {
         datasize = stou(param.at("datasize"));
-        std::cout<<"datasize"<<std::endl;
       }
       uint32_t descsize = 19; // 16 MiB
       if (param.count("descsize") != 0u) {
