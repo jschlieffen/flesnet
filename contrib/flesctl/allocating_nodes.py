@@ -17,8 +17,8 @@ class slurm_commands:
     def alloc_nodes(self,node_list):
         command = ['srun', 
                    '--nodelist=%s'%(node_list),
-                   '--time-min=02:00:00',
-                   '--time=02:30:00',
+                   '--time-min=00:15:00',
+                   '--time=00:30:00',
                    '--pty-bash']
         exit_code = subprocess.call(command)
         return exit_code
@@ -69,8 +69,11 @@ class Build_nodes(slurm_commands):
      
     
 def main():
-    None
+    s = slurm_commands()
+    s.alloc_nodes('htc-cmp501')
 
 if __name__ == '__main__':
     main()
         
+    
+    
