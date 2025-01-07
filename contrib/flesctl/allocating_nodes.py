@@ -59,11 +59,15 @@ class slurm_commands:
     def kill_process(self,pid):
         return None
     
+    # =============================================================================
+    #  TODO:
+    #       1. take care that the message may change
+    # =============================================================================
     def ethernet_ip(self,node_id):
         command = 'srun --nodelist=%s ip a' % (node_id)
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         stdout,stderr = result.communicate()
-        match = re.search(r'eth0:(.*?)7: net0912@eth0:',stdout,re.DOTALL)
+        match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
         content = match.group(1)
         match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
         #print(repr(content))
@@ -75,12 +79,14 @@ class slurm_commands:
     
     def infiniband_ip(self,node_id):
         command = 'srun --nodelist=%s ip a' % (node_id)
-        print('test_inf_id')
+        #print('test_inf_id')
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        print('test_inf_id2')
+        #print('test_inf_id2')
         stdout,stderr = result.communicate()
-        print('test_inf_id3')
-        match = re.search(r'ib0:(.*?)7: net0912@eth0:',stdout,re.DOTALL)
+        #print('test_inf_id3')
+        #print(stdout)
+        match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
+        #print(match)
         content = match.group(1)
         match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
         #print(repr(content))
@@ -89,7 +95,12 @@ class slurm_commands:
         #print(type(content))
         #print(result.stdout)
         return content2
-    
+        
+    # =============================================================================
+    #  TODOs:
+    #   1. get the log message.
+    #   2. make this a parallel process.
+    # =============================================================================
     def start_customize_program(self,program_name,node_id):
         command = 'srun --nodelist=%s %s &> /dev/null &' %(node_id,program_name)
         #result = subprocess.run(command,capture_output=True, text=True, check=True, shell=True)
@@ -102,6 +113,7 @@ class slurm_commands:
             #print('Error')
             #sys.exit(1)
         print('test1')
+        #log_variable = ""
         #print(result.stdout)
         print('test2')
         #print(result.stderr)
@@ -111,6 +123,12 @@ class slurm_commands:
         #print(stderr)
         print(result.poll())
         return None
+    
+    #Funktioniert nicht wie es soll.
+    def exit_node(self,node_id):
+        command = 'exit'
+        subprocess.run(command, shell=True)
+        
 
 class Entry_nodes(slurm_commands):
     
@@ -118,10 +136,25 @@ class Entry_nodes(slurm_commands):
         super().__init__()
         self.node_list = []
     
-    def start_mstool(self):
-        return None
+    #TODO: remove node id from the functioninput
+    def start_mstool(self,node_id):
+        program_string = '../../build/./mstool -i ../../build/500GB.dmsa -O fles_in -D 1 -L mstool.log'
+        self.start_customize_program(program_string, node_id)
     
-    def start_flesnet(self):
+    def start_flesnet(self,node_id):
+        program_string = '../../build/./flesnet -L flesnet.log -t zeromq -i 0 -I shm:/fles_in/0 -o 0 -O shm:/fles_out/0 --timeslice-size 1 --processor-instances 0 -e "_"'
+        self.start_customize_program(program_string, node_id)
+        #time.sleep(1)
+        with open('flesnet.log', 'r') as file:
+            print(file.read())
+            file.seek(0,2)
+            while(True):
+                line = file.readline()
+                if line:
+                    print(line.strip())
+                else:
+                    #print('test')
+                    time.sleep(0.1)
         return None
     
 class Build_nodes(slurm_commands):
@@ -145,6 +178,7 @@ def main():
     #print('test3')
     if allocating_nodes == '1':
         s.alloc_nodes(1)
+        #s.exit_node('jsdfbjkwebf')
     else:
         node = os.environ.get('SLURM_NODELIST')
         #print(node)
@@ -159,9 +193,13 @@ def main():
         print(inf_id)
         eth_id = s.ethernet_ip(node)
         print(eth_id)
-        program_string = '../../build/./mstool -i ../../build/500GB.dmsa -O fles_in -D 1'
-        s.start_customize_program(program_string, node)
+        program_string = '../../build/./mstool -i ../../build/500GB.dmsa -O fles_in -D 1 -L test.log'
+        #s.start_customize_program(program_string, node)
         print(s.pids(node))
+        e = Entry_nodes(1, 1)
+        e.start_mstool(node)
+        e.start_flesnet(node)
+       # s.exit_node('jkfeb')
     #print('test5')
 
     
