@@ -1,6 +1,0 @@
-[2025-01-07 16:36:31] INFO: this is input 0 (of 1)
-[2025-01-07 16:36:31] INFO: this is output 0 (of 1)
-[2025-01-07 16:36:31] INFO: timeslice size: 1 microslices
-[2025-01-07 16:36:31] INFO: number of timeslices: 4294967295
-[2025-01-07 16:36:31] ERROR: exception while connecting to shared memory: No such file or directory
-[2025-01-07 16:36:31] FATAL: map::at
