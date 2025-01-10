@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Jan  9 11:24:40 2025
 
-@author: jschlieffen
+#Created on Thu Jan  9 11:24:40 2025
+
+#@author: jschlieffen
 """
+Usage: output.py <ip> 
+
+Arguments: 
+    <ip> The ip address to use
+"""
+
 
 import subprocess
 import time

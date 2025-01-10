@@ -13,6 +13,9 @@ Options:
     -h --help  Show this message.
 """
 
+# =============================================================================
+# TODO: write new file with better structuring
+# =============================================================================
 
 import subprocess
 import sys
@@ -63,7 +66,7 @@ class slurm_commands:
         except subprocess.CalledProcessError as e:
             print('Error')
             sys.exit(1)
-        return 
+        return None
     
     def kill_process(self,pid):
         return None
@@ -158,9 +161,9 @@ class slurm_commands:
 
 class Entry_nodes(slurm_commands):
     
-    def __init__(self,number_nodes,use_infini_band):
+    def __init__(self,number_nodes):
         super().__init__()
-        self.node_list = []
+        self.node_list = {}
     
     #TODO: remove node id from the functioninput
     def start_mstool(self,node_id):
@@ -185,7 +188,7 @@ class Entry_nodes(slurm_commands):
     
     def start_flesnet(self, node_id,ip):
         file = 'input.py'
-        command = 'srun --nodelist=%s %s' % (node_id,file)
+        command = 'srun --nodelist=%s %s %s' % (node_id,file,ip)
         print(os.path.exists(file))
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         print(result.poll)        
@@ -193,13 +196,79 @@ class Entry_nodes(slurm_commands):
     
 class Build_nodes(slurm_commands):
     
-    def __init__(self,number_nodes,use_infini_band):
+    def __init__(self,number_nodes):
         super().__init__()
-        self.node_lits
+        self.node_list = {}
         
-    def start_flesnet(self):
+    def start_flesnet(self,node_id,ip):
+        file = 'output.py'
+        command = 'srun --nodelist=%s %s %s' % (node_id,file,ip)
+        print(os.path.exists(file))
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        print(result.poll)        
         return None
+    
      
+class execution(slurm_command):
+    
+    def __init__(self,num_entrynodes, num_buildnodes):
+        super().__init__()
+        self.num_entrynodes = num_entrynodes 
+        self.num_buildnodes = num_buildnodes
+        self.entry_nodes = {}
+        self.build_nodes = {} 
+        self.schedule_nodes()
+    
+    
+    # =============================================================================
+    # Note 1: I have no clue how to properly manage a different number of entry and 
+    # build nodes. Currently there should be the same number of entry nodes and 
+    # build nodes.
+    # Note 2: This program assume that you have allocated the correct number of nodes
+    # TODO: write a proper algorithm for the schedule.
+    # Ich habe keine Ahnung ob sich hier eventuell durch sbatch was aendert.
+    # =============================================================================
+    def schedule_nodes(self):
+        node_list = os.environ.get('SLURM_NODELIST')
+        entry_nodes_cnt = 0
+        build_nodes_cnt = 0
+        if node_list is None:
+            print("Error: SLURM_NODELIST is not set.")
+            sys.exit(1)
+        elif len(node_list) != self.num_entrynodes + self.num_buildnodes:
+            print('Incorrect number of nodes')
+            sys.exit(1)
+        for node in node_list:
+            node_ip = self.infiniband_ip(node)
+            if entry_nodes_cnt < self.num_entrynodes:
+                self.entry_nodes[node] = {
+                    'node' : node,
+                    'inf_ip' : node_ip,
+                    'allocated_build_node' : ''} #to be inserted later
+                entry_nodes_cnt += 1
+            elif build_nodes_cnt < self.build_nodes_cnt:
+                self.build_nodes[node] = {
+                    'node' : node,
+                    'inf_ip' : node_ip,
+                    'allocated_entry_node' : ''} #to be inserted later
+                build_nodes_cnt += 1
+            else:
+                print('unexpected error with the number of nodes')
+                sys.exit(1)
+            self.bijectiv_mapping()
+     
+    def bijectiv_mapping(self):
+        for entry_node, build_node in zip(self.entry_nodes.keys(), self.build_nodes.keys()):
+            self.entry_nodes[entry_node]['allocated_build_node'] = build_node
+            self.build_nodes[build_node]['allocated_entry_node'] = entry_node
+    
+    
+    def start_entry_nodes(self):
+        node_list = os.environ.get('SLURM_NODELIST')
+        #for node in entry_node:
+            
+    #def start_build_nodes(self):
+        
     
 def main():
     arg = docopt.docopt(__doc__, version='0.2')
@@ -215,7 +284,8 @@ def main():
         #s.exit_node('jsdfbjkwebf')
     else:
         node = os.environ.get('SLURM_NODELIST')
-        #print(node)
+        print(node)
+        print(type(node))
         if node is None:
             print("Error: SLURM_NODELIST is not set. Did you run this within a SLURM job allocation?")
         else:
@@ -236,7 +306,7 @@ def main():
         #time.sleep(5)
         #e.start_flesnet(node)
         #print(s.ssh_to_node(node))
-        s.srun_test('input.py 87325', node)
+        #s.srun_test('input.py 87325', node)
        # s.exit_node('jkfeb')
     print('test5')
 
