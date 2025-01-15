@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
-#Created on Wed Jan  8 16:54:02 2025
+#Created on Wed Jan 15 16:02:41 2025
 
 #@author: jschlieffen
 
+
+
 """
-Usage: input.py <ip>
+Usage: input_zeromq.py <ip>
 
 Arguments:
   <ip>   The IP address to use.
@@ -22,7 +23,7 @@ import docopt
 # =============================================================================
 def entry_nodes(dmsa_file,ip):
     mstool_commands = '../../../build/./mstool -L logs/mstool_input_file.log -i %s -O fles_in -D 1 > /dev/null 2>&1 &' % (dmsa_file)
-    flesnet_commands = '../../../build/./flesnet -t rdma -L logs/flesnet_input_file.log -l 3 -i 0 -I shm:/fles_in/0 -O %s --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' % (ip)
+    flesnet_commands = '../../../build/./flesnet -t zeromq -L logs/flesnet_zeromq_input_file.log -l 3 -i 0 -I shm:/fles_in/0 -O %s --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' % (ip)
     #flesnet_commands = '../../../build/./flesnet -t rdma -L logs/flesnet_input_file.log -i 0 -I shm:/fles_in/0 -o 0 -O shm:/fles_out/0 --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' 
     result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     time.sleep(1)

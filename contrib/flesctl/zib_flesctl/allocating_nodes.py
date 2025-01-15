@@ -40,7 +40,7 @@ class slurm_commands:
         #           '--time=00:05:00',
         #           '--ntasks=1',
         #           '&']
-        command = 'salloc --nodes=%s --time=00:20:00'%(node_numbers)
+        command = 'salloc --nodes=%s -p big --time=00:20:00'%(node_numbers)
         allocation = subprocess.run(command,shell=True)
         print(allocation.returncode)
         return allocation.returncode
@@ -77,7 +77,7 @@ class slurm_commands:
     #       2. make sure that the message 
     # =============================================================================
     def ethernet_ip(self,node_id):
-        command = 'srun --nodelist=%s ip a' % (node_id)
+        command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         stdout,stderr = result.communicate()
         match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
@@ -91,12 +91,13 @@ class slurm_commands:
         return content2
     
     def infiniband_ip(self,node_id):
-        command = 'srun --nodelist=%s ip a' % (node_id)
+        command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
         #print('test')
         #print('test_inf_id')
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         #result = subprocess.run(command, shell=True)
         #print('test_inf_id2')
+        result.wait()
         stdout,stderr = result.communicate()
         #stdout = result.returncode
         #print(stdout)
@@ -161,9 +162,11 @@ class slurm_commands:
 
 class Entry_nodes(slurm_commands):
     
-    def __init__(self,number_nodes):
+    def __init__(self,node_list,build_nodes_ips,build_nodes_eth_ips):
         super().__init__()
-        self.node_list = {}
+        self.node_list = node_list
+        self.build_nodes_ips = build_nodes_ips
+        self.build_nodes_eth_ips = build_nodes_eth_ips
     
     #TODO: remove node id from the functioninput
     def start_mstool(self,node_id):
@@ -186,30 +189,54 @@ class Entry_nodes(slurm_commands):
                     time.sleep(0.1)
         return None
     
-    def start_flesnet(self, node_id,ip):
+    def start_flesnet(self):
         file = 'input.py'
-        command = 'srun --nodelist=%s %s %s' % (node_id,file,ip)
         print(os.path.exists(file))
-        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        print(result.poll)        
+        for node in self.node_list.keys():
+            command = 'srun --nodelist=%s -N 1 %s %s' % (node,file,self.build_nodes_ips)
+            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            print(result.poll())        
+        return None
+    
+    def start_flesnet_zeromq(self):
+        file = 'input_zeromq.py'
+        print(os.path.exists(file))
+        for node in self.node_list.keys():
+            command = 'srun --nodelist=%s -N 1 %s %s' % (node,file,self.build_nodes_eth_ips)
+            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            print(result.poll())        
         return None
     
 class Build_nodes(slurm_commands):
     
-    def __init__(self,number_nodes):
+    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips):
         super().__init__()
-        self.node_list = {}
+        self.node_list = node_list
+        self.entry_node_ips = entry_nodes_ips
+        self.entry_node_eth_ips = entry_nodes_eth_ips
         
-    def start_flesnet(self,node_id,ip):
+    def start_flesnet(self):
         file = 'output.py'
-        command = 'srun --nodelist=%s %s %s' % (node_id,file,ip)
         print(os.path.exists(file))
-        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        print(result.poll)        
+        for node in self.node_list.keys():
+            command = 'srun --nodelist=%s -N 1 %s %s' % (node,file,self.entry_node_ips)
+            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            print('start_build_nodes')
+            print(result.poll())        
+        return None
+    
+    def start_flesnet_zeromq(self):
+        file = 'output_zeromq.py'
+        print(os.path.exists(file))
+        for node in self.node_list.keys():
+            command = 'srun --nodelist=%s -N 1 %s %s' % (node,file,self.entry_node_eth_ips)
+            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            print('start_build_nodes')
+            print(result.poll())        
         return None
     
      
-class execution(slurm_command):
+class execution(slurm_commands):
     
     def __init__(self,num_entrynodes, num_buildnodes):
         super().__init__()
@@ -218,7 +245,40 @@ class execution(slurm_command):
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.schedule_nodes()
+        self.entry_nodes_ips = ""
+        self.build_nodes_ips = ""
+        self.get_ips()
+        self.entry_nodes_eth_ips = ""
+        self.build_nodes_eth_ips = ""
+        self.get_eth_ips()
+        self.entry_nodes_cls = Entry_nodes(self.entry_nodes,self.build_nodes_ips,self.build_nodes_eth_ips)
+        self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips)
+        
     
+    def get_node_list(self):
+        node_str = os.environ.get('SLURM_NODELIST')
+        nodes_numbers = re.findall(r'\d+',node_str)
+        node_list = [f"htc-cmp{num}" for num in nodes_numbers]
+        return node_list
+    
+    def get_eth_ips(self):
+        for key, val in self.entry_nodes.items():
+            self.entry_nodes_eth_ips += 'shm://' + val['eth_ip'] + '/0'
+        for key, val in self.build_nodes.items():
+            self.build_nodes_eth_ips += 'shm://' + val['eth_ip'] + '/0'
+        print(self.entry_nodes_eth_ips)
+        print(self.build_nodes_eth_ips)
+            
+        
+    def get_ips(self):
+        for key,val in self.entry_nodes.items():
+            print(key)
+            print(val['inf_ip'])
+            self.entry_nodes_ips += 'shm://'+ val['inf_ip'] + '/0 '
+        for key,val in self.build_nodes.items():
+            print(key)
+            print(val['inf_ip'])
+            self.build_nodes_ips += 'shm://'+ val['inf_ip'] + '/0 '
     
     # =============================================================================
     # Note 1: I have no clue how to properly manage a different number of entry and 
@@ -229,7 +289,8 @@ class execution(slurm_command):
     # Ich habe keine Ahnung ob sich hier eventuell durch sbatch was aendert.
     # =============================================================================
     def schedule_nodes(self):
-        node_list = os.environ.get('SLURM_NODELIST')
+        node_list = self.get_node_list()
+        print(node_list)
         entry_nodes_cnt = 0
         build_nodes_cnt = 0
         if node_list is None:
@@ -240,22 +301,28 @@ class execution(slurm_command):
             sys.exit(1)
         for node in node_list:
             node_ip = self.infiniband_ip(node)
+            node_eth_ip = self.ethernet_ip(node)
+            time.sleep(1)
+            print(node)
+            print(node_ip)
             if entry_nodes_cnt < self.num_entrynodes:
                 self.entry_nodes[node] = {
                     'node' : node,
                     'inf_ip' : node_ip,
-                    'allocated_build_node' : ''} #to be inserted later
+                    'eth_ip' : node_eth_ip}
+                    #'allocated_build_node' : ''} #to be inserted later
                 entry_nodes_cnt += 1
-            elif build_nodes_cnt < self.build_nodes_cnt:
+            elif build_nodes_cnt < self.num_buildnodes:
                 self.build_nodes[node] = {
                     'node' : node,
                     'inf_ip' : node_ip,
-                    'allocated_entry_node' : ''} #to be inserted later
+                    'eth_ip' : node_eth_ip}
+                    #'allocated_entry_node' : ''} #to be inserted later
                 build_nodes_cnt += 1
             else:
                 print('unexpected error with the number of nodes')
                 sys.exit(1)
-            self.bijectiv_mapping()
+            #self.bijectiv_mapping()
      
     def bijectiv_mapping(self):
         for entry_node, build_node in zip(self.entry_nodes.keys(), self.build_nodes.keys()):
@@ -263,9 +330,17 @@ class execution(slurm_command):
             self.build_nodes[build_node]['allocated_entry_node'] = entry_node
     
     
-    def start_entry_nodes(self):
-        node_list = os.environ.get('SLURM_NODELIST')
-        #for node in entry_node:
+    def start_Flesnet(self):
+        #file = 'input.py %s' (self.build_nodes_ips)
+        #node_list = os.environ.get('SLURM_NODELIST')
+        self.entry_nodes_cls.start_flesnet()
+        self.build_nodes_cls.start_flesnet()
+            
+    def start_Flesnet_zeromq(self):
+        #file = 'input.py %s' (self.build_nodes_ips)
+        #node_list = os.environ.get('SLURM_NODELIST')
+        self.entry_nodes_cls.start_flesnet_zeromq()
+        self.build_nodes_cls.start_flesnet_zeromq()
             
     #def start_build_nodes(self):
         
@@ -279,10 +354,11 @@ def main():
     #print(type(allocating_nodes))
     #s.alloc_nodes('htc-cmp507')
     #print('test3')
-    if allocating_nodes == '1':
-        s.alloc_nodes(1)
+    if allocating_nodes != '0':
+        s.alloc_nodes(2)
         #s.exit_node('jsdfbjkwebf')
     else:
+        """
         node = os.environ.get('SLURM_NODELIST')
         print(node)
         print(type(node))
@@ -306,8 +382,19 @@ def main():
         #time.sleep(5)
         #e.start_flesnet(node)
         #print(s.ssh_to_node(node))
-        #s.srun_test('input.py 87325', node)
-       # s.exit_node('jkfeb')
+        s.srun_test('input.py 87325', node)
+        # s.exit_node('jkfeb')
+        """
+        print('test')
+        exec_ = execution(1, 1)
+        #exec_.schedule_nodes()
+        print('Entry nodes: ', exec_.entry_nodes)
+        print('Build nodes: ', exec_.build_nodes)
+        #exec_.get_ips()
+        print('Build nodes ips: ' + exec_.entry_nodes_ips)
+        print('Entry Nodes ips: ' + exec_.build_nodes_ips)
+        exec_.start_Flesnet()
+        #exec_.start_Flesnet_zeromq()
     print('test5')
 
     
