@@ -23,6 +23,7 @@ import os
 import time
 import docopt
 import re
+import monitoring as mon
 
 class slurm_commands:
     
@@ -154,6 +155,7 @@ class slurm_commands:
         #print(stderr)
         print(result.poll())
         return None
+    
     #Funktioniert nicht wie es soll.
     def exit_node(self,node_id):
         command = 'exit'
@@ -167,6 +169,7 @@ class Entry_nodes(slurm_commands):
         self.node_list = node_list
         self.build_nodes_ips = build_nodes_ips
         self.build_nodes_eth_ips = build_nodes_eth_ips
+        self.pids = []
     
     #TODO: remove node id from the functioninput
     def start_mstool(self,node_id):
@@ -194,8 +197,14 @@ class Entry_nodes(slurm_commands):
         print(os.path.exists(file))
         for node in self.node_list.keys():
             command = 'srun --nodelist=%s -N 1 %s %s' % (node,file,self.build_nodes_ips)
-            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            print(result.poll())        
+            result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            print(result.poll())    
+            time.sleep(5)
+            #stdout,stderr = result.communicate()
+            #result.stdin.write('foobar')
+            self.pids += [result]
+            #for stdout_line in iter(result.stdout.readline, ''):
+                #print(stdout_line, end='')
         return None
     
     def start_flesnet_zeromq(self):
@@ -207,6 +216,14 @@ class Entry_nodes(slurm_commands):
             print(result.poll())        
         return None
     
+    def stop_flesnet(self):
+        for pid in self.pids:
+            pid.stdin.write('stop')
+            stdout, stderr = pid.communicate()
+            print('Output: ',stdout)
+            print('Error: ', stderr)
+            print('\n')
+    
 class Build_nodes(slurm_commands):
     
     def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips):
@@ -214,15 +231,17 @@ class Build_nodes(slurm_commands):
         self.node_list = node_list
         self.entry_node_ips = entry_nodes_ips
         self.entry_node_eth_ips = entry_nodes_eth_ips
+        self.pids = []
         
     def start_flesnet(self):
         file = 'output.py'
         print(os.path.exists(file))
         for node in self.node_list.keys():
             command = 'srun --nodelist=%s -N 1 %s %s' % (node,file,self.entry_node_ips)
-            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            result = subprocess.Popen(command, shell=True,stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print('start_build_nodes')
             print(result.poll())        
+            self.pids += [result]
         return None
     
     def start_flesnet_zeromq(self):
@@ -234,6 +253,14 @@ class Build_nodes(slurm_commands):
             print('start_build_nodes')
             print(result.poll())        
         return None
+
+    def stop_flesnet(self):
+        for pid in self.pids:
+            pid.stdin.write('stop')
+            stdout, stderr = pid.communicate()
+            print('Output: ',stdout)
+            print('Error: ', stderr)
+            print('\n')
     
      
 class execution(slurm_commands):
@@ -281,11 +308,6 @@ class execution(slurm_commands):
             self.build_nodes_ips += 'shm://'+ val['inf_ip'] + '/0 '
     
     # =============================================================================
-    # Note 1: I have no clue how to properly manage a different number of entry and 
-    # build nodes. Currently there should be the same number of entry nodes and 
-    # build nodes.
-    # Note 2: This program assume that you have allocated the correct number of nodes
-    # TODO: write a proper algorithm for the schedule.
     # Ich habe keine Ahnung ob sich hier eventuell durch sbatch was aendert.
     # =============================================================================
     def schedule_nodes(self):
@@ -343,7 +365,24 @@ class execution(slurm_commands):
         self.build_nodes_cls.start_flesnet_zeromq()
             
     #def start_build_nodes(self):
+    
+    def stop_via_ctrl_c(self):
+        try: 
+            self.monitoring()
+        except KeyboardInterrupt:
+            print('Interrupting')
+            self.entry_nodes_cls.stop_flesnet()
+            self.build_nodes_cls.stop_flesnet()
+        return None
         
+    # =============================================================================
+    # TODO: make log file depend on node id
+    # maybe TODO: function also calls for output nodes
+    # =============================================================================
+    def monitoring(self):
+        for entry_node in self.entry_nodes.keys():
+            #print('test')
+            mon.monitoring('logs/flesnet_input_file.log',500)
     
 def main():
     arg = docopt.docopt(__doc__, version='0.2')
@@ -376,7 +415,7 @@ def main():
         #print(eth_id)
         #program_string = '../../build/./mstool -i ../../build/500GB.dmsa -O fles_in -D 1 -L test.log'
         #s.start_customize_program(program_string, node)
-        print(s.pids(node))
+        print(s.pids(node))%
         #e = Entry_nodes(1, 1)
         #e.start_mstool(node)
         #time.sleep(5)
@@ -394,6 +433,7 @@ def main():
         print('Build nodes ips: ' + exec_.entry_nodes_ips)
         print('Entry Nodes ips: ' + exec_.build_nodes_ips)
         exec_.start_Flesnet()
+        exec_.stop_via_ctrl_c()
         #exec_.start_Flesnet_zeromq()
     print('test5')
 

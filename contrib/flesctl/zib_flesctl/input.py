@@ -14,19 +14,25 @@ Arguments:
 import subprocess
 import time
 import docopt
+import sys
 
 
 
 # =============================================================================
 # TODO: Get better variable names for the commands
+# TODO: make the log file name depend on the node_id
 # =============================================================================
 def entry_nodes(dmsa_file,ip):
     mstool_commands = '../../../build/./mstool -L logs/mstool_input_file.log -i %s -O fles_in -D 1 > /dev/null 2>&1 &' % (dmsa_file)
-    flesnet_commands = '../../../build/./flesnet -t rdma -L logs/flesnet_input_file.log -l 3 -i 0 -I shm:/fles_in/0 -O %s --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' % (ip)
+    flesnet_commands = '../../../build/./flesnet -t rdma -L logs/flesnet_input_file.log -l 2 -i 0 -I shm:/fles_in/0 -O %s --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' % (ip)
     #flesnet_commands = '../../../build/./flesnet -t rdma -L logs/flesnet_input_file.log -i 0 -I shm:/fles_in/0 -o 0 -O shm:/fles_out/0 --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' 
     result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     time.sleep(1)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    #for stdout_line in iter(result_flesnet.stdout.readline, ''):
+        #print(stdout_line, end='')
+        #print('test')
+    '''
     print('result:')
     print(result_mstool)
     print(result_flesnet)
@@ -45,13 +51,31 @@ def entry_nodes(dmsa_file,ip):
                 print(line.strip())
             else:
                 time.sleep(0.5)
+    '''
+    input_data = ''
+    while input_data == '':
+        input_data = sys.stdin.read().strip()
+    result_mstool.terminate()
+    result_flesnet.terminate()
+    result_mstool.wait()
+    result_flesnet.wait()
+    
 
 #print('iuwefbbwe')
-print('test')
+print('test123')
 arg = docopt.docopt(__doc__, version='0.2')
 
 ip = arg["<ip>"]
 #print(ip)
 entry_nodes('../../../build/500GB.dmsa',ip)
-print('iuefbuiweb')
+#print('iuefbuiweb')
+'''
+input_data = ''
+while input_data == '': 
+    input_data = sys.stdin.read().strip()
+with open('test.txt', 'w') as f:
+    f.write(input_data)
+'''
+
+
     

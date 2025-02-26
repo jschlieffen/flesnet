@@ -208,7 +208,7 @@ void Parameters::parse_options(int argc, char* argv[]) {
   if (vm.count("log-file") != 0u) {
     L_(info) << "logging output to " << log_file;
     if (log_level < 3) {
-      log_level = 3;
+      //log_level = 3;
       L_(info) << "increased file log level to " << log_level;
     }
     logging::add_file(log_file, static_cast<severity_level>(log_level));
