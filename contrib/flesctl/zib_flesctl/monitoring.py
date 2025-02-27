@@ -175,12 +175,12 @@ def draw_progress_bar(stdscr, progress1, progress2, total_data_1, total_data_2, 
     stdscr.addstr(0, 0, "Progress Bar 1: ")
     stdscr.addstr(green1, curses.color_pair(1))  # Green part
     stdscr.addstr(red1, curses.color_pair(2))   # Red part
-    stdscr.addstr(f" {current_data1:12.2f} /{total_data_1:.2f}", curses.color_pair(3))  # Pink numbers
+    stdscr.addstr(f" {current_data1:12.2f} / {total_data_1:.2f}", curses.color_pair(3))  # Pink numbers
 
     stdscr.addstr(1, 0, "Progress Bar 2: ")
     stdscr.addstr(green2, curses.color_pair(1))  # Green part
     stdscr.addstr(red2, curses.color_pair(2))   # Red part
-    stdscr.addstr(f" {current_data2:12.2f} /{total_data_2:.2f}", curses.color_pair(3))  # Pink numbers
+    stdscr.addstr(f" {current_data2:12.2f} / {total_data_2:.2f}", curses.color_pair(3))  # Pink numbers
     # Refresh the screen
     stdscr.refresh()
 
