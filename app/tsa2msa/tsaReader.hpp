@@ -14,6 +14,7 @@
 // Flesnet Library header files:
 #include "lib/fles_ipc/MicrosliceOutputArchive.hpp"
 #include "lib/fles_ipc/TimesliceAutoSource.hpp"
+#include "lib/fles_ipc/TimesliceSource.hpp"
 
 // tsa2msa Library header files:
 #include "genericOptions.hpp"
