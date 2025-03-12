@@ -372,8 +372,9 @@ class execution(slurm_commands):
             self.monitoring()
         except KeyboardInterrupt:
             print('Interrupting')
-            self.entry_nodes_cls.stop_flesnet()
             self.build_nodes_cls.stop_flesnet()
+            self.entry_nodes_cls.stop_flesnet()
+
         return None
         
     # =============================================================================
