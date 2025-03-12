@@ -1,2 +1,2 @@
-0.12442000000000002 
-logs/flesnet_output_file.log 
+0.07655900000000002 
+logs/build_node_htc-cmp101.log 

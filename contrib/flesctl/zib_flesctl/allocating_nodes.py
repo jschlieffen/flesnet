@@ -42,7 +42,7 @@ class slurm_commands:
         #           '--time=00:05:00',
         #           '--ntasks=1',
         #           '&']
-        command = 'salloc --nodes=%s -p big --time=00:20:00'%(node_numbers)
+        command = 'salloc --nodes=%s -p big --constraint=Infiniband --time=00:20:00'%(node_numbers)
         allocation = subprocess.run(command,shell=True)
         print(allocation.returncode)
         return allocation.returncode
@@ -50,7 +50,7 @@ class slurm_commands:
     def sbatch(self,node_numbers):
         command = 'sbatch'
     
-    # DO NOT USE: Creates permission error
+    # DO NOT USE: Ask for password auth.
     def ssh_to_node(self,node_id):
         command = 'ssh %s' % (node_id)
         ssh = subprocess.run(command, shell=True)
@@ -197,7 +197,9 @@ class Entry_nodes(slurm_commands):
         file = 'input.py'
         print(os.path.exists(file))
         for node in self.node_list.keys():
-            command = 'srun --nodelist=%s -N 1 %s %s' % (node,file,self.build_nodes_ips)
+            logfile = "logs/entry_node_%s.log" % node
+            print('test123: ', self.build_nodes_ips)
+            command = 'srun --nodelist=%s -N 1 %s %s %s' % (node,file,logfile,self.build_nodes_ips)
             result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print(result.poll())    
             time.sleep(5)
@@ -238,7 +240,9 @@ class Build_nodes(slurm_commands):
         file = 'output.py'
         print(os.path.exists(file))
         for node in self.node_list.keys():
-            command = 'srun --nodelist=%s -N 1 %s %s' % (node,file,self.entry_node_ips)
+            logfile = 'logs/build_node_%s.log' % (node)
+            print('test12234', self.entry_node_ips)
+            command = 'srun --nodelist=%s -N 1 %s %s %s' % (node,file,logfile,self.entry_node_ips)
             result = subprocess.Popen(command, shell=True,stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print('start_build_nodes')
             print(result.poll())        
@@ -302,12 +306,12 @@ class execution(slurm_commands):
         for key,val in self.entry_nodes.items():
             print(key)
             print(val['inf_ip'])
-            self.entry_nodes_ips += 'shm://'+ val['inf_ip'] + '/0 '
+            self.entry_nodes_ips += val['inf_ip'] + "sep"
         for key,val in self.build_nodes.items():
             print(key)
             print(val['inf_ip'])
-            self.build_nodes_ips += 'shm://'+ val['inf_ip'] + '/0 '
-    
+            self.build_nodes_ips += val['inf_ip'] + "sep"
+            
     # =============================================================================
     # Ich habe keine Ahnung ob sich hier eventuell durch sbatch was aendert.
     # =============================================================================
@@ -382,11 +386,20 @@ class execution(slurm_commands):
     # maybe TODO: function also calls for output nodes
     # =============================================================================
     def monitoring(self):
+        file_names = []
         for entry_node in self.entry_nodes.keys():
+            logfile = 'logs/entry_node_%s.log' % (entry_node)
+            total_data = 1000
+            file_names.append((logfile,total_data))
+        for build_node in self.build_nodes.keys():
+            logfile = 'logs/build_node_%s.log' % (build_node)
+            total_data = 2000
+            file_names.append((logfile,total_data))
             #print('test')
             #mon.sequential_monitoring(['logs/flesnet_input_file.log','logs/flesnet_output_file.log'],[500,1000])
-            curses.wrapper(mon.main,[('logs/flesnet_input_file.log',1000), ('logs/flesnet_output_file.log',2000)])
-            
+        #curses.wrapper(mon.main,[('logs/flesnet_input_file.log',1000), ('logs/flesnet_output_file.log',2000)])
+        curses.wrapper(mon.main,file_names)
+        
 def main():
     arg = docopt.docopt(__doc__, version='0.2')
     
@@ -397,7 +410,7 @@ def main():
     #s.alloc_nodes('htc-cmp507')
     #print('test3')
     if allocating_nodes != '0':
-        s.alloc_nodes(2)
+        s.alloc_nodes(4)
         #s.exit_node('jsdfbjkwebf')
     else:
         """
@@ -428,7 +441,7 @@ def main():
         # s.exit_node('jkfeb')
         """
         print('test')
-        exec_ = execution(1, 1)
+        exec_ = execution(2, 2)
         #exec_.schedule_nodes()
         print('Entry nodes: ', exec_.entry_nodes)
         print('Build nodes: ', exec_.build_nodes)
