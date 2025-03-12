@@ -132,7 +132,7 @@ def get_data_rate(log_line):
 def calculate_progress(current_data, total_data):
     return current_data / total_data
 
-def draw_progress_bar(stdscr, progress1, progress2, total_data_1, total_data_2, current_data1, current_data2):
+def draw_progress_bar(stdscr, data_dict):
     stdscr.clear()
     bar_width = 50
     
@@ -140,7 +140,7 @@ def draw_progress_bar(stdscr, progress1, progress2, total_data_1, total_data_2, 
     curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK) 
     curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)   
     curses.init_pair(3, curses.COLOR_MAGENTA, curses.COLOR_BLACK) 
-
+    '''
     green1 =  u'\u2500' * int(progress1 * bar_width)
     red1 =  u'\u2500' * (bar_width - len(green1))
     green2 = u'\u2500'* int(progress2 * bar_width)
@@ -156,7 +156,27 @@ def draw_progress_bar(stdscr, progress1, progress2, total_data_1, total_data_2, 
     stdscr.addstr(green2, curses.color_pair(1)) 
     stdscr.addstr(red2, curses.color_pair(2)) 
     stdscr.addstr(f" {current_data2:12.2f} / {total_data_2:.2f}", curses.color_pair(3))  # Pink numbers
-
+    '''
+    '''
+    with open('test.txt', 'w') as file:
+        for key,val in data_dict.items():
+            file.write(key)
+    '''
+    i = 0
+    for key,val in data_dict.items():
+        progress = calculate_progress(val['current_data'], val['total_data'])
+        with open('prog.txt', 'w') as file:
+            file.write(str(progress)+ ' \n')
+            file.write(key + ' \n')
+        #print(key)
+        green = u'\u2500' * int(progress * bar_width)
+        red = u'\u2500' * (bar_width - len(green))
+        
+        stdscr.addstr(i, 0, "Progress Bar " + key + ': ')
+        stdscr.addstr(green, curses.color_pair(1))
+        stdscr.addstr(red, curses.color_pair(2))   
+        stdscr.addstr(f" {val['current_data']:12.2f} / {val['total_data']:.2f}", curses.color_pair(3))  
+        i += 1
     stdscr.refresh()
 
 def tail_file(file_path):
@@ -172,9 +192,9 @@ def tail_file(file_path):
 
 def main(stdscr,file_names):
 
-    total_data_1 = 1000.0
-    total_data_2 = 2000.0
-    start_time = time.time()
+    #total_data_1 = 1000.0
+    #total_data_2 = 2000.0
+    #start_time = time.time()
 
 
     #current_data1 = 0.0
@@ -182,11 +202,18 @@ def main(stdscr,file_names):
     #tail_a = tail_file(file_a)
     #tail_b = tail_file(file_b)
     data_dict = {}
+    #i = 0
     for file_name in file_names:
-        data_dict[file_names] = {
+        data_dict[file_name[0]] = {
             'current_data' : 0.0,
-            'tail' : tail_file(file_name)
+            'tail' : tail_file(file_name[0]),
+            'total_data' : file_name[1]
             }
+    '''
+    with open('test.txt', 'w') as file:
+        for key,val in data_dict.items():
+            file.write(key)
+    '''
     '''
     # Main loop to read both files
     while True:
@@ -225,7 +252,7 @@ def main(stdscr,file_names):
     time.sleep(2)
     '''
     while True:
-
+        '''
         try:
             line_a = next(tail_a)
             data_rate_a = get_data_rate(line_a)
@@ -244,21 +271,25 @@ def main(stdscr,file_names):
         progress2 = calculate_progress(current_data2, total_data_2)
 
         draw_progress_bar(stdscr, progress1, progress2, total_data_1, total_data_2, current_data1, current_data2)
-
         if progress1 >= 1.0 and progress2 >= 1.0:
             break
-        for key,val in data_dict:
+        '''
+        for key,val in data_dict.items():
+            #print('test1223')
+            #stdscr.addstr(key)
             try:
+                #print('test1223')
+                #print(val['tail'])
                 line = next(val['tail'])
                 data_rate = get_data_rate(line)
                 data_dict[key]['current_data'] += data_rate
             except StopIteration:
                 data_rate = 0.0
             #progress = calculate_progress(data_dict[key]['current_data'], total_data_1)
-        draw_progress_bar(stdscr, total_data_1, total_data_2, current_data1, current_dat)
+        draw_progress_bar(stdscr, data_dict)
                 
 
-    stdscr.addstr(2, 0, "Both transfers complete!")
+    #stdscr.addstr(2, 0, "Both transfers complete!")
     stdscr.refresh()
     time.sleep(2)
 

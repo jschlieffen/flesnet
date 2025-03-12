@@ -1,1 +1,1 @@
-foobar
+logs/flesnet_input_file.loglogs/flesnet_output_file.log
