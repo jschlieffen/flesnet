@@ -1,2 +1,2 @@
-0.17896 
+0.12442000000000002 
 logs/flesnet_output_file.log 
