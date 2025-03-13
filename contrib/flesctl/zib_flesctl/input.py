@@ -6,37 +6,50 @@
 #@author: jschlieffen
 
 """
-Usage: input.py <logfile> <ip> 
+Usage: input.py <logfile> <ip> <num_entry_nodes> <entry_node_idx>
 
 Arguments: 
     <ip> The ip address to use
     <logfile> The Logfile to use
+    <num_entry_nodes> The number of entry nodes
+    <entry_node_idx> The index of the current entry node
 """
 import subprocess
 import time
 import docopt
 import sys
 
+def calc_str(ip,num_entry_nodes):
+    ip_string = ""
+    parts = ip.split('sep')
+    for part in parts:
+        if part != "":
+            ip_string += "tcp://" + part + '/0'
+    shm_string = ""
+    for i in range(0,num_entry_nodes):
+        shm_string += "shm:/fles_in_e%s" % (str(i))
+    return ip_string, shm_string
 
 
 # =============================================================================
 # TODO: Get better variable names for the commands
 # TODO: make the log file name depend on the node_id
 # =============================================================================
-def entry_nodes(dmsa_file,ip,logfile):
+def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx):
     #ip_string = "shm://" + ip.replace("sep", "/0 shm://") + "/0"
     #print(ip_string)
-    ip_string = ""
-    print(ip)
-    i = 0
-    parts = ip.split('sep')
-    for part in parts:
-        if part != "":
-            ip_string += "shm://" + part + '/%s ' % (i)
-            i += 1
-    print(ip_string)
-    mstool_commands = '../../../build/./mstool -L logs/mstool_input_file.log -i %s -O fles_in -D 1 > /dev/null 2>&1 &' % (dmsa_file)
-    flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -i 0 -I shm:/fles_in/0 -O %s --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' % (logfile,ip_string)
+    #ip_string = ""
+    #print(ip)
+    #i = 0
+    #parts = ip.split('sep')
+    #for part in parts:
+    #    if part != "":
+    #        ip_string += "shm://" + part + '/%s ' % (i)
+    #        i += 1
+    #print(ip_string)
+    ip_string, shm_string = calc_str(ip, num_entry_nodes)
+    mstool_commands = '../../../build/./mstool -L logs/mstool_input_file.log -i %s -O fles_in_e%s -D 1 > /dev/null 2>&1 &' % (dmsa_file, str(entry_node_idx))
+    flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -i %s -I %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' % (logfile,str(entry_node_idx), shm_string,ip_string)
     #flesnet_commands = '../../../build/./flesnet -t rdma -L logs/flesnet_input_file.log -i 0 -I shm:/fles_in/0 -o 0 -O shm:/fles_out/0 --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' 
     result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     time.sleep(1)
@@ -79,8 +92,10 @@ arg = docopt.docopt(__doc__, version='0.2')
 
 ip = arg["<ip>"]
 logfile = arg["<logfile>"]
+num_entry_nodes = arg["<num_build_nodes>"]
+entry_node_idx = arg["<build_node_idx>"]
 #print(ip)
-entry_nodes('../../../build/500GB.dmsa',ip, logfile)
+entry_nodes('../../../build/500GB.dmsa',ip, logfile,num_entry_nodes, entry_node_idx)
 #print('iuefbuiweb')
 '''
 input_data = ''
