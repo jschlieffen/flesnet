@@ -27,8 +27,10 @@ def calc_str(ip,num_build_nodes):
         if part != "":
             ip_string += "tcp://" + part + '/0'
     shm_string = ""
-    for i in range(0,num_build_nodes):
+    for i in range(0,int(num_build_nodes)):
         shm_string += "shm:/fles_out_b%s" % (str(i))
+    print(shm_string)
+    #print(ip_string)
     return ip_string, shm_string
 
 def build_nodes(ip,logfile, num_build_nodes, build_node_idx):

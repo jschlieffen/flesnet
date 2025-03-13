@@ -165,11 +165,12 @@ class slurm_commands:
 
 class Entry_nodes(slurm_commands):
     
-    def __init__(self,node_list,build_nodes_ips,build_nodes_eth_ips):
+    def __init__(self,node_list,build_nodes_ips,build_nodes_eth_ips, num_entry_nodes):
         super().__init__()
         self.node_list = node_list
         self.build_nodes_ips = build_nodes_ips
         self.build_nodes_eth_ips = build_nodes_eth_ips
+        self.num_entry_nodes = num_entry_nodes
         self.pids = []
     
     #TODO: remove node id from the functioninput
@@ -199,7 +200,7 @@ class Entry_nodes(slurm_commands):
         for node in self.node_list.keys():
             logfile = "logs/entry_node_%s.log" % node
             print('test123: ', self.build_nodes_ips)
-            command = 'srun --nodelist=%s -N 1 %s %s %s' % (node,file,logfile,self.build_nodes_ips)
+            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s' % (node,file,logfile,self.build_nodes_ips, self.num_entry_nodes ,self.node_list[node]['entry_node_idx'])
             result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print(result.poll())    
             time.sleep(5)
@@ -229,9 +230,10 @@ class Entry_nodes(slurm_commands):
     
 class Build_nodes(slurm_commands):
     
-    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips):
+    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, num_build_nodes):
         super().__init__()
         self.node_list = node_list
+        self.num_build_nodes = num_build_nodes
         self.entry_node_ips = entry_nodes_ips
         self.entry_node_eth_ips = entry_nodes_eth_ips
         self.pids = []
@@ -242,7 +244,7 @@ class Build_nodes(slurm_commands):
         for node in self.node_list.keys():
             logfile = 'logs/build_node_%s.log' % (node)
             print('test12234', self.entry_node_ips)
-            command = 'srun --nodelist=%s -N 1 %s %s %s' % (node,file,logfile,self.entry_node_ips)
+            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s' % (node,file,logfile,self.entry_node_ips, self.num_build_nodes ,self.node_list[node]['build_node_idx'])
             result = subprocess.Popen(command, shell=True,stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print('start_build_nodes')
             print(result.poll())        
@@ -267,7 +269,11 @@ class Build_nodes(slurm_commands):
             print('Error: ', stderr)
             print('\n')
     
-     
+
+# =============================================================================
+# Check for different output of the command SLURM_NODELIST,
+# e.g. htc-cmp[501-504]
+# =============================================================================
 class execution(slurm_commands):
     
     def __init__(self,num_entrynodes, num_buildnodes):
@@ -283,8 +289,8 @@ class execution(slurm_commands):
         self.entry_nodes_eth_ips = ""
         self.build_nodes_eth_ips = ""
         self.get_eth_ips()
-        self.entry_nodes_cls = Entry_nodes(self.entry_nodes,self.build_nodes_ips,self.build_nodes_eth_ips)
-        self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips)
+        self.entry_nodes_cls = Entry_nodes(self.entry_nodes,self.build_nodes_ips,self.build_nodes_eth_ips, self.num_entrynodes)
+        self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips, self.num_buildnodes)
         
     
     def get_node_list(self):
@@ -323,6 +329,9 @@ class execution(slurm_commands):
         if node_list is None:
             print("Error: SLURM_NODELIST is not set.")
             sys.exit(1)
+        # =============================================================================
+        # Note: Hier aendert sich vielleicht noch was
+        # =============================================================================
         elif len(node_list) != self.num_entrynodes + self.num_buildnodes:
             print('Incorrect number of nodes')
             sys.exit(1)
@@ -335,6 +344,7 @@ class execution(slurm_commands):
             if entry_nodes_cnt < self.num_entrynodes:
                 self.entry_nodes[node] = {
                     'node' : node,
+                    'entry_node_idx' : entry_nodes_cnt,
                     'inf_ip' : node_ip,
                     'eth_ip' : node_eth_ip}
                     #'allocated_build_node' : ''} #to be inserted later
@@ -342,6 +352,7 @@ class execution(slurm_commands):
             elif build_nodes_cnt < self.num_buildnodes:
                 self.build_nodes[node] = {
                     'node' : node,
+                    'build_node_idx' : build_nodes_cnt,
                     'inf_ip' : node_ip,
                     'eth_ip' : node_eth_ip}
                     #'allocated_entry_node' : ''} #to be inserted later
@@ -374,6 +385,8 @@ class execution(slurm_commands):
     def stop_via_ctrl_c(self):
         try: 
             self.monitoring()
+            #while True:
+            #    time.sleep(1)
         except KeyboardInterrupt:
             print('Interrupting')
             self.build_nodes_cls.stop_flesnet()

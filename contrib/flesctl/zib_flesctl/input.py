@@ -26,8 +26,10 @@ def calc_str(ip,num_entry_nodes):
         if part != "":
             ip_string += "tcp://" + part + '/0'
     shm_string = ""
-    for i in range(0,num_entry_nodes):
+    for i in range(0,int(num_entry_nodes)):
         shm_string += "shm:/fles_in_e%s" % (str(i))
+    print(shm_string)
+    print(ip_string)
     return ip_string, shm_string
 
 
@@ -92,8 +94,8 @@ arg = docopt.docopt(__doc__, version='0.2')
 
 ip = arg["<ip>"]
 logfile = arg["<logfile>"]
-num_entry_nodes = arg["<num_build_nodes>"]
-entry_node_idx = arg["<build_node_idx>"]
+num_entry_nodes = arg["<num_entry_nodes>"]
+entry_node_idx = arg["<entry_node_idx>"]
 #print(ip)
 entry_nodes('../../../build/500GB.dmsa',ip, logfile,num_entry_nodes, entry_node_idx)
 #print('iuefbuiweb')
