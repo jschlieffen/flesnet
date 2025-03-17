@@ -271,8 +271,8 @@ class Build_nodes(slurm_commands):
     
 
 # =============================================================================
-# Check for different output of the command SLURM_NODELIST,
-# e.g. htc-cmp[501-504]
+# TODO: Check for different output of the command SLURM_NODELIST,
+# e.g. htc-cmp[501-504] done but untested
 # =============================================================================
 class execution(slurm_commands):
     
@@ -295,8 +295,22 @@ class execution(slurm_commands):
     
     def get_node_list(self):
         node_str = os.environ.get('SLURM_NODELIST')
-        nodes_numbers = re.findall(r'\d+',node_str)
-        node_list = [f"htc-cmp{num}" for num in nodes_numbers]
+        #nodes_numbers = re.findall(r'\d+',node_str)
+        #node_list = [f"htc-cmp{num}" for num in nodes_numbers]
+        range_pattern = re.search(r'(.*)\[(\d+)-(\d+)\]', node_str)
+        list_pattern = re.search(r'(.*)\[(\d+(?:,\d+)*)\]', node_str)
+        if range_pattern:
+            base, start, end = range_pattern.groups()
+            start, end = int(start), int(end)
+            node_list = [f"{base}{i}" for i in range(start, end + 1)]
+                      
+        elif list_pattern:
+            base, numbers = list_pattern.groups()
+            num_list = numbers.split(",")
+            node_list = [f"{base}{num.strip()}" for num in num_list]
+        else:
+            print("Invalid format")
+
         return node_list
     
     def get_eth_ips(self):
@@ -411,6 +425,7 @@ class execution(slurm_commands):
             #print('test')
             #mon.sequential_monitoring(['logs/flesnet_input_file.log','logs/flesnet_output_file.log'],[500,1000])
         #curses.wrapper(mon.main,[('logs/flesnet_input_file.log',1000), ('logs/flesnet_output_file.log',2000)])
+        print(file_names)
         curses.wrapper(mon.main,file_names)
         
 def main():
@@ -423,7 +438,7 @@ def main():
     #s.alloc_nodes('htc-cmp507')
     #print('test3')
     if allocating_nodes != '0':
-        s.alloc_nodes(4)
+        s.alloc_nodes(5)
         #s.exit_node('jsdfbjkwebf')
     else:
         """
@@ -454,7 +469,7 @@ def main():
         # s.exit_node('jkfeb')
         """
         print('test')
-        exec_ = execution(2, 2)
+        exec_ = execution(3, 2)
         #exec_.schedule_nodes()
         print('Entry nodes: ', exec_.entry_nodes)
         print('Build nodes: ', exec_.build_nodes)

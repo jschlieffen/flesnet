@@ -25,10 +25,10 @@ def calc_str(ip,num_build_nodes):
     parts = ip.split('sep')
     for part in parts:
         if part != "":
-            ip_string += "tcp://" + part + '/0'
+            ip_string += "tcp://" + part + '/0 '
     shm_string = ""
     for i in range(0,int(num_build_nodes)):
-        shm_string += "shm:/fles_out_b%s" % (str(i))
+        shm_string += "shm:/fles_out_b%s/0 " % (str(i))
     print(shm_string)
     #print(ip_string)
     return ip_string, shm_string
