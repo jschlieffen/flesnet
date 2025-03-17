@@ -444,7 +444,7 @@ class execution(slurm_commands):
             #mon.sequential_monitoring(['logs/flesnet_input_file.log','logs/flesnet_output_file.log'],[500,1000])
         #curses.wrapper(mon.main,[('logs/flesnet_input_file.log',1000), ('logs/flesnet_output_file.log',2000)])
         print(file_names)
-        curses.wrapper(mon.main,file_names)
+        curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes)
         
 def main():
     arg = docopt.docopt(__doc__, version='0.2')

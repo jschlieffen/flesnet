@@ -12,6 +12,9 @@ import sys
 import os
 import curses
 
+# =============================================================================
+# TODO: Search the Bottleneck. Very likely in the tail funct.
+# =============================================================================
 def get_data_rate(log_line):
     match = re.search(r'(\d+\.\d+)\sGB/s', log_line)
     if match:
@@ -39,15 +42,21 @@ def calc_outout_str(input_string):
     #else:
         #print("No match found.")
 
-def draw_progress_bar(stdscr, data_dict):
+def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes):
     stdscr.clear()
     bar_width = 50
-    
+
     curses.start_color()
     curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK) 
     curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)   
     curses.init_pair(3, curses.COLOR_MAGENTA, curses.COLOR_BLACK) 
-    i = 0
+    curses.init_pair(4, curses.COLOR_CYAN, curses.COLOR_BLACK)
+    curses.init_pair(5, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    stdscr.addstr(0, 0, "Number of: ")
+    stdscr.addstr("entry nodes: " + str(num_entry_nodes), curses.color_pair(4))
+    stdscr.addstr(1,0, "           build nodes: " + str(num_build_nodes), curses.color_pair(5))
+    i = 2
+    #stdscr.addstr
     for key,val in data_dict.items():
         progress = calculate_progress(val['current_data'], val['total_data'])
         #with open('prog.txt', 'w') as file:
@@ -57,8 +66,12 @@ def draw_progress_bar(stdscr, data_dict):
         output_str = calc_outout_str(key)
         green = u'\u2500' * int(progress * bar_width)
         red = u'\u2500' * (bar_width - len(green))
-        
-        stdscr.addstr(i, 0, "Progress Bar " + output_str + ': ')
+        if 'entry node' in output_str:
+            stdscr.addstr(i, 0, output_str + ': ', curses.color_pair(4))
+        elif 'build node' in output_str:
+            stdscr.addstr(i, 0, output_str + ': ', curses.color_pair(5))
+        else:
+            stdscr.addstr(i, 0, output_str + ': ')
         stdscr.addstr(green, curses.color_pair(1))
         stdscr.addstr(red, curses.color_pair(2))   
         stdscr.addstr(f" {val['current_data']:12.2f} / {val['total_data']:.2f}", curses.color_pair(3))  
@@ -77,7 +90,7 @@ def tail_file(file_path):
                 continue
             yield line
 
-def main(stdscr,file_names):
+def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
 
     data_dict = {}
 
@@ -100,7 +113,7 @@ def main(stdscr,file_names):
                 data_dict[key]['current_data'] += data_rate
             except StopIteration:
                 data_rate = 0.0
-        draw_progress_bar(stdscr, data_dict)
+        draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
     stdscr.refresh()
     #time.sleep(2)
 
