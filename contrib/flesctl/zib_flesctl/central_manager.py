@@ -194,13 +194,18 @@ class Entry_nodes(slurm_commands):
                     time.sleep(0.1)
         return None
     
-    def start_flesnet(self):
+    def start_flesnet(self,input_files):
         file = 'input.py'
         print(os.path.exists(file))
         for node in self.node_list.keys():
+            input_file = next((tup[1] for tup in input_files if tup[0] == node), None)
+            # TODO: Check if there is a faster implementation
+            if input_file is None:
+                print('test1234456')
+                input_file = next((tup[1] for tup in input_files if tup[0] == 'e_remaining'), None)
             logfile = "logs/entry_node_%s.log" % node
             print('test123: ', self.build_nodes_ips)
-            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s' % (node,file,logfile,self.build_nodes_ips, self.num_entry_nodes ,self.node_list[node]['entry_node_idx'])
+            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s %s' % (node,file,input_file,logfile,self.build_nodes_ips, self.num_entry_nodes ,self.node_list[node]['entry_node_idx'])
             result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print(result.poll())    
             time.sleep(5)
@@ -276,10 +281,12 @@ class Build_nodes(slurm_commands):
 # =============================================================================
 class execution(slurm_commands):
     
-    def __init__(self,num_entrynodes, num_buildnodes):
+    def __init__(self, input_files,num_entrynodes, num_buildnodes, show_total_data):
         super().__init__()
+        self.input_files = input_files
         self.num_entrynodes = num_entrynodes 
         self.num_buildnodes = num_buildnodes
+        self.show_total_data = show_total_data
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.schedule_nodes()
@@ -293,6 +300,7 @@ class execution(slurm_commands):
         self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips, self.num_buildnodes)
         
     
+    #TODO: Pattern does not work
     def get_node_list(self):
         node_str = os.environ.get('SLURM_NODELIST')
         #nodes_numbers = re.findall(r'\d+',node_str)
@@ -385,7 +393,7 @@ class execution(slurm_commands):
     def start_Flesnet(self):
         #file = 'input.py %s' (self.build_nodes_ips)
         #node_list = os.environ.get('SLURM_NODELIST')
-        self.entry_nodes_cls.start_flesnet()
+        self.entry_nodes_cls.start_flesnet(self.input_files)
         self.build_nodes_cls.start_flesnet()
             
     def start_Flesnet_zeromq(self):
@@ -397,15 +405,25 @@ class execution(slurm_commands):
     #def start_build_nodes(self):
     
     def stop_via_ctrl_c(self):
-        try: 
-            self.monitoring()
-            #while True:
-            #    time.sleep(1)
-        except KeyboardInterrupt:
-            print('Interrupting')
-            self.build_nodes_cls.stop_flesnet()
-            self.entry_nodes_cls.stop_flesnet()
-
+        if self.show_total_data:
+            try: 
+                self.monitoring()
+                #while True:
+                #    time.sleep(1)
+            except KeyboardInterrupt:
+                print('Interrupting')
+                self.build_nodes_cls.stop_flesnet()
+                self.entry_nodes_cls.stop_flesnet()
+        else: 
+            try: 
+                #self.monitoring()
+                while True:
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print('Interrupting')
+                self.build_nodes_cls.stop_flesnet()
+                self.entry_nodes_cls.stop_flesnet()
+            
         return None
         
     # =============================================================================
@@ -438,7 +456,7 @@ def main():
     #s.alloc_nodes('htc-cmp507')
     #print('test3')
     if allocating_nodes != '0':
-        s.alloc_nodes(5)
+        s.alloc_nodes(4)
         #s.exit_node('jsdfbjkwebf')
     else:
         """

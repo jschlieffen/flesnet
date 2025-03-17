@@ -6,9 +6,10 @@
 #@author: jschlieffen
 
 """
-Usage: input.py <logfile> <ip> <num_entry_nodes> <entry_node_idx>
+Usage: input.py <input_file> <logfile> <ip> <num_entry_nodes> <entry_node_idx>
 
 Arguments: 
+    <input_file> The input dmsa file for the mstool
     <ip> The ip address to use
     <logfile> The Logfile to use
     <num_entry_nodes> The number of entry nodes
@@ -35,7 +36,7 @@ def calc_str(ip,num_entry_nodes):
 
 # =============================================================================
 # TODO: Get better variable names for the commands
-# TODO: make the log file name depend on the node_id
+# TODO: make the log file name depend on the node_id done
 # =============================================================================
 def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx):
     #ip_string = "shm://" + ip.replace("sep", "/0 shm://") + "/0"
@@ -49,6 +50,7 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx):
     #        ip_string += "shm://" + part + '/%s ' % (i)
     #        i += 1
     #print(ip_string)
+    print(dmsa_file)
     ip_string, shm_string = calc_str(ip, num_entry_nodes)
     mstool_commands = '../../../build/./mstool -L logs/mstool_input_file.log -i %s -O fles_in_e%s -D 1 > /dev/null 2>&1 &' % (dmsa_file, str(entry_node_idx))
     flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -i %s -I %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' % (logfile,str(entry_node_idx), shm_string,ip_string)
@@ -91,13 +93,14 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx):
 #print('iuwefbbwe')
 print('test123')
 arg = docopt.docopt(__doc__, version='0.2')
-
+input_file = arg["<input_file>"]
 ip = arg["<ip>"]
 logfile = arg["<logfile>"]
 num_entry_nodes = arg["<num_entry_nodes>"]
 entry_node_idx = arg["<entry_node_idx>"]
 #print(ip)
-entry_nodes('../../../build/500GB.dmsa',ip, logfile,num_entry_nodes, entry_node_idx)
+#entry_nodes('../../../build/500GB.dmsa',ip, logfile,num_entry_nodes, entry_node_idx)
+entry_nodes(input_file,ip, logfile,num_entry_nodes, entry_node_idx)
 #print('iuefbuiweb')
 '''
 input_data = ''

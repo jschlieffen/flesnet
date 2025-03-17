@@ -102,6 +102,6 @@ def main(stdscr,file_names):
                 data_rate = 0.0
         draw_progress_bar(stdscr, data_dict)
     stdscr.refresh()
-    time.sleep(2)
+    #time.sleep(2)
 
 
