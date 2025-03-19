@@ -32,49 +32,19 @@ def calc_str(ip,num_build_nodes):
     shm_string = ""
     for i in range(0,int(num_build_nodes)):
         shm_string += "shm:/fles_out_b%s/0 " % (str(i))
-    print(shm_string)
-    #print(ip_string)
     return ip_string, shm_string
 
 def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token):
-    #print(ip)
-    #ip_string = "shm://" + ip.replace("sep", "/0 shm://") + "/0"
-    #ip_string = ""
-    #print(ip_string)
-    print(ip)
-    #i = 0
-    #parts = ip.split('sep')
-    #for part in parts:
-        #if part != "":
-            #ip_string += "tcp://" + part + '/0'
     ip_string, shm_string = calc_str(ip, num_build_nodes)
-    print(ip_string)
     os.environ['CBM_INFLUX_TOKEN'] = influx_token
-    print(os.getenv('CBM_INFLUX_TOKEN'))
-    print(influx_node_ip)
     flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -I %s -o %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" -m influx2:%s:8086:flesnet_status: > /dev/null 2>&1 &' % (logfile,ip_string, build_node_idx, shm_string, influx_node_ip)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    print(result_flesnet)
-    print(result_flesnet.poll())
-    '''
-    with open('logs/flesnet_output_file.log','r') as file:
-        file.seek(0,2)
-        while (True):
-            line = file.readline()
-            if line:
-                print(line.strip())
-            else:
-                time.sleep(0.5)
-    '''
     input_data = ''
     while input_data == '':
         input_data = sys.stdin.read().strip()
-    #result_mstool.terminate()
     result_flesnet.terminate()
-    #result_mstool.wait()
     result_flesnet.wait()
 
-print('test')
 arg = docopt.docopt(__doc__, version='0.2')
 
 ip = arg["<ip>"]
@@ -83,7 +53,4 @@ num_build_nodes = arg["<num_build_nodes>"]
 build_node_idx = arg["<build_node_idx>"]
 influx_node_ip = arg["<influx_node_ip>"]
 influx_token = arg["<influx_token>"]
-#print(ip)
-#entry_nodes('../../../build/500GB.dmsa',ip)
 build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token)
-print('iuefbuiweb')

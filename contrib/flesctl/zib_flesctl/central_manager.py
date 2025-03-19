@@ -32,16 +32,6 @@ class slurm_commands:
         None
         
     def alloc_nodes(self,node_numbers):
-        #command = ['srun', 
-        #           '--nodelist=%s'%(node_list),
-        #           '--time-min=00:15:00',
-        #           '--time=00:30:00',
-        #           'ip a']
-        #command = ['salloc',
-        #           '--nodes=%s'%(node_numbers),
-        #           '--time=00:05:00',
-        #           '--ntasks=1',
-        #           '&']
         command = 'salloc --nodes=%s -p big --constraint=Infiniband --time=00:20:00'%(node_numbers)
         allocation = subprocess.run(command,shell=True)
         print(allocation.returncode)
@@ -57,8 +47,6 @@ class slurm_commands:
     def pids(self,node_id):
         command = 'ps aux | grep %s' % (node_id) 
         try:
-            #result = subprocess.Popen(command, capture_output=True, text=True, check=True, shell=True)
-            #result = subprocess.run(command, capture_output=True, text=True, check=True, shell=True)
             result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             stdout,stderr = result.communicate()
             return stdout
@@ -66,10 +54,7 @@ class slurm_commands:
             print('Error')
             sys.exit(1)
         return None
-    
-    def kill_process(self,pid):
-        return None
-    
+
     # =============================================================================
     #  TODO:
     #       1. take care that the message may change
@@ -82,35 +67,18 @@ class slurm_commands:
         match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
         content = match.group(1)
         match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
-        #print(repr(content))
         content2 = match2.group(1)
-        #print(repr(content2))
-        #print(type(content))
-        #print(result.stdout)
         return content2
     
     def infiniband_ip(self,node_id):
         command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
-        #print('test')
-        #print('test_inf_id')
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        #result = subprocess.run(command, shell=True)
-        #print('test_inf_id2')
         result.wait()
         stdout,stderr = result.communicate()
-        #stdout = result.returncode
-        #print(stdout)
-        #print('test_inf_id3')
-        #print(stdout)
         match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
-        #print(match)
         content = match.group(1)
         match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
-        #print(repr(content))
         content2 = match2.group(1)
-        #print(repr(content2))
-        #print(type(content))
-        #print(result.stdout)
         return content2
         
     # =============================================================================
@@ -119,39 +87,13 @@ class slurm_commands:
     #   2. make this a parallel process.
     # =============================================================================
     def start_customize_program(self,program_name,node_id):
-        #command = 'srun --nodelist=%s %s &> /dev/null &' %(node_id,program_name)
         command = '%s &> /dev/null &' %(program_name)
-        #result = subprocess.run(command,capture_output=True, text=True, check=True, shell=True)
-        #command = 'sbatch --nodelist=%s %s &> /dev/null &' % (node_id,program_name)
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        #try:
-            #print('test')
-            #result = subprocess.Popen(command, capture_output=True, text=True, check=True, shell=True)
-            #return result.stdout
-        #except subprocess.CalledProcessError as e:
-            #print('Error')
-            #sys.exit(1)
-        print('test1')
-        #log_variable = ""
-        #print(result.stdout)
-        print('test2')
-        #print(result.stderr)
-        print(result)
-        #stdout, stderr = result.communicate()
-        print('test3')
-        #print(stderr)
-        print(result.poll())
         return None
     
     def srun_test(self,file, node_id):
         command ='srun --nodelist=%s python3 %s' % (node_id,file)
-        print(os.path.exists(file))
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-        print(result)
-        #stdout, stderr = result.communicate()
-        #print('test3')
-        #print(stderr)
-        print(result.poll())
         return None
     
     #Funktioniert nicht wie es soll.
@@ -170,56 +112,26 @@ class Entry_nodes(slurm_commands):
         self.num_entry_nodes = num_entry_nodes
         self.pids = []
     
-    #TODO: remove node id from the functioninput
-    def start_mstool(self,node_id):
-        program_string = '../../../build/./mstool -i ../../../build/500GB.dmsa -O fles_in -D 1 -L mstool.log'
-        self.start_customize_program(program_string, node_id)
-    
-    def start_flesnet_old(self,node_id):
-        program_string = '../../../build/./flesnet -L ttt.log -t zeromq -i 0 -I shm:/fles_in/0 -o 0 -O shm:/fles_out/0 --timeslice-size 1 --processor-instances 0 -e "_"'
-        self.start_customize_program(program_string, node_id)
-        time.sleep(5)
-        with open('ttt.log', 'r') as file:
-            print(file.read())
-            file.seek(0,2)
-            while(True):
-                line = file.readline()
-                if line:
-                    print(line.strip())
-                else:
-                    #print('test')
-                    time.sleep(0.1)
-        return None
-    
+
     def start_flesnet(self,input_files, influx_node_ip, influx_token):
         file = 'input.py'
-        print(os.path.exists(file))
         for node in self.node_list.keys():
             input_file = next((tup[1] for tup in input_files if tup[0] == node), None)
             # TODO: Check if there is a faster implementation
             if input_file is None:
-                print('test1234456')
                 input_file = next((tup[1] for tup in input_files if tup[0] == 'e_remaining'), None)
             logfile = "logs/entry_node_%s.log" % node
-            print('test123: ', self.build_nodes_ips)
             command = 'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s' % (node,file,input_file,logfile,self.build_nodes_ips, self.num_entry_nodes ,self.node_list[node]['entry_node_idx'], influx_node_ip, influx_token)
-            result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            print(result.poll())    
-            time.sleep(5)
-            #stdout,stderr = result.communicate()
-            #result.stdin.write('foobar')
+            result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
+            time.sleep(1)
             self.pids += [result]
-            #for stdout_line in iter(result.stdout.readline, ''):
-                #print(stdout_line, end='')
         return None
     
     def start_flesnet_zeromq(self):
         file = 'input_zeromq.py'
-        print(os.path.exists(file))
         for node in self.node_list.keys():
             command = 'srun --nodelist=%s -N 1 %s %s' % (node,file,self.build_nodes_eth_ips)
-            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            print(result.poll())        
+            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)    
         return None
     
     def stop_flesnet(self):
@@ -242,25 +154,18 @@ class Build_nodes(slurm_commands):
         
     def start_flesnet(self, influx_node_ip, influx_token):
         file = 'output.py'
-        print(os.path.exists(file))
         for node in self.node_list.keys():
             logfile = 'logs/build_node_%s.log' % (node)
-            print('test12234', self.entry_node_ips)
             command = 'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s' % (node,file,logfile,self.entry_node_ips, self.num_build_nodes ,self.node_list[node]['build_node_idx'], influx_node_ip, influx_token)
-            result = subprocess.Popen(command, shell=True,stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            print('start_build_nodes')
-            print(result.poll())        
+            result = subprocess.Popen(command, shell=True,stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)        
             self.pids += [result]
         return None
     
     def start_flesnet_zeromq(self):
         file = 'output_zeromq.py'
-        print(os.path.exists(file))
         for node in self.node_list.keys():
             command = 'srun --nodelist=%s -N 1 %s %s' % (node,file,self.entry_node_eth_ips)
-            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            print('start_build_nodes')
-            print(result.poll())        
+            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)    
         return None
 
     def stop_flesnet(self):
@@ -302,64 +207,31 @@ class execution(slurm_commands):
     #TODO: Pattern does not work
     def get_node_list(self):
         node_str = os.environ.get('SLURM_NODELIST')
-        '''
-        print(node_str)
-        #nodes_numbers = re.findall(r'\d+',node_str)
-        #node_list = [f"htc-cmp{num}" for num in nodes_numbers]
-        range_pattern = re.search(r'(.*)\[(\d+)-(\d+)\]', node_str)
-        list_pattern = re.search(r'(.*)\[(\d+(?:,\d+)*)\]', node_str)
-        if range_pattern:
-            print('test 1')
-            base, start, end = range_pattern.groups()
-            start, end = int(start), int(end)
-            node_list = [f"{base}{i}" for i in range(start, end + 1)]
-                      
-        elif list_pattern:
-            print('test 2')
-            base, numbers = list_pattern.groups()
-            num_list = numbers.split(",")
-            node_list = [f"{base}{num.strip()}" for num in num_list]
-        else:
-            print("Invalid format")
-        print(node_list)
-        '''
-        
         node_list = []
-
         range_pattern = re.findall(r'(.*?)(\d+)-(\d+)', node_str)
-
         list_pattern = re.findall(r'(.*?)(\d+(?:,\d+)*)', node_str)
-
         for base, start, end in range_pattern:
             start, end = int(start), int(end)
             node_list.extend([f"htc-cmp{i}" for i in range(start, end + 1)])
-
         for base, numbers in list_pattern:
             num_list = numbers.split(",")
             node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
-
         node_list = sorted(set(node_list))
-
-
         return node_list
+    
+    
     
     def get_eth_ips(self):
         for key, val in self.entry_nodes.items():
             self.entry_nodes_eth_ips += 'shm://' + val['eth_ip'] + '/0'
         for key, val in self.build_nodes.items():
             self.build_nodes_eth_ips += 'shm://' + val['eth_ip'] + '/0'
-        print(self.entry_nodes_eth_ips)
-        print(self.build_nodes_eth_ips)
             
         
     def get_ips(self):
         for key,val in self.entry_nodes.items():
-            print(key)
-            print(val['inf_ip'])
             self.entry_nodes_ips += val['inf_ip'] + "sep"
         for key,val in self.build_nodes.items():
-            print(key)
-            print(val['inf_ip'])
             self.build_nodes_ips += val['inf_ip'] + "sep"
             
     # =============================================================================
@@ -367,7 +239,6 @@ class execution(slurm_commands):
     # =============================================================================
     def schedule_nodes(self):
         node_list = self.get_node_list()
-        print(node_list)
         entry_nodes_cnt = 0
         build_nodes_cnt = 0
         if node_list is None:
@@ -383,15 +254,12 @@ class execution(slurm_commands):
             node_ip = self.infiniband_ip(node)
             node_eth_ip = self.ethernet_ip(node)
             time.sleep(1)
-            print(node)
-            print(node_ip)
             if entry_nodes_cnt < self.num_entrynodes:
                 self.entry_nodes[node] = {
                     'node' : node,
                     'entry_node_idx' : entry_nodes_cnt,
                     'inf_ip' : node_ip,
                     'eth_ip' : node_eth_ip}
-                    #'allocated_build_node' : ''} #to be inserted later
                 entry_nodes_cnt += 1
             elif build_nodes_cnt < self.num_buildnodes:
                 self.build_nodes[node] = {
@@ -399,13 +267,12 @@ class execution(slurm_commands):
                     'build_node_idx' : build_nodes_cnt,
                     'inf_ip' : node_ip,
                     'eth_ip' : node_eth_ip}
-                    #'allocated_entry_node' : ''} #to be inserted later
                 build_nodes_cnt += 1
             else:
                 print('unexpected error with the number of nodes')
                 sys.exit(1)
-            #self.bijectiv_mapping()
      
+        
     def bijectiv_mapping(self):
         for entry_node, build_node in zip(self.entry_nodes.keys(), self.build_nodes.keys()):
             self.entry_nodes[entry_node]['allocated_build_node'] = build_node
@@ -413,32 +280,24 @@ class execution(slurm_commands):
     
     
     def start_Flesnet(self):
-        #file = 'input.py %s' (self.build_nodes_ips)
-        #node_list = os.environ.get('SLURM_NODELIST')
         self.entry_nodes_cls.start_flesnet(self.input_files,self.influx_node_ip, self.influx_token)
         self.build_nodes_cls.start_flesnet(self.influx_node_ip, self.influx_token)
             
     def start_Flesnet_zeromq(self):
-        #file = 'input.py %s' (self.build_nodes_ips)
-        #node_list = os.environ.get('SLURM_NODELIST')
         self.entry_nodes_cls.start_flesnet_zeromq()
         self.build_nodes_cls.start_flesnet_zeromq()
             
-    #def start_build_nodes(self):
     
     def stop_via_ctrl_c(self):
         if self.show_total_data:
             try: 
                 self.monitoring()
-                #while True:
-                #    time.sleep(1)
             except KeyboardInterrupt:
                 print('Interrupting')
                 self.build_nodes_cls.stop_flesnet()
                 self.entry_nodes_cls.stop_flesnet()
         else: 
             try: 
-                #self.monitoring()
                 while True:
                     time.sleep(1)
             except KeyboardInterrupt:
@@ -462,10 +321,6 @@ class execution(slurm_commands):
             logfile = 'logs/build_node_%s.log' % (build_node)
             total_data = 2000
             file_names.append((logfile,total_data))
-            #print('test')
-            #mon.sequential_monitoring(['logs/flesnet_input_file.log','logs/flesnet_output_file.log'],[500,1000])
-        #curses.wrapper(mon.main,[('logs/flesnet_input_file.log',1000), ('logs/flesnet_output_file.log',2000)])
-        print(file_names)
         curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes)
         
 def main():
@@ -474,53 +329,19 @@ def main():
     allocating_nodes = arg["<allocating_nodes>"]
     
     s = slurm_commands()
-    #print(type(allocating_nodes))
-    #s.alloc_nodes('htc-cmp507')
-    #print('test3')
+
     if allocating_nodes != '0':
         s.alloc_nodes(4)
-        #s.exit_node('jsdfbjkwebf')
     else:
-        """
-        node = os.environ.get('SLURM_NODELIST')
-        print(node)
-        print(type(node))
-        if node is None:
-            print("Error: SLURM_NODELIST is not set. Did you run this within a SLURM job allocation?")
-        else:
-            print(f"Allocated node: {node}")
-        print('test1')
-        print(s.pids(node))
-        print('test2')
-        print(node)
-        #inf_id = s.infiniband_ip(node)
-        #print(inf_id)
-        #eth_id = s.ethernet_ip(node)
-        #print(eth_id)
-        #program_string = '../../build/./mstool -i ../../build/500GB.dmsa -O fles_in -D 1 -L test.log'
-        #s.start_customize_program(program_string, node)
-        print(s.pids(node))%
-        #e = Entry_nodes(1, 1)
-        #e.start_mstool(node)
-        #time.sleep(5)
-        #e.start_flesnet(node)
-        #print(s.ssh_to_node(node))
-        s.srun_test('input.py 87325', node)
-        # s.exit_node('jkfeb')
-        """
-        print('test')
+
         exec_ = execution(3, 2)
-        #exec_.schedule_nodes()
         print('Entry nodes: ', exec_.entry_nodes)
         print('Build nodes: ', exec_.build_nodes)
-        #exec_.get_ips()
         print('Build nodes ips: ' + exec_.entry_nodes_ips)
         print('Entry Nodes ips: ' + exec_.build_nodes_ips)
         exec_.start_Flesnet()
         exec_.stop_via_ctrl_c()
-        #exec_.start_Flesnet_zeromq()
-    print('test5')
-
+        
     
 if __name__ == '__main__':
     main()

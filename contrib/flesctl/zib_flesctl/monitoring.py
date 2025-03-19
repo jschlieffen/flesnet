@@ -19,7 +19,6 @@ def get_data_rate(log_line):
     match = re.search(r'(\d+\.\d+)\sGB/s', log_line)
     if match:
         return float(match.group(1))
-        #return 
     return 0.0
 
 def calculate_progress(current_data, total_data):
@@ -27,20 +26,14 @@ def calculate_progress(current_data, total_data):
 
 def calc_outout_str(input_string):
     
-    #log_path = "logs/build_node_htc-cmp12.log"  # Example log path
-    
-    # Regular expression to capture the required parts
     pattern = r"logs/(build|entry)_node_(.+?)\.log"
     
     match = re.search(pattern, input_string)
     if match:
-        node_type = match.group(1)  # 'build' or 'entry'
-        node_id = match.group(2)    # 'htc-cmp12' or similar
+        node_type = match.group(1) 
+        node_id = match.group(2)
         formatted_output = f"{node_type} node: {node_id}"
-        #print(formatted_output)
         return formatted_output
-    #else:
-        #print("No match found.")
 
 def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes):
     stdscr.clear()
@@ -56,13 +49,8 @@ def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes):
     stdscr.addstr("entry nodes: " + str(num_entry_nodes), curses.color_pair(4))
     stdscr.addstr(1,0, "           build nodes: " + str(num_build_nodes), curses.color_pair(5))
     i = 2
-    #stdscr.addstr
     for key,val in data_dict.items():
         progress = calculate_progress(val['current_data'], val['total_data'])
-        #with open('prog.txt', 'w') as file:
-            #file.write(str(progress)+ ' \n')
-            #file.write(key + ' \n')
-        #print(key)
         output_str = calc_outout_str(key)
         green = u'\u2500' * int(progress * bar_width)
         red = u'\u2500' * (bar_width - len(green))
@@ -115,6 +103,5 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
                 data_rate = 0.0
         draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
     stdscr.refresh()
-    #time.sleep(2)
 
 

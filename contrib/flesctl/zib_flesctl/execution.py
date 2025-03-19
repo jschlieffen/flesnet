@@ -13,10 +13,8 @@ class exec_:
     
     def __init__(self):
         self.Par_ = par.Params('config.cfg')
-        #self.start_sim()
 
     def start_sim(self):
-        print(self.Par_.input_file_list)
         execution_cls = cm.execution(self.Par_.input_file_list, self.Par_.entry_nodes, self.Par_.build_nodes, 
                                      self.Par_.show_total_data, self.Par_.influx_node_ip, self.Par_.influx_token)
         execution_cls.start_Flesnet()
