@@ -47,9 +47,6 @@ class slurm_commands:
         print(allocation.returncode)
         return allocation.returncode
     
-    def sbatch(self,node_numbers):
-        command = 'sbatch'
-    
     # DO NOT USE: Ask for password auth.
     def ssh_to_node(self,node_id):
         command = 'ssh %s' % (node_id)
@@ -303,21 +300,44 @@ class execution(slurm_commands):
     #TODO: Pattern does not work
     def get_node_list(self):
         node_str = os.environ.get('SLURM_NODELIST')
+        '''
+        print(node_str)
         #nodes_numbers = re.findall(r'\d+',node_str)
         #node_list = [f"htc-cmp{num}" for num in nodes_numbers]
         range_pattern = re.search(r'(.*)\[(\d+)-(\d+)\]', node_str)
         list_pattern = re.search(r'(.*)\[(\d+(?:,\d+)*)\]', node_str)
         if range_pattern:
+            print('test 1')
             base, start, end = range_pattern.groups()
             start, end = int(start), int(end)
             node_list = [f"{base}{i}" for i in range(start, end + 1)]
                       
         elif list_pattern:
+            print('test 2')
             base, numbers = list_pattern.groups()
             num_list = numbers.split(",")
             node_list = [f"{base}{num.strip()}" for num in num_list]
         else:
             print("Invalid format")
+        print(node_list)
+        '''
+        
+        node_list = []
+
+        range_pattern = re.findall(r'(.*?)(\d+)-(\d+)', node_str)
+
+        list_pattern = re.findall(r'(.*?)(\d+(?:,\d+)*)', node_str)
+
+        for base, start, end in range_pattern:
+            start, end = int(start), int(end)
+            node_list.extend([f"htc-cmp{i}" for i in range(start, end + 1)])
+
+        for base, numbers in list_pattern:
+            num_list = numbers.split(",")
+            node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
+
+        node_list = sorted(set(node_list))
+
 
         return node_list
     

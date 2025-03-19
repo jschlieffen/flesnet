@@ -35,7 +35,7 @@ def calc_str(ip,num_entry_nodes):
 
 
 # =============================================================================
-# TODO: Get better variable names for the commands
+# TODO: Get better variable names for the commands done
 # TODO: make the log file name depend on the node_id done
 # =============================================================================
 def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx):
