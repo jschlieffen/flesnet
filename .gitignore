@@ -8,3 +8,5 @@ xcuserdata/
 /.cproject
 /.project
 /.cache
+contrib/flesctl/zib_flesctl/__pycache__/
+__pycache__/
