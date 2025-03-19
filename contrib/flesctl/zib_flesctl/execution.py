@@ -17,7 +17,8 @@ class exec_:
 
     def start_sim(self):
         print(self.Par_.input_file_list)
-        execution_cls = cm.execution(self.Par_.input_file_list, self.Par_.entry_nodes, self.Par_.build_nodes, self.Par_.show_total_data)
+        execution_cls = cm.execution(self.Par_.input_file_list, self.Par_.entry_nodes, self.Par_.build_nodes, 
+                                     self.Par_.show_total_data, self.Par_.influx_node_ip, self.Par_.influx_token)
         execution_cls.start_Flesnet()
         execution_cls.stop_via_ctrl_c()
         

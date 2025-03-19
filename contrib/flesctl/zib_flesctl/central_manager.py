@@ -191,7 +191,7 @@ class Entry_nodes(slurm_commands):
                     time.sleep(0.1)
         return None
     
-    def start_flesnet(self,input_files):
+    def start_flesnet(self,input_files, influx_node_ip, influx_token):
         file = 'input.py'
         print(os.path.exists(file))
         for node in self.node_list.keys():
@@ -202,7 +202,7 @@ class Entry_nodes(slurm_commands):
                 input_file = next((tup[1] for tup in input_files if tup[0] == 'e_remaining'), None)
             logfile = "logs/entry_node_%s.log" % node
             print('test123: ', self.build_nodes_ips)
-            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s %s' % (node,file,input_file,logfile,self.build_nodes_ips, self.num_entry_nodes ,self.node_list[node]['entry_node_idx'])
+            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s' % (node,file,input_file,logfile,self.build_nodes_ips, self.num_entry_nodes ,self.node_list[node]['entry_node_idx'], influx_node_ip, influx_token)
             result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print(result.poll())    
             time.sleep(5)
@@ -240,13 +240,13 @@ class Build_nodes(slurm_commands):
         self.entry_node_eth_ips = entry_nodes_eth_ips
         self.pids = []
         
-    def start_flesnet(self):
+    def start_flesnet(self, influx_node_ip, influx_token):
         file = 'output.py'
         print(os.path.exists(file))
         for node in self.node_list.keys():
             logfile = 'logs/build_node_%s.log' % (node)
             print('test12234', self.entry_node_ips)
-            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s' % (node,file,logfile,self.entry_node_ips, self.num_build_nodes ,self.node_list[node]['build_node_idx'])
+            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s' % (node,file,logfile,self.entry_node_ips, self.num_build_nodes ,self.node_list[node]['build_node_idx'], influx_node_ip, influx_token)
             result = subprocess.Popen(command, shell=True,stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             print('start_build_nodes')
             print(result.poll())        
@@ -278,12 +278,14 @@ class Build_nodes(slurm_commands):
 # =============================================================================
 class execution(slurm_commands):
     
-    def __init__(self, input_files,num_entrynodes, num_buildnodes, show_total_data):
+    def __init__(self, input_files,num_entrynodes, num_buildnodes, show_total_data, influx_node_ip, influx_token):
         super().__init__()
         self.input_files = input_files
         self.num_entrynodes = num_entrynodes 
         self.num_buildnodes = num_buildnodes
         self.show_total_data = show_total_data
+        self.influx_node_ip = influx_node_ip
+        self.influx_token = influx_token
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.schedule_nodes()
@@ -413,8 +415,8 @@ class execution(slurm_commands):
     def start_Flesnet(self):
         #file = 'input.py %s' (self.build_nodes_ips)
         #node_list = os.environ.get('SLURM_NODELIST')
-        self.entry_nodes_cls.start_flesnet(self.input_files)
-        self.build_nodes_cls.start_flesnet()
+        self.entry_nodes_cls.start_flesnet(self.input_files,self.influx_node_ip, self.influx_token)
+        self.build_nodes_cls.start_flesnet(self.influx_node_ip, self.influx_token)
             
     def start_Flesnet_zeromq(self):
         #file = 'input.py %s' (self.build_nodes_ips)

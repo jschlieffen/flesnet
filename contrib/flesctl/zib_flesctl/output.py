@@ -5,13 +5,15 @@
 
 #@author: jschlieffen
 """
-Usage: output.py <logfile> <ip> <num_build_nodes> <build_node_idx>
+Usage: output.py <logfile> <ip> <num_build_nodes> <build_node_idx> <influx_node_ip> <influx_token>
 
 Arguments: 
     <ip> The ip address to use
     <logfile> The Logfile to use
     <num_build_nodes> The number of build nodes
     <build_node_idx> The index of the current build node
+    <influx_node_ip> The ip of the where the influx container is runnning
+    <influx_token> The token to the influx-db
 """
 
 
@@ -19,6 +21,7 @@ import subprocess
 import time
 import docopt
 import sys
+import os
 
 def calc_str(ip,num_build_nodes):
     ip_string = ""
@@ -33,7 +36,7 @@ def calc_str(ip,num_build_nodes):
     #print(ip_string)
     return ip_string, shm_string
 
-def build_nodes(ip,logfile, num_build_nodes, build_node_idx):
+def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token):
     #print(ip)
     #ip_string = "shm://" + ip.replace("sep", "/0 shm://") + "/0"
     #ip_string = ""
@@ -46,7 +49,10 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx):
             #ip_string += "tcp://" + part + '/0'
     ip_string, shm_string = calc_str(ip, num_build_nodes)
     print(ip_string)
-    flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -I %s -o %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' % (logfile,ip_string, build_node_idx, shm_string)
+    os.environ['CBM_INFLUX_TOKEN'] = influx_token
+    print(os.getenv('CBM_INFLUX_TOKEN'))
+    print(influx_node_ip)
+    flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -I %s -o %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" -m influx2:%s:8086:flesnet_status: > /dev/null 2>&1 &' % (logfile,ip_string, build_node_idx, shm_string, influx_node_ip)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     print(result_flesnet)
     print(result_flesnet.poll())
@@ -75,7 +81,9 @@ ip = arg["<ip>"]
 logfile = arg["<logfile>"]
 num_build_nodes = arg["<num_build_nodes>"]
 build_node_idx = arg["<build_node_idx>"]
+influx_node_ip = arg["<influx_node_ip>"]
+influx_token = arg["<influx_token>"]
 #print(ip)
 #entry_nodes('../../../build/500GB.dmsa',ip)
-build_nodes(ip,logfile, num_build_nodes, build_node_idx)
+build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token)
 print('iuefbuiweb')

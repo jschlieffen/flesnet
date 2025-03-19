@@ -15,6 +15,8 @@ class Params:
         self.build_nodes = 0
         self.input_file_list = []
         self.show_total_data = 0
+        self.influx_node_ip = ""
+        self.influx_token = ""
         self.get_params(config_file)
         
     def __str__(self):
@@ -29,7 +31,8 @@ class Params:
         self.build_nodes = config.getint('Number_of_Nodes', 'build_nodes')
         self.input_file_list = [(param, value) for param, value in config.items('input_file')]
         self.show_total_data = config.getint('Monotoring', 'show_total_data')
-        
+        self.influx_node_ip = config.get('influxdb', 'influx_node_ip')
+        self.influx_token = config.get('influxdb', 'token')
     
 def main():
     Par_ = Params('config.cfg')

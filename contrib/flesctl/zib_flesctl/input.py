@@ -6,7 +6,7 @@
 #@author: jschlieffen
 
 """
-Usage: input.py <input_file> <logfile> <ip> <num_entry_nodes> <entry_node_idx>
+Usage: input.py <input_file> <logfile> <ip> <num_entry_nodes> <entry_node_idx> <influx_node_ip> <influx_token>
 
 Arguments: 
     <input_file> The input dmsa file for the mstool
@@ -14,11 +14,14 @@ Arguments:
     <logfile> The Logfile to use
     <num_entry_nodes> The number of entry nodes
     <entry_node_idx> The index of the current entry node
+    <influx_node_ip> The ip of the where the influx container is runnning
+    <influx_token> The token to the influx-db
 """
 import subprocess
 import time
 import docopt
 import sys
+import os
 
 def calc_str(ip,num_entry_nodes):
     ip_string = ""
@@ -38,7 +41,7 @@ def calc_str(ip,num_entry_nodes):
 # TODO: Get better variable names for the commands done
 # TODO: make the log file name depend on the node_id done
 # =============================================================================
-def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx):
+def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token):
     #ip_string = "shm://" + ip.replace("sep", "/0 shm://") + "/0"
     #print(ip_string)
     #ip_string = ""
@@ -51,9 +54,11 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx):
     #        i += 1
     #print(ip_string)
     print(dmsa_file)
+    os.environ['CBM_INFLUX_TOKEN'] = influx_token
+    print(os.getenv('CBM_INFLUX_TOKEN'))
     ip_string, shm_string = calc_str(ip, num_entry_nodes)
-    mstool_commands = '../../../build/./mstool -L logs/mstool_input_file.log -i %s -O fles_in_e%s -D 1 > /dev/null 2>&1 &' % (dmsa_file, str(entry_node_idx))
-    flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -i %s -I %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' % (logfile,str(entry_node_idx), shm_string,ip_string)
+    mstool_commands = '../../../build/./mstool -i %s -O fles_in_e%s -D 1 > /dev/null 2>&1 &' % (dmsa_file, str(entry_node_idx))
+    flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -i %s -I %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" -m influx2:%s:8086:flesnet_status: > /dev/null 2>&1 &' % (logfile,str(entry_node_idx), shm_string,ip_string, influx_node_ip)
     #flesnet_commands = '../../../build/./flesnet -t rdma -L logs/flesnet_input_file.log -i 0 -I shm:/fles_in/0 -o 0 -O shm:/fles_out/0 --timeslice-size 1 --processor-instances 0 -e "_" > /dev/null 2>&1 &' 
     result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     time.sleep(1)
@@ -98,9 +103,11 @@ ip = arg["<ip>"]
 logfile = arg["<logfile>"]
 num_entry_nodes = arg["<num_entry_nodes>"]
 entry_node_idx = arg["<entry_node_idx>"]
+influx_node_ip = arg["<influx_node_ip>"]
+influx_token = arg["<influx_token>"]
 #print(ip)
 #entry_nodes('../../../build/500GB.dmsa',ip, logfile,num_entry_nodes, entry_node_idx)
-entry_nodes(input_file,ip, logfile,num_entry_nodes, entry_node_idx)
+entry_nodes(input_file,ip, logfile,num_entry_nodes, entry_node_idx, influx_node_ip, influx_token)
 #print('iuefbuiweb')
 '''
 input_data = ''
