@@ -35,6 +35,7 @@ def calc_outout_str(input_string):
         formatted_output = f"{node_type} node: {node_id}"
         return formatted_output
 
+#it seems as it is a problem with the number of refreshings
 def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes):
     stdscr.clear()
     bar_width = 50
@@ -74,14 +75,14 @@ def tail_file(file_path):
         while True:
             line = file.readline()
             if not line:
-                time.sleep(0.1) 
+                time.sleep(0.01) 
                 continue
             yield line
 
 def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
 
     data_dict = {}
-
+    #last_update = time.time()
     for file_name in file_names:
         data_dict[file_name[0]] = {
             'current_data' : 0.0,
@@ -93,6 +94,7 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
         for key,val in data_dict.items():
             file.write(key)
     '''
+
     while True:
         for key,val in data_dict.items():
             try:
@@ -101,7 +103,11 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
                 data_dict[key]['current_data'] += data_rate
             except StopIteration:
                 data_rate = 0.0
+        #current_time = time.time()
         draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
+        #if current_time - last_update >= 0.2:
+            #draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
+            #last_update = current_time
     stdscr.refresh()
 
 

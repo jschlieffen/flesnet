@@ -1,2 +1,0 @@
-0.6500394999999994 
-logs/build_node_htc-cmp521.log 

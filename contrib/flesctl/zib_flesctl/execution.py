@@ -9,6 +9,17 @@ Created on Mon Mar 17 16:28:18 2025
 import params as par
 import central_manager as cm
 
+
+# =============================================================================
+# TODOs: 1. make a possibility to disable grafana
+#        2. improve monotoring
+#        3. search for env- variables that may overwrite the config variables
+#        4. comment code
+#        5. write documentation for the code. 
+#        6. make a fitting implementation for the use of sbatch
+#        7. make zeromq implementation. (big problem I guess? different log files)
+#        8. make implementation for libfabric (get libabric run first)
+# =============================================================================
 class exec_:
     
     def __init__(self):
