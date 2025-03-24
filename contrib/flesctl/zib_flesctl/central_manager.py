@@ -37,12 +37,6 @@ class slurm_commands:
         print(allocation.returncode)
         return allocation.returncode
     
-    # DO NOT USE: Ask for password auth.
-    def ssh_to_node(self,node_id):
-        command = 'ssh %s' % (node_id)
-        ssh = subprocess.run(command, shell=True)
-        return ssh.returncode
-    
     #Todo: try-except for all slurm-commands
     def pids(self,node_id):
         command = 'ps aux | grep %s' % (node_id) 
@@ -81,11 +75,7 @@ class slurm_commands:
         content2 = match2.group(1)
         return content2
         
-    # =============================================================================
-    #  TODOs:
-    #   1. get the log message.
-    #   2. make this a parallel process.
-    # =============================================================================
+
     def start_customize_program(self,program_name,node_id):
         command = '%s &> /dev/null &' %(program_name)
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -96,10 +86,6 @@ class slurm_commands:
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         return None
     
-    #Funktioniert nicht wie es soll.
-    def exit_node(self,node_id):
-        command = 'exit'
-        subprocess.run(command, shell=True)
         
 
 class Entry_nodes(slurm_commands):
@@ -113,7 +99,7 @@ class Entry_nodes(slurm_commands):
         self.pids = []
     
 
-    def start_flesnet(self,input_files, influx_node_ip, influx_token):
+    def start_flesnet(self,input_files, influx_node_ip, influx_token, use_grafana):
         file = 'input.py'
         for node in self.node_list.keys():
             input_file = next((tup[1] for tup in input_files if tup[0] == node), None)
@@ -121,7 +107,7 @@ class Entry_nodes(slurm_commands):
             if input_file is None:
                 input_file = next((tup[1] for tup in input_files if tup[0] == 'e_remaining'), None)
             logfile = "logs/entry_node_%s.log" % node
-            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s' % (node,file,input_file,logfile,self.build_nodes_ips, self.num_entry_nodes ,self.node_list[node]['entry_node_idx'], influx_node_ip, influx_token)
+            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s' % (node,file,input_file,logfile,self.build_nodes_ips, self.num_entry_nodes ,self.node_list[node]['entry_node_idx'], influx_node_ip, influx_token, use_grafana)
             result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             time.sleep(1)
             self.pids += [result]
@@ -152,11 +138,11 @@ class Build_nodes(slurm_commands):
         self.entry_node_eth_ips = entry_nodes_eth_ips
         self.pids = []
         
-    def start_flesnet(self, influx_node_ip, influx_token):
+    def start_flesnet(self, influx_node_ip, influx_token, use_grafana):
         file = 'output.py'
         for node in self.node_list.keys():
             logfile = 'logs/build_node_%s.log' % (node)
-            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s' % (node,file,logfile,self.entry_node_ips, self.num_build_nodes ,self.node_list[node]['build_node_idx'], influx_node_ip, influx_token)
+            command = 'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s' % (node,file,logfile,self.entry_node_ips, self.num_build_nodes ,self.node_list[node]['build_node_idx'], influx_node_ip, influx_token, use_grafana)
             result = subprocess.Popen(command, shell=True,stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)        
             self.pids += [result]
         return None
@@ -177,13 +163,9 @@ class Build_nodes(slurm_commands):
             print('\n')
     
 
-# =============================================================================
-# TODO: Check for different output of the command SLURM_NODELIST,
-# e.g. htc-cmp[501-504] done but untested
-# =============================================================================
 class execution(slurm_commands):
     
-    def __init__(self, input_files,num_entrynodes, num_buildnodes, show_total_data, influx_node_ip, influx_token):
+    def __init__(self, input_files,num_entrynodes, num_buildnodes, show_total_data, influx_node_ip, influx_token, use_grafana):
         super().__init__()
         self.input_files = input_files
         self.num_entrynodes = num_entrynodes 
@@ -191,6 +173,7 @@ class execution(slurm_commands):
         self.show_total_data = show_total_data
         self.influx_node_ip = influx_node_ip
         self.influx_token = influx_token
+        self.use_grafana = use_grafana
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.schedule_nodes()
@@ -280,8 +263,8 @@ class execution(slurm_commands):
     
     
     def start_Flesnet(self):
-        self.entry_nodes_cls.start_flesnet(self.input_files,self.influx_node_ip, self.influx_token)
-        self.build_nodes_cls.start_flesnet(self.influx_node_ip, self.influx_token)
+        self.entry_nodes_cls.start_flesnet(self.input_files,self.influx_node_ip, self.influx_token, self.use_grafana)
+        self.build_nodes_cls.start_flesnet(self.influx_node_ip, self.influx_token, self.use_grafana)
             
     def start_Flesnet_zeromq(self):
         self.entry_nodes_cls.start_flesnet_zeromq()
@@ -289,6 +272,7 @@ class execution(slurm_commands):
             
     
     def stop_via_ctrl_c(self):
+        time.sleep(2)
         if self.show_total_data:
             try: 
                 self.monitoring()

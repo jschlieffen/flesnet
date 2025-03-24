@@ -5,7 +5,7 @@
 
 #@author: jschlieffen
 """
-Usage: output.py <logfile> <ip> <num_build_nodes> <build_node_idx> <influx_node_ip> <influx_token>
+Usage: output.py <logfile> <ip> <num_build_nodes> <build_node_idx> <influx_node_ip> <influx_token> <use_grafana>
 
 Arguments: 
     <ip> The ip address to use
@@ -14,6 +14,7 @@ Arguments:
     <build_node_idx> The index of the current build node
     <influx_node_ip> The ip of the where the influx container is runnning
     <influx_token> The token to the influx-db
+    <use_grafana> enables/disables grafana
 """
 
 
@@ -34,10 +35,13 @@ def calc_str(ip,num_build_nodes):
         shm_string += "shm:/fles_out_b%s/0 " % (str(i))
     return ip_string, shm_string
 
-def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token):
+def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana):
     ip_string, shm_string = calc_str(ip, num_build_nodes)
     os.environ['CBM_INFLUX_TOKEN'] = influx_token
-    flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -I %s -o %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" -m influx2:%s:8086:flesnet_status: > /dev/null 2>&1 &' % (logfile,ip_string, build_node_idx, shm_string, influx_node_ip)
+    grafana_string = ''
+    if use_grafana:
+        grafana_string = '-m influx2:%s:8086:flesnet_status: ' % (influx_node_ip)
+    flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -I %s -o %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" %s > /dev/null 2>&1 &' % (logfile,ip_string, build_node_idx, shm_string, grafana_string)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
     while input_data == '':
@@ -53,4 +57,5 @@ num_build_nodes = arg["<num_build_nodes>"]
 build_node_idx = arg["<build_node_idx>"]
 influx_node_ip = arg["<influx_node_ip>"]
 influx_token = arg["<influx_token>"]
-build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token)
+use_grafana = arg["<use_grafana>"]
+build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana)

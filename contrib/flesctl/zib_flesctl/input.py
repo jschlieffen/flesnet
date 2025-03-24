@@ -6,7 +6,7 @@
 #@author: jschlieffen
 
 """
-Usage: input.py <input_file> <logfile> <ip> <num_entry_nodes> <entry_node_idx> <influx_node_ip> <influx_token>
+Usage: input.py <input_file> <logfile> <ip> <num_entry_nodes> <entry_node_idx> <influx_node_ip> <influx_token> <use_grafana>
 
 Arguments: 
     <input_file> The input dmsa file for the mstool
@@ -16,6 +16,7 @@ Arguments:
     <entry_node_idx> The index of the current entry node
     <influx_node_ip> The ip of the where the influx container is runnning
     <influx_token> The token to the influx-db
+    <use_grafana> enables/disables grafana
 """
 
 import subprocess
@@ -40,11 +41,14 @@ def calc_str(ip,num_entry_nodes):
 # TODO: Get better variable names for the commands done
 # TODO: make the log file name depend on the node_id done
 # =============================================================================
-def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token):
+def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana):
     os.environ['CBM_INFLUX_TOKEN'] = influx_token
     ip_string, shm_string = calc_str(ip, num_entry_nodes)
+    grafana_string = ''
+    if use_grafana:
+        grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
     mstool_commands = '../../../build/./mstool -i %s -O fles_in_e%s -D 1 > /dev/null 2>&1 &' % (dmsa_file, str(entry_node_idx))
-    flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -i %s -I %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" -m influx2:%s:8086:flesnet_status: > /dev/null 2>&1 &' % (logfile,str(entry_node_idx), shm_string,ip_string, influx_node_ip)
+    flesnet_commands = '../../../build/./flesnet -t rdma -L %s -l 2 -i %s -I %s -O %s --timeslice-size 1 --processor-instances 0 -e "_" %s > /dev/null 2>&1 &' % (logfile,str(entry_node_idx), shm_string,ip_string, grafana_string)
     result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     time.sleep(1)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -66,7 +70,8 @@ num_entry_nodes = arg["<num_entry_nodes>"]
 entry_node_idx = arg["<entry_node_idx>"]
 influx_node_ip = arg["<influx_node_ip>"]
 influx_token = arg["<influx_token>"]
-entry_nodes(input_file,ip, logfile,num_entry_nodes, entry_node_idx, influx_node_ip, influx_token)
+use_grafana = arg["<use_grafana>"]
+entry_nodes(input_file,ip, logfile,num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana)
 
 
 
