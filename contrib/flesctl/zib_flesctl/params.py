@@ -20,6 +20,7 @@ class Params:
         self.use_grafana = 0
         self.influx_node_ip = ""
         self.influx_token = ""
+        self.overlap_usage_of_nodes = 0
         self.config = cfg.ConfigParser()
         self.config.read(config_file)
         #self.config = config_file
@@ -37,9 +38,11 @@ class Params:
         self.build_nodes = self.get_value('Number_of_Nodes', 'build_nodes', 'int', True)
         self.input_file_list = [(param, value) for param, value in self.config.items('input_file')]
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)
+        self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', True)
         self.use_grafana = self.get_value('influxdb', 'use_grafana', 'int', True)
         self.influx_node_ip = self.get_value('influxdb', 'influx_node_ip','str', False)
         self.influx_token = self.get_value('influxdb', 'token','str', False)
+        #print(self.show_total_data)
     
     def get_value(self, section, param, par_type, required=False):
         val = os.getenv(param)
@@ -47,6 +50,8 @@ class Params:
         #config.read(self.config_file)
         
         if val is not None:
+            if par_type=='int':
+                return int(val)
             return val
         elif self.config.has_option(section, param):
             if par_type == 'int':
@@ -55,6 +60,7 @@ class Params:
                 return self.config.get(section, param)
         elif required:
             print('Error: Param not set: %s' % (param))
+            sys.exit(1)
         else:
             return None
 
