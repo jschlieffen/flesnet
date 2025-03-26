@@ -14,7 +14,7 @@ import central_manager as cm
 # TODOs: 1. make a possibility to disable grafana done
 #        2. improve monotoring
 #        3. search for env- variables that may overwrite the config variables
-#           done except input file list (likely do not do)
+#           done except input file list done
 #        4. comment code 
 #        5. write documentation for the code. 
 #        6. make a fitting implementation for the use of sbatch

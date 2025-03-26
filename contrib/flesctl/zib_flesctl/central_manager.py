@@ -25,6 +25,7 @@ import docopt
 import re
 import monitoring as mon
 import curses
+import test_terminal_Graph_v2 as test
 
 class slurm_commands:
     
@@ -405,6 +406,8 @@ class execution(slurm_commands):
             total_data = 2000
             file_names.append((logfile,total_data))
         curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes)
+        #test.tail_file(file_names[0][0])
+        #test.main(file_names)
         
 def main():
     arg = docopt.docopt(__doc__, version='0.2')
