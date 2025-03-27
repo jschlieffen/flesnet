@@ -5,35 +5,37 @@ Created on Wed Mar 19 17:22:50 2025
 
 @author: jschlieffen
 """
-import plotext as plt
-import numpy as np
-import pandas as pd
+#import plotext as plt
+import matplotlib.pyplot as plt
+import curses
 
-# Set date range
-plt.date_form("d/m/Y")
-start = plt.string_to_datetime("01/01/2023")
-end = plt.today_datetime()
-dates = pd.date_range(start=start, end=end, freq='B').strftime('%d/%m/%Y')  # Generate business days dates
+def main(stdscr):
+    # Clear the screen
+    stdscr.clear()
 
-# Generate random stock data
-np.random.seed(42)  # For reproducibility
-open_prices = np.random.rand(len(dates)) * 100 + 200  # Random open prices between 200 and 300
-high_prices = open_prices + np.random.rand(len(dates)) * 10  # High prices slightly above open
-low_prices = open_prices - np.random.rand(len(dates)) * 10  # Low prices slightly below open
-close_prices = np.random.rand(len(dates)) * 100 + 200  # Random close prices between 200 and 300
+    # Data for the plot
+    x = [i for i in range(10)]
+    y = [i ** 2 for i in range(10)]  # Simple quadratic data
 
-# Combine data into a DataFrame
-data = pd.DataFrame({
-    'Open': open_prices,
-    'High': high_prices,
-    'Low': low_prices,
-    'Close': close_prices
-}, index=pd.to_datetime(dates, format='%d/%m/%Y'))
+    # Create the plot using plotext
+    plt.plot(x, y)
 
-# Plotting
-plt.clf()
-plt.theme("dark")
-plt.candlestick(dates, data)
-plt.title("Random Stock Price CandleSticks")
+    # Set plot title and labels
+    plt.title("Quadratic Function")
+    plt.xlabel("X-axis")
+    plt.ylabel("Y-axis")
 
-plt.show()
+    # Now, render the plot as a string and display via curses
+    #plot_str = plt.figtext()
+
+    # Display the plot in the terminal using curses
+    stdscr.addstr(0, 0, plot_str)  # Positioning at the top-left corner
+    stdscr.refresh()
+
+    # Wait for user input to exit
+    stdscr.getch()
+
+# Initialize the curses application
+curses.wrapper(main)
+
+

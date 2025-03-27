@@ -5,89 +5,95 @@ Created on Wed Mar 26 17:34:35 2025
 
 @author: jschlieffen
 """
+
+import plotext as plt
 import curses
-import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-import time
+import re
+from contextlib import redirect_stdout
 import io
 
-def plot_to_ascii(fig, width, height):
-    # Convert the plot to a PNG image in memory
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', bbox_inches='tight', dpi=80)
-    buf.seek(0)
+# Function to strip ANSI escape sequences (for plain text display)
+def strip_ansi_escape_sequences(text):
+    ansi_escape = re.compile(r'(?:\x1b\[[0-9;]*[mGKHfaboA-DX]?)')
+    return ansi_escape.sub('', text)
+
+# Function to extract the color codes from the plotext string
+def extract_colors(text):
+    # This regex will match color escape sequences in plotext
+    color_escape = re.compile(r'(\x1b\[[0-9;]*m)')
+    return color_escape.findall(text)
+
+def main(stdscr):
+    # Clear the screen
+    stdscr.clear()
+
+    # Initialize curses color support
+    curses.start_color()
+    curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
+    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)
+    curses.init_pair(3, curses.COLOR_BLUE, curses.COLOR_BLACK)
+    curses.init_pair(4, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+    curses.init_pair(5, curses.COLOR_MAGENTA, curses.COLOR_BLACK)
+    curses.init_pair(6, curses.COLOR_CYAN, curses.COLOR_BLACK)
+    curses.init_pair(7, curses.COLOR_WHITE, curses.COLOR_BLACK)
+
+    # Data for the plot
+    x = [i for i in range(10)]
+    y = [i ** 2 for i in range(10)]  # Simple quadratic data
+
+    # Create the plot using plotext
+    plt.plot(x, y)
+
+    # Set plot title and labels
+    plt.title("Quadratic Function")
+    plt.xlabel("X-axis")
+    plt.ylabel("Y-axis")
+
+    buf = io.StringIO()
+    with redirect_stdout(buf):
+        #plt.figtext()  # This will print the plot to the StringIO buffer
+        plt.show()
+    # Get the plot as a string from the buffer
+    plot_str = buf.getvalue()
+    # Extract color sequences to preserve
+    color_sequences = extract_colors(plot_str)
     
-    # Open the image with Pillow
-    img = Image.open(buf)
-    img = img.resize((width, height))  # Resize image to fit the terminal
-    
-    # Convert to grayscale
-    img = img.convert('L')
-    
-    # Convert the image to ASCII characters
-    ascii_chars = "@%#*+=-:. "  # List of characters for gradient representation
-    pixels = np.array(img)
-    ascii_art = ""
-    
-    for row in pixels:
-        for pixel in row:
-            ascii_art += ascii_chars[pixel // 32]  # Map pixel value to one of the ASCII characters
-        ascii_art += "\n"
-    
-    return ascii_art
+    # Strip color codes to get plain text
+    plot_str = strip_ansi_escape_sequences(plot_str)
 
-def update_plot(stdscr):
-    # Get terminal size
-    height, width = stdscr.getmaxyx()
+    # Split the plot into lines
+    plot_lines = plot_str.splitlines()
 
-    # Create an initial figure for plotting
-    fig, ax = plt.subplots(figsize=(width / 10, height / 10))
-    
-    # Set plot limits
-    ax.set_xlim(0, 4 * np.pi)
-    ax.set_ylim(-1.5, 1.5)
-    
-    # Generate some x-values for plotting
-    x_vals = np.linspace(0, 4 * np.pi, 100)
-    
-    # Set plot appearance
-    ax.set_facecolor('white')
-    ax.plot(x_vals, np.sin(x_vals), label='Sine Wave')
+    # Display the plot line-by-line using curses
+    color_idx = 0
+    for i, line in enumerate(plot_lines):
+        for char in line:
+            # Check if we have a color to apply
+            if color_idx < len(color_sequences):
+                # Activate the color for this character
+                color_code = color_sequences[color_idx]
+                if '38;5;10' in color_code:
+                    stdscr.attron(curses.color_pair(2))  # Green
+                elif '38;5;9' in color_code:
+                    stdscr.attron(curses.color_pair(1))  # Red
+                elif '38;5;11' in color_code:
+                    stdscr.attron(curses.color_pair(4))  # Yellow
+                # Add more color mappings as needed
 
-    while True:
-        # Create new data (sine wave with shifting phase)
-        ax.clear()  # Clear the previous plot
-        x_vals = np.linspace(0, 4 * np.pi, 100)
-        ax.plot(x_vals, np.sin(x_vals + time.time()), label='Sine Wave')
+                stdscr.addstr(i, len(line) + color_idx, char)
+                stdscr.attroff(curses.color_pair(0))  # Reset color
 
-        # Update the plot with the new data
-        fig.canvas.draw()
+            else:
+                # Print the regular characters if no color is specified
+                stdscr.addstr(i, color_idx, char)
+            color_idx += 1
 
-        # Convert the plot to ASCII
-        ascii_art = plot_to_ascii(fig, width - 2, height - 2)  # Reduce width and height for padding
-        
-        # Ensure that the ASCII art fits in the terminal size
-        # Only display up to terminal height and width
-        ascii_art_lines = ascii_art.split("\n")
-        ascii_art_lines = ascii_art_lines[:height-3]  # Leave space for header
+    # Refresh the screen to display the plot
+    stdscr.refresh()
 
-        # Clear the screen and print the ASCII art line by line
-        stdscr.clear()
-        stdscr.addstr(0, 0, f"Updating plot... Press 'q' to quit.\n")
-        for idx, line in enumerate(ascii_art_lines):
-            if idx < height - 3:  # Make sure it doesn't exceed the terminal height
-                stdscr.addstr(idx + 2, 0, line)  # Start printing from line 2
-        stdscr.refresh()
+    # Wait for user input to exit
+    stdscr.getch()
 
-        # Wait for 1 second before updating again
-        time.sleep(1)
-
-        # Allow user to quit the loop by pressing 'q'
-        key = stdscr.getch()
-        if key == ord('q'):
-            break
-
-# Start the curses application
-curses.wrapper(update_plot)
+# Initialize the curses application
+curses.wrapper(main)
 
