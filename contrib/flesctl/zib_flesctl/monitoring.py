@@ -16,7 +16,7 @@ import subprocess
 import plotext as plt
 import threading
 import io
-import contextlib
+from contextlib import redirect_stdout
 
 def get_data_rate(log_line):
     match = re.search(r'(\d+\.\d+)\sGB/s', log_line)
@@ -39,15 +39,8 @@ def calc_outout_str(input_string):
         return formatted_output
 
 def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes):
-    stdscr.clear()
+    #stdscr.clear()
     bar_width = 50
-
-    curses.start_color()
-    curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK) 
-    curses.init_pair(2, curses.COLOR_RED, curses.COLOR_BLACK)   
-    curses.init_pair(3, curses.COLOR_MAGENTA, curses.COLOR_BLACK) 
-    curses.init_pair(4, curses.COLOR_CYAN, curses.COLOR_BLACK)
-    curses.init_pair(5, curses.COLOR_YELLOW, curses.COLOR_BLACK)
     stdscr.addstr(0, 0, "Number of: ")
     stdscr.addstr("entry nodes: " + str(num_entry_nodes), curses.color_pair(4))
     stdscr.addstr(1,0, "           build nodes: " + str(num_build_nodes), curses.color_pair(5))
@@ -63,96 +56,116 @@ def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes):
             stdscr.addstr(i, 0, output_str + ': ', curses.color_pair(5))
         else:
             stdscr.addstr(i, 0, output_str + ': ')
-        stdscr.addstr(green, curses.color_pair(1))
-        stdscr.addstr(red, curses.color_pair(2))   
+        stdscr.addstr(green, curses.color_pair(2))
+        stdscr.addstr(red, curses.color_pair(1))   
         stdscr.addstr(f" {val['current_data']:12.2f} / {val['total_data']:.2f}", curses.color_pair(3))  
         i += 1
         
-    stdscr.refresh()
 
-def create_graph_v2(stdscr, data_dict):
-    #data = {}
-    #for key,val in data_dict.items():
-        #data[key] = {
-                #'data' : [val['current_data']]
-            #}
-    while True:
-        #data.append(new_value)
-        #for key,val in data_dict.items():
-            #print('test')
-            #data[key]['data'].append(val['current_data'])
-            #if len(data[key]['data']) > 20:
-                #data[key]['data'].pop(0)
-    
 
-        stdscr.move(15, 0)  
+def strip_and_translate_ansi_escape_sequences(text):
+    ansi_escape = re.compile(r'\x1b\[[0-9;]*[m]')
+    color_codes = []
+    result_text = []
+    last_pos = 0
+    def replace_with_curses(match):
+        code_str = match.group(0)
+        color_code = None
+        nonlocal last_pos
+        if ';' not in code_str:  
+            try:
+                color_code = int(code_str[2][:-1]) 
+                #curses_color = color_code
+                #color_codes.append(curses_color)
+                #result_text.append(('color', curses_color))
+                #return ''  # Return empty, as we only want the color code
+            except ValueError:
+                return ''  # Return empty if the code is malformed
+
+        # Case 2: 256 color (like 38;5;10m)
+        elif '38;5;' in code_str:
+            try:
+                color_code = int(code_str.split(';')[2][:-1])  # Extract 256 color code
+                #curses_color = ansi_to_curses_color(color_code)
+                #curses_color = color_code
+                #color_codes.append(curses_color)
+                #result_text.append(('color', curses_color))
+                #return ''
+            except ValueError:
+                return '' # Return empty if the code is malformed
             
-        plt.clf()  
-        colors = [1, 2, 3, 4, 5, 6, 7, 8] 
-        markers = ['.', 'o', 'x', '^', 's', 'd', 'p', '*']
-        for idx, (key,val) in enumerate(data_dict.items()):
-            data = val['data_array']
-            while True:
-                if len(data) > 20:
-                    data.pop(0)
-            color_idx = (idx % len(colors)) + 1
-            marker_idx = idx % len(markers) 
-            #plt.plot(val['data_array'], label=key, color=color_idx)
-            plt.plot(data, label=key, marker=markers[marker_idx], color=color_idx)
-            #plt.plot(val['data_array'], label=key)
-        plt.title("Real-Time Data Plot")
-        plt.ylim(0, 100)  
-        plt.show()  
-        sys.stdout.flush()
-        time.sleep(1)  
-        
-def create_graph(stdscr,data_dict):
-    stdscr.clear()
+        if color_code is not None:
+            text_segment = text[last_pos:match.start()]
+            clean_segment = ansi_escape.sub('', text_segment)
+            if text_segment:
+                result_text.append(('text', clean_segment))  
+            result_text.append(('color', color_code))  
+            last_pos = match.end()  
+            return '' 
+
+        return ''
+    
+    processed_txt = ansi_escape.sub(replace_with_curses, text)
+
+    if last_pos < len(text):
+        text_segment = text[last_pos:]
+        clean_segment = ansi_escape.sub('', text_segment) 
+        if clean_segment:
+            result_text.append(('text', clean_segment))
+
+
+    return result_text
+
+
+def init_color_pairs_v2():
+    curses.use_default_colors()
+    for i in range(0, curses.COLORS):
+        curses.init_pair(i, i, -1)
+
+def draw_Graph(stdscr, data_dict):
+    curses.start_color()
+    init_color_pairs_v2()
     plt.clf()
     for idx, (key,val) in enumerate(data_dict.items()):
         data = val['data_array']
         while True:
+            #stdscr.addstr('test')
             if len(data) > 20:
                 data.pop(0)
             else:
                 break
-        #color_idx = (idx % len(colors)) + 1
-        #marker_idx = idx % len(markers) 
-        #plt.plot(val['data_array'], label=key, color=color_idx)
         plt.plot(data, label=key)
+        
     plt.theme("dark")
-    plt.title("random num")
-    #plt.show()
-    #plot_output= plt.figtext()
-    # Create a StringIO buffer to capture the plot output
-
-    # Create a StringIO buffer to capture the plot output
-    #buf = io.StringIO()
-
-    # Save the plot to the buffer (instead of printing it)
-    #plt.savefig(buf)  # Save the plot as text to the buffer
-
-    # Get the plot as a string from the buffer
-    #plot_output = buf.getvalue()
-    # Create a StringIO buffer to capture the plot output
+    plt.title("data rate")
+    plt.plot_size(80,20)
     buf = io.StringIO()
+    with redirect_stdout(buf):
+        plt.show()
+    plot_str = buf.getvalue()
+    max_y, max_x = stdscr.getmaxyx()  
+    lines = plot_str.splitlines()
+    for i, line in enumerate(lines):
+        if i < max_y - 1:  
+            result_arr = strip_and_translate_ansi_escape_sequences(line)         
+            color_pair = 0
+            char = ''
+            y, x = 0, 0
+            was_prev_color = False
+            count = 0
+            for j,tup in enumerate(result_arr):
+                if tup[0] == 'color':
+                    color_pair = tup[1]
+                    was_prev_color = True
+                elif tup[0] == 'text':
+                    char = tup[1]
+                    stdscr.addstr(i+15,x,char, curses.color_pair(int(color_pair)))
+                    was_prev_color = False
+                    count += 1
+                    
+                    x += len(char)
+            x = 0
 
-    # Use contextlib.redirect_stdout to capture plt.show() output
-    with contextlib.redirect_stdout(buf):
-        plt.show()  # This will print the plot to the StringIO buffer
-
-    # Get the plot as a string from the buffer
-    plot_output = buf.getvalue()
-
-    # Display the plot inside the curses window
-    stdscr.addstr(0, 0, plot_output)  # Add the plot output to the curses window
-
-    
-    stdscr.addstr(0,0, plot_output)
-    stdscr.refresh()
-    time.sleep(1)
-                
-            
 def tail_file(file_path):
     f = subprocess.Popen(['tail','-F',file_path],\
             stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -165,9 +178,8 @@ def tail_file(file_path):
         time.sleep(0.5)
 
 def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
-
+    stdscr.clear()
     data_dict = {}
-    #last_update = time.time()
     for file_name in file_names:
         data_dict[file_name[0]] = {
             'current_data' : 0.0,
@@ -175,14 +187,6 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
             'total_data' : file_name[1], 
             'data_array' : []
             }
-    '''
-    with open('test.txt', 'w') as file:
-        for key,val in data_dict.items():
-            file.write(key)
-    '''
-    #plot_thread = threading.Thread(target=create_graph, args=(data_dict))
-    #plot_thread.daemon = True
-    #plot_thread.start()
 
     while True:
         for key,val in data_dict.items():
@@ -193,13 +197,10 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
                 data_dict[key]['data_array'].append(data_rate)
             except StopIteration:
                 data_rate = 0.0
-        #current_time = time.time()
         time.sleep(1)
-        #draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
-        #if current_time - last_update >= 0.2:
-            #draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
-            #last_update = current_time
-        create_graph(stdscr,data_dict)
-    stdscr.refresh()
+        
+        draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
+        draw_Graph(stdscr,data_dict)
+        stdscr.refresh()
 
 
