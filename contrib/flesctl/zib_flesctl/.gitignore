@@ -2,3 +2,5 @@
 logs
 flesctl_venv/
 config.cfg
+config.cfg
+*.cfg
