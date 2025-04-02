@@ -11,7 +11,8 @@ import os
 import sys
 
 
-#TODO: check if vars are set correctly
+#TODO: check if vars are set correctly done
+#TODO: get total data in dependence for the input_file
 class Params:
     
     def __init__(self,config_file):
@@ -24,6 +25,9 @@ class Params:
         self.tsclient_string = ""
         self.input_file_list = []
         self.show_total_data = 0
+        self.show_graph = 0
+        self.show_progress_bar = 0
+        self.show_only_entry_nodes = 0
         self.use_grafana = 0
         self.influx_node_ip = ""
         self.influx_token = ""
@@ -48,6 +52,9 @@ class Params:
         self.customize_string = self.get_value('flesnet_commands', 'customize_string', 'str', True)
         self.input_file_list = [(param, value) for param, value in self.config.items('input_file')]
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)
+        self.show_graph = self.get_value('Monotoring', 'show_graph', 'int', False)
+        self.show_progress_bar = self.get_value('Monotoring', 'show_progress_bar', 'int', False)
+        self.show_only_entry_nodes = self.get_value('Monotoring', 'show_only_entry_nodes', 'int', False)
         self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', False)
         self.use_grafana = self.get_value('influxdb', 'use_grafana', 'int', True)
         self.influx_node_ip = self.get_value('influxdb', 'influx_node_ip','str', False)
@@ -69,11 +76,28 @@ class Params:
             else:
                 return self.config.get(section, param)
         elif required:
-            print('Error: Param not set: %s' % (param))
+            print('\033[31mError: Param not set: %s\033[0m' % (param))
             sys.exit(1)
         else:
             return None
 
+    def validation_params(self):
+        if not self.input_file_list:
+            print('\033[31mError: no input files\033[0m')
+            sys.exit(1)
+        else:
+            for elem in self.input_file_list:
+                if not os.path.isfile(elem[1]):
+                    print(f'\033[31mError: File {elem[1]} does not exist\033[0m')
+                    sys.exit(1)
+        for program in ['./mstool', './flesnet']:
+            program_path = self.path + program
+            if not (os.path.isfile(program_path) and os.access(program_path, os.X_OK)):
+                print(f'\033[31mError: Program {program} does not exist\033[0m')
+                sys.exit(1)
+        if self.transport_method == 'zeromq' and self.show_only_entry_nodes == 0:
+            print('\033[93mWarning: transport method zeromq only shows data rate for the entry nodes. Therefore param show_only_entry_nodes is set to 1\033[0m')
+            self.show_only_entry_nodes = 1
 
 def main():
     Par_ = Params('config.cfg')

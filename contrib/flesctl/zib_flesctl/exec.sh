@@ -8,7 +8,8 @@ echo $TIME_ALLOC
 
 source flesctl_venv/bin/activate
 
-NODES=$((ENTRY_NODES_CNT + PROCESSING_NODES_CNT))
+NODES=$((ENTRY_NODES_CNT + PROCESSING_NODES_CNT + 1))
+#echo $((NODES+1))
 NTASKS=4
 MEM=16G
 p="big"

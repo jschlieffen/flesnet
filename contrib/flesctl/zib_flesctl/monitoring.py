@@ -22,6 +22,9 @@ def get_data_rate(log_line):
     match = re.search(r'(\d+\.\d+)\sGB/s', log_line)
     if match:
         return float(match.group(1))
+    match = re.search(r'(\d+\.\d+)\sMB/s', log_line)
+    if match:
+        return float(match.group(1))/1000
     return 0.0
 
 def calculate_progress(current_data, total_data):
@@ -114,7 +117,7 @@ def init_color_pairs_v2():
 
 def draw_Graph(stdscr, data_dict):
     curses.start_color()
-    init_color_pairs_v2()
+
     plt.clf()
     for idx, (key,val) in enumerate(data_dict.items()):
         data = val['data_array']
@@ -156,7 +159,7 @@ def draw_Graph(stdscr, data_dict):
                     x += len(char)
             x = 0
 
-def tail_file(file_path):
+def tail_file_v2(file_path):
     f = subprocess.Popen(['tail','-F',file_path],\
             stdout=subprocess.PIPE,stderr=subprocess.PIPE)
     p = select.poll()
@@ -166,10 +169,20 @@ def tail_file(file_path):
         if p.poll(1):
             yield str(f.stdout.readline())
         time.sleep(0.5)
+        
+def tail_file(file_path):
+    f = subprocess.Popen(['tail', '-F', file_path],
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    while True:
+        # Using select.select to check if there's data ready to read
+        rlist, _, _ = select.select([f.stdout], [], [], 1)  # 1-second timeout
+        if rlist:
+            yield str(f.stdout.readline(), 'utf-8').strip()
 
-def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
+def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable_progress_bar):
     stdscr.clear()
     data_dict = {}
+    init_color_pairs_v2()
     for file_name in file_names:
         data_dict[file_name[0]] = {
             'current_data' : 0.0,
@@ -187,9 +200,10 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
             except StopIteration:
                 data_rate = 0.0
         time.sleep(1)
-        
-        draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
-        draw_Graph(stdscr,data_dict)
+        if enable_progress_bar:
+            draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
+        if enable_graph:
+            draw_Graph(stdscr,data_dict)
         stdscr.refresh()
-
+        
 
