@@ -123,11 +123,12 @@ def draw_Graph(stdscr, data_dict):
                 data.pop(0)
             else:
                 break
-        plt.plot(data, label=key)
+        lbl = calc_outout_str(key)
+        plt.plot(data, label=lbl)
         
     plt.theme("dark")
     plt.title("data rate")
-    plt.plot_size(40,10)
+    plt.plot_size(80,20)
     buf = io.StringIO()
     with redirect_stdout(buf):
         plt.show()

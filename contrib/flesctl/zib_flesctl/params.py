@@ -10,11 +10,18 @@ import configparser as cfg
 import os
 import sys
 
+
+#TODO: check if vars are set correctly
 class Params:
     
     def __init__(self,config_file):
         self.entry_nodes = 0
         self.build_nodes = 0
+        self.path = ""
+        self.transport_method = ""
+        self.timeslice_size = 0
+        self.processor_instances = 0
+        self.tsclient_string = ""
         self.input_file_list = []
         self.show_total_data = 0
         self.use_grafana = 0
@@ -36,9 +43,12 @@ class Params:
         
         self.entry_nodes = self.get_value('Number_of_Nodes', 'entry_nodes', 'int', True)
         self.build_nodes = self.get_value('Number_of_Nodes', 'build_nodes', 'int', True)
+        self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', True)
+        self.transport_method = self.get_value('flesnet_commands', 'transport_method', 'str', True)
+        self.customize_string = self.get_value('flesnet_commands', 'customize_string', 'str', True)
         self.input_file_list = [(param, value) for param, value in self.config.items('input_file')]
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)
-        self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', True)
+        self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', False)
         self.use_grafana = self.get_value('influxdb', 'use_grafana', 'int', True)
         self.influx_node_ip = self.get_value('influxdb', 'influx_node_ip','str', False)
         self.influx_token = self.get_value('influxdb', 'token','str', False)
