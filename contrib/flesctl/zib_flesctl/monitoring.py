@@ -68,6 +68,7 @@ def strip_and_translate_ansi_escape_sequences(text):
     color_codes = []
     result_text = []
     last_pos = 0
+    
     def replace_with_curses(match):
         code_str = match.group(0)
         color_code = None
@@ -75,24 +76,13 @@ def strip_and_translate_ansi_escape_sequences(text):
         if ';' not in code_str:  
             try:
                 color_code = int(code_str[2][:-1]) 
-                #curses_color = color_code
-                #color_codes.append(curses_color)
-                #result_text.append(('color', curses_color))
-                #return ''  # Return empty, as we only want the color code
             except ValueError:
-                return ''  # Return empty if the code is malformed
-
-        # Case 2: 256 color (like 38;5;10m)
+                return ''  
         elif '38;5;' in code_str:
             try:
-                color_code = int(code_str.split(';')[2][:-1])  # Extract 256 color code
-                #curses_color = ansi_to_curses_color(color_code)
-                #curses_color = color_code
-                #color_codes.append(curses_color)
-                #result_text.append(('color', curses_color))
-                #return ''
+                color_code = int(code_str.split(';')[2][:-1]) 
             except ValueError:
-                return '' # Return empty if the code is malformed
+                return '' 
             
         if color_code is not None:
             text_segment = text[last_pos:match.start()]
@@ -129,7 +119,6 @@ def draw_Graph(stdscr, data_dict):
     for idx, (key,val) in enumerate(data_dict.items()):
         data = val['data_array']
         while True:
-            #stdscr.addstr('test')
             if len(data) > 20:
                 data.pop(0)
             else:
@@ -138,7 +127,7 @@ def draw_Graph(stdscr, data_dict):
         
     plt.theme("dark")
     plt.title("data rate")
-    plt.plot_size(80,20)
+    plt.plot_size(40,10)
     buf = io.StringIO()
     with redirect_stdout(buf):
         plt.show()
@@ -187,7 +176,6 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes):
             'total_data' : file_name[1], 
             'data_array' : []
             }
-
     while True:
         for key,val in data_dict.items():
             try:
