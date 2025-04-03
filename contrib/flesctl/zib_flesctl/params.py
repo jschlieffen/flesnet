@@ -9,7 +9,7 @@ Created on Mon Mar 17 15:48:03 2025
 import configparser as cfg
 import os
 import sys
-
+from log_msg import *
 
 #TODO: check if vars are set correctly done
 #TODO: get total data in dependence for the input_file
@@ -60,6 +60,8 @@ class Params:
         self.influx_node_ip = self.get_value('influxdb', 'influx_node_ip','str', False)
         self.influx_token = self.get_value('influxdb', 'token','str', False)
         #print(self.show_total_data)
+        #print('\033[32mSUCCESS: Params valid and successfully set\033[0m')
+        
     
     def get_value(self, section, param, par_type, required=False):
         val = os.getenv(param)
@@ -76,27 +78,32 @@ class Params:
             else:
                 return self.config.get(section, param)
         elif required:
-            print('\033[31mError: Param not set: %s\033[0m' % (param))
+            #print('\033[31mERROR: Param not set: %s\033[0m' % (param))
+            logger.critical(f'Param not set: {param}')
             sys.exit(1)
         else:
             return None
 
     def validation_params(self):
         if not self.input_file_list:
-            print('\033[31mError: no input files\033[0m')
+            #print('\033[31mERROR: no input files\033[0m')
+            logger.critical('no input files')
             sys.exit(1)
         else:
             for elem in self.input_file_list:
                 if not os.path.isfile(elem[1]):
-                    print(f'\033[31mError: File {elem[1]} does not exist\033[0m')
+                    #print(f'\033[31mERROR: File {elem[1]} does not exist\033[0m')
+                    logger.critical(f'File {elem[1]} does not exist')
                     sys.exit(1)
         for program in ['./mstool', './flesnet']:
             program_path = self.path + program
             if not (os.path.isfile(program_path) and os.access(program_path, os.X_OK)):
-                print(f'\033[31mError: Program {program} does not exist\033[0m')
+                #print(f'\033[31mERROR: Program {program} does not exist\033[0m')
+                logger.critical(f'Program {program} does not exist')
                 sys.exit(1)
         if self.transport_method == 'zeromq' and self.show_only_entry_nodes == 0:
-            print('\033[93mWarning: transport method zeromq only shows data rate for the entry nodes. Therefore param show_only_entry_nodes is set to 1\033[0m')
+            #print('\033[93mWARNING: transport method zeromq only shows data rate for the entry nodes. Therefore param show_only_entry_nodes is set to 1\033[0m')
+            logger.warning(f'transport method zeromq only shows data rate for the entry nodes. Therefore param show_only_entry_nodes is set to 1')
             self.show_only_entry_nodes = 1
 
 def main():

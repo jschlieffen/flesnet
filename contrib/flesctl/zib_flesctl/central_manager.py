@@ -26,6 +26,7 @@ import re
 import monitoring as mon
 import curses
 import test_terminal_Graph_v2 as test
+from log_msg import *
 
 #TODO: delete class
 class slurm_commands:
@@ -62,7 +63,8 @@ class slurm_commands:
             result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)    
             stdout,stderr = result.communicate()
         except subprocess.CalledProcessError as e:
-            print(f'Error occurred at reading ips: {e}')
+            logger.error(f'ERROR: {e} Error occurred at reading ips')
+            sys.exit(1)
         match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
         content = match.group(1)
         match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
@@ -75,7 +77,9 @@ class slurm_commands:
             result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
             stdout,stderr = result.communicate()
         except subprocess.CalledProcessError as e:
-            print(f'Error occurred at reading ips: {e}')
+            logger.error(f'ERROR: {e} Error occurred at reading ips')
+            sys.exit(1)
+            #print(f'\033[31mERROR: Error occurred at reading ips: {e}\033[0m')
         match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
         content = match.group(1)
         match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
@@ -102,7 +106,8 @@ class Entry_nodes(slurm_commands):
     def start_flesnet(self,input_files, influx_node_ip, influx_token, use_grafana):
         file = 'input.py'
         for node in self.node_list.keys():
-            print(f'\033[36mSTATUS: start entry node: {node}\033[0m')
+            #print(f'\033[36mSTATUS: start entry node: {node}\033[0m')
+            logger.info(f'start entry node: {node}')
             input_file = next((tup[1] for tup in input_files if tup[0] == node), None)
             # TODO: Check if there is a faster implementation
             if input_file is None:
@@ -118,11 +123,13 @@ class Entry_nodes(slurm_commands):
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
-                print(f'\033[31mError {e} occurried in entry node: {node}. Shutdown flesnet\033[0m')
+                logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
+                #print(f'\033[31mERROR {e} occurried in entry node: {node}. Shutdown flesnet\033[0m')
                 return 'shutdown'
             time.sleep(1)
             self.pids += [result]
-            print('\033[32mSUCCESS: start successful\033[0m')
+            logger.success('start successful')
+            #print('\033[32mSUCCESS: start successful\033[0m')
         return None
     
     
@@ -151,7 +158,8 @@ class Build_nodes(slurm_commands):
     def start_flesnet(self, influx_node_ip, influx_token, use_grafana):
         file = 'output.py'
         for node in self.node_list.keys():
-            print(f'\033[36mSTATUS: start build node: {node}\033[0m')
+            #print(f'\033[36mSTATUS: start build node: {node}\033[0m')
+            logger.info(f'start build node: {node}')
             logfile = 'logs/build_node_%s.log' % (node)
             command = (
                 'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s " %s"'
@@ -163,10 +171,12 @@ class Build_nodes(slurm_commands):
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
-                print(f'\033[31mError {e} occurried in build node: {node}. Shutdown flesnet\033[0m')
+                #print(f'\033[31mERROR {e} occurried in build node: {node}. Shutdown flesnet\033[0m')
+                logger.error('ERROR {e} occurried in build node: {node}. Shutdown flesnet')
                 return 'shutdown'            
             self.pids += [result]
-            print('\033[32mSUCCESS: start successful\033[0m')
+            #print('\033[32mSUCCESS: start successful\033[0m')
+            logger.success(f'start successful')
         return None
     
     def start_flesnet_zeromq(self):
@@ -204,8 +214,9 @@ class Super_nodes(slurm_commands):
     def start_flesnet(self,input_files, influx_node_ip, influx_token, use_grafana):
         file = 'super_nodes.py'
         for node in self.node_list.keys():
-            print(f'\033[36mSTATUS: start super node: {node}\033[0m')
+            #print(f'\033[36mSTATUS: start super node: {node}\033[0m')
             #print('test')
+            logger.info(f'start super node: {node}')
             input_file = next((tup[1] for tup in input_files if tup[0] == node), None)
             # TODO: Check if there is a faster implementation
             if input_file is None:
@@ -224,11 +235,13 @@ class Super_nodes(slurm_commands):
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
-                print(f'\033[31mError {e} occurried in super node: {node}. Shutdown flesnet\033[0m')
+                #print(f'\033[31mERROR {e} occurried in super node: {node}. Shutdown flesnet\033[0m')
+                logger.error(f'ERROR {e} occurried in super node: {node}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
             self.pids += [result]
-            print('\033[32mSUCCESS: start successful\033[0m')
+            #print('\033[32mSUCCESS: start successful\033[0m')
+            logger.success('start successful')
         return None
     
     def start_flesnet_zeromq(self):
@@ -329,14 +342,16 @@ class execution(slurm_commands):
         entry_nodes_cnt = 0
         build_nodes_cnt = 0
         if node_list is None:
-            print("Error: SLURM_NODELIST is not set.")
+            #print(f'\033[31mERROR: SLURM_NODELIST is not set.\033[0m')
+            logger.critical('SLURM_NODELIST is not set, Maybe you forget to allocate the nodes')
             sys.exit(1)
             
         # =============================================================================
         # Note: Hier aendert sich vielleicht noch was
         # =============================================================================
         elif len(node_list) < self.num_entrynodes + self.num_buildnodes:
-            print('Incorrect number of nodes')
+            #print('Incorrect number of nodes')
+            logger.critical('Incorrect Number of nodes, expected: {self.num_entrynodes + self.num_buildnodes}, got: {len(node_list)} ')
             sys.exit(1)
         if self.overlap_usage_of_nodes:
             for node in node_list:
@@ -414,6 +429,7 @@ class execution(slurm_commands):
             else:    
                 res = self.build_nodes_cls.start_flesnet(self.influx_node_ip, self.influx_token, self.use_grafana)
                 if res == 'shutdown':
+                    self.entry_nodes_cls.stop_flesnet()
                     self.build_nodes_cls.stop_flesnet()
                     sys.exit(1)
                     
@@ -426,32 +442,30 @@ class execution(slurm_commands):
     #TODO Wednesday: debug monotoring
     def stop_via_ctrl_c(self):
         time.sleep(2)
-        print('\033[32mSUCCESS: flesnet successfully launched\033[0m')
+        #print('\033[32mSUCCESS: flesnet successfully launched\033[0m')
+        logger.success('flesnet launched successfully')
         if self.show_total_data:
             try: 
                 #kawufgwekugfu
-                self.monitoring()
-            except KeyboardInterrupt:
-                print('Interrupting')
-                if self.overlap_nodes:
-                    self.super_nodes_cls.stop_flesnet()
-                else:
-                    self.build_nodes_cls.stop_flesnet()
-                    self.entry_nodes_cls.stop_flesnet()
-        else: 
-            try: 
-                while True:
-                    time.sleep(1)
-            except KeyboardInterrupt:
-                print('Interrupting')
-                if self.overlap_nodes:
-                    self.super_nodes_cls.stop_flesnet()
-                else:
-                    self.build_nodes_cls.stop_flesnet()
-                    self.entry_nodes_cls.stop_flesnet()
-            
-        return None
+                total_data, avg_data_rate = self.monitoring()
+            except Exception as e:
+                #print(f'\033[31mERROR: {e} occured during monotoring. Terminating')
+                logger.critical(f'Error {e} occured during monotoring. Terminating')
+        else:
+            while True:
+                time.sleep(1)
+        self.stop_program()
+        return total_data, avg_data_rate
         
+    def stop_program(self):
+        time.sleep(2)
+        #print('\033[36mSTATUS: stopping flesnet\033[0m')
+        logger.info('stopping flesnet')
+        if self.overlap_nodes:
+            self.super_nodes_cls.stop_flesnet()
+        else:
+            self.build_nodes_cls.stop_flesnet()
+            self.entry_nodes_cls.stop_flesnet()
 
     def monitoring(self):
         file_names = []
@@ -464,8 +478,8 @@ class execution(slurm_commands):
                     logfile_build = 'logs/build_node_%s.log' % (super_node)
                     total_data = 2000
                     file_names.append((logfile_build,total_data))
-            curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes, self.enable_graph, self.enable_progess_bar,
-                           )
+            total_data, avg_data_rate = curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes, 
+                                                       self.enable_graph, self.enable_progess_bar)
         else:
             for entry_node in self.entry_nodes.keys():
                 logfile = 'logs/entry_node_%s.log' % (entry_node)
@@ -476,10 +490,11 @@ class execution(slurm_commands):
                     logfile = 'logs/build_node_%s.log' % (build_node)
                     total_data = 2000
                     file_names.append((logfile,total_data))
-            curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes, self.enable_graph, self.enable_progess_bar,
-                           )
+            total_data, avg_data_rate = curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes, 
+                                                       self.enable_graph, self.enable_progess_bar)
         #test.tail_file(file_names[0][0])
         #test.main(file_names)
+        return total_data, avg_data_rate
         
 def main():
     arg = docopt.docopt(__doc__, version='0.2')

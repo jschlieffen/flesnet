@@ -17,6 +17,10 @@ import plotext as plt
 import threading
 import io
 from contextlib import redirect_stdout
+import signal
+from log_msg import *
+
+terminate_program = False
 
 def get_data_rate(log_line):
     match = re.search(r'(\d+\.\d+)\sGB/s', log_line)
@@ -180,6 +184,9 @@ def tail_file(file_path):
             yield str(f.stdout.readline(), 'utf-8').strip()
 
 def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable_progress_bar):
+    global terminate_program
+    signal.signal(signal.SIGINT, lambda signum, frame: signal_handler(signum, frame, stdscr))
+    signal.signal(signal.SIGTERM, lambda signum, frame: signal_handler(signum, frame, stdscr))
     stdscr.clear()
     data_dict = {}
     init_color_pairs_v2()
@@ -191,6 +198,8 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable
             'data_array' : []
             }
     while True:
+        if terminate_program:
+            break
         for key,val in data_dict.items():
             try:
                 line = next(val['tail'])
@@ -205,5 +214,36 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable
         if enable_graph:
             draw_Graph(stdscr,data_dict)
         stdscr.refresh()
+    #cleanup(stdscr)
+    total_data, avg_data_rate = calc_output_msg(data_dict)
+    return total_data, avg_data_rate
+    
+def calc_output_msg(data_dict):
+    total_data = 0
+    avg_data_rate = 0
+    it_counter = 0
+    for key,val in data_dict.items():
+        if 'entry_node' in key:
+            total_data += val['current_data']
+            for data_rate in val['data_array']:
+                if data_rate > 0:
+                    avg_data_rate += data_rate
+                    it_counter += 1
+    avg_data_rate = avg_data_rate/it_counter
+    return total_data, avg_data_rate
         
+def signal_handler(signum, frame,stdscr):
+    if signum == signal.SIGINT:
+        logger.error(f'received signal {signum}. Handling termination')
+        #print(f'\033[31mERROR: received signal {signum}. Handling termination')
+    elif signum == signal.SIGTERM:
+        #print(f'\033[31mERROR: received signal {signum}. Handling termination')
+        logger.error(f'received signal {signum}. Handling termination')
+    cleanup(stdscr)
 
+def cleanup(stdscr):
+    global terminate_program
+    if stdscr is not None:
+        curses.endwin()
+    #sys.exit(0)
+    terminate_program = True
