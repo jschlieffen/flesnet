@@ -44,16 +44,11 @@ def calc_str(ip,num_entry_nodes):
     return ip_string, shm_string
 
 
-# =============================================================================
-# TODO: Get better variable names for the commands done
-# TODO: make the log file name depend on the node_id done
-# =============================================================================
 def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logfile_build_nodes, num_entry_nodes, num_build_nodes, entry_node_idx, build_node_idx,
                 influx_node_ip, influx_token, use_grafana ,path, transport_method, customize_string):
     os.environ['CBM_INFLUX_TOKEN'] = influx_token
     ip_string, shm_string = calc_str(build_nodes_ip, num_entry_nodes)
     grafana_string = ''
-    print(shm_string)
     if use_grafana:
         grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
     mstool_commands = '%s./mstool -i %s -O fles_in_e%s -D 1 > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx))
@@ -71,7 +66,6 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
     result_flesnet.terminate()
     result_mstool.wait()
     result_flesnet.wait()
-    print('test')
 
 def build_nodes(entry_nodes_ip,logfile_build_nodes, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana, path, 
                 transport_method, customize_string):

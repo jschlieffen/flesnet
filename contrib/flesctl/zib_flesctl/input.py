@@ -40,10 +40,6 @@ def calc_str(ip,num_entry_nodes):
     return ip_string, shm_string
 
 
-# =============================================================================
-# TODO: Get better variable names for the commands done
-# TODO: make the log file name depend on the node_id done
-# =============================================================================
 def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
                 transport_method, customize_string):
     ip_string, shm_string = calc_str(ip, num_entry_nodes)
@@ -57,8 +53,6 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
         % (path,transport_method,logfile,str(entry_node_idx), shm_string,ip_string,
           customize_string, grafana_string)
     )
-    #flesnet_command_v2 = '%s./flesnet -t %s -L %s -l 2 -i %s -I %s -O %s %s' 
-    #flesnet_command += custom_string;
     result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     time.sleep(1)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

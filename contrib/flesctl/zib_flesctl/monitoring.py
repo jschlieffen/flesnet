@@ -8,13 +8,10 @@ Created on Wed Feb 26 16:53:41 2025
 
 import re
 import time
-import sys
-import os
 import curses
 import select
 import subprocess
 import plotext as plt
-import threading
 import io
 from contextlib import redirect_stdout
 import signal
@@ -124,7 +121,7 @@ def draw_Graph(stdscr, data_dict):
 
     plt.clf()
     for idx, (key,val) in enumerate(data_dict.items()):
-        data = val['data_array']
+        data = val['data_array'][: ]
         while True:
             if len(data) > 20:
                 data.pop(0)
@@ -178,8 +175,7 @@ def tail_file(file_path):
     f = subprocess.Popen(['tail', '-F', file_path],
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     while True:
-        # Using select.select to check if there's data ready to read
-        rlist, _, _ = select.select([f.stdout], [], [], 1)  # 1-second timeout
+        rlist, _, _ = select.select([f.stdout], [], [], 1) 
         if rlist:
             yield str(f.stdout.readline(), 'utf-8').strip()
 
@@ -214,7 +210,6 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable
         if enable_graph:
             draw_Graph(stdscr,data_dict)
         stdscr.refresh()
-    #cleanup(stdscr)
     total_data, avg_data_rate = calc_output_msg(data_dict)
     return total_data, avg_data_rate
     
@@ -225,6 +220,7 @@ def calc_output_msg(data_dict):
     for key,val in data_dict.items():
         if 'entry_node' in key:
             total_data += val['current_data']
+            print(len(val['data_array']))
             for data_rate in val['data_array']:
                 if data_rate > 0:
                     avg_data_rate += data_rate
@@ -235,9 +231,7 @@ def calc_output_msg(data_dict):
 def signal_handler(signum, frame,stdscr):
     if signum == signal.SIGINT:
         logger.error(f'received signal {signum}. Handling termination')
-        #print(f'\033[31mERROR: received signal {signum}. Handling termination')
     elif signum == signal.SIGTERM:
-        #print(f'\033[31mERROR: received signal {signum}. Handling termination')
         logger.error(f'received signal {signum}. Handling termination')
     cleanup(stdscr)
 
@@ -245,5 +239,4 @@ def cleanup(stdscr):
     global terminate_program
     if stdscr is not None:
         curses.endwin()
-    #sys.exit(0)
     terminate_program = True

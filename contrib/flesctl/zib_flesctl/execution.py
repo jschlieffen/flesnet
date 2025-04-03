@@ -14,15 +14,10 @@ import signal
 from log_msg import *
 
 # =============================================================================
-# TODOs: 1. make a possibility to disable grafana done
-#        2. improve monotoring 
-#        3. search for env- variables that may overwrite the config variables
-#           done except input file list done
-#        4. comment code 
-#        5. write documentation for the code. 
-#        6. make a fitting implementation for the use of sbatch
-#        7. make zeromq implementation. (big problem I guess? different log files) done
-#        8. make implementation for libfabric (get libabric run first) 
+# TODOs: 1. comment code 
+#        2. write documentation for the code. 
+#        3. make a fitting implementation for the use of sbatch
+#        4. make implementation for libfabric (get libabric run first) 
 #           (maybe to complicated at first do this when I have the time to.)
 # =============================================================================
 class exec_:
@@ -67,7 +62,6 @@ class exec_:
         else:
             self.execution_cls.entry_nodes_cls.stop_flesnet()
             self.execution_cls.build_nodes_cls.stop_flesnet()
-        #self.end_time = time.time()
         self.running = False
         sys.exit(1)
     
@@ -76,15 +70,10 @@ class exec_:
             elapsed_seconds = self.end_time - self.start_time
             hours, remainder = divmod(elapsed_seconds, 3600)
             minutes, seconds = divmod(remainder, 60)
-            #formatted_time = f"\033[36mSTATUS: The simulation ran for {int(hours):02d}H:{int(minutes):02d}M:{int(seconds):02d}S\033[0m"
-            #print(formatted_time)
-            #data_rate_str = f"\033[36mSTATUS: Total data send: {total_data} GB, with average data rate: {avg_data_rate} GB/s\033[0m"
-            #print(data_rate_str)
-            formatted_time = f"The simulation ran for {int(hours):02d}H:{int(minutes):02d}M:{int(seconds):02d}"
+            formatted_time = f"The simulation ran for {int(hours):02d}H:{int(minutes):02d}M:{int(seconds):02d}S"
             logger.info(formatted_time)
-            #logger.info('test')
             data_rate_str = f"Total data send: {total_data} GB, with average data rate: {avg_data_rate} GB/s"
-            logger.info(f"Total data send: {total_data} GB, with average data rate: {avg_data_rate} GB/s")
+            logger.info(data_rate_str)
         
 def main():
     exe = exec_()
