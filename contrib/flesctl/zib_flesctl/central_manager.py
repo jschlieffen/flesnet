@@ -21,7 +21,7 @@ import docopt
 import re
 import monitoring as mon
 import curses
-import test_terminal_Graph_v2 as test
+# import test_terminal_Graph_v2 as test
 from log_msg import *
 import logfile_gen as Logfile
 

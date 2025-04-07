@@ -1,7 +1,0 @@
-The total number of nodes allocated: 0 
-Entry nodes: 
-The nodes that was used as both: 
-    htc-cmp502 as index 0
-Build nodes: 
-   htc-cmp508 as index 0 
-The average data rate of this run was: 6.122727272727274The execution time of this run was: 54.27822184562683The used transport method was: rdma
