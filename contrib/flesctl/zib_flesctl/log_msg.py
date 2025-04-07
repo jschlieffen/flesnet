@@ -8,6 +8,7 @@ Created on Thu Apr  3 13:58:56 2025
 
 import logging
 from datetime import datetime
+import configparser
 
 class LogColors:
     BLUE = "\033[34m"
@@ -54,6 +55,19 @@ def setup_logger():
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(BoostLogFormatter())
     logger.addHandler(console_handler)
+    config = configparser.ConfigParser()
+    config.read('config.cfg')
+    
+    run_id = config.getint('general', 'run_id')
+    config['general']['run_id'] = str(run_id+1)
+    #with open('config.cfg', 'w') as configfile:
+    #    config.write(configfile)
+    timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    file_handler = logging.FileHandler(f'logs/flesctl/Run_{str(run_id+1)}_{timestamp}.log')
+    file_handler.setFormatter(BoostLogFormatter())
+    logger.addHandler(file_handler)
+    
+    
 
     return logger
 

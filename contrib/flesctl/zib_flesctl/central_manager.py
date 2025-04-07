@@ -23,6 +23,7 @@ import monitoring as mon
 import curses
 import test_terminal_Graph_v2 as test
 from log_msg import *
+import logfile_gen as Logfile
 
 class slurm_commands:
     
@@ -79,7 +80,7 @@ class slurm_commands:
 class Entry_nodes(slurm_commands):
     
     def __init__(self,node_list,build_nodes_ips,build_nodes_eth_ips, num_entry_nodes,
-                 path, transport_method, customize_string):
+                 path, transport_method, customize_string, use_pattern_gen, use_dmsa_files):
         super().__init__()
         self.node_list = node_list
         self.build_nodes_ips = build_nodes_ips
@@ -88,6 +89,8 @@ class Entry_nodes(slurm_commands):
         self.path = path
         self.transport_method = transport_method
         self.customize_string = customize_string
+        self.use_pattern_gen = use_pattern_gen
+        self.use_dmsa_files = use_dmsa_files
         self.pids = []
     
 
@@ -100,13 +103,14 @@ class Entry_nodes(slurm_commands):
                 input_file = next((tup[1] for tup in input_files if tup[0] == 'e_remaining'), None)
             
             logger.info(f'start entry node: {node}, with input file {input_file}')
-            logfile = "logs/entry_node_%s.log" % node
+            logfile = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
             command = (
-                'srun --nodelist=%s --oversubscribe -N 1 %s %s %s %s %s %s %s %s %s %s %s " %s" ' 
+                'srun --nodelist=%s --oversubscribe -N 1 %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s' 
                 % (node,file,input_file,logfile,self.build_nodes_ips, 
                 self.num_entry_nodes ,self.node_list[node]['entry_node_idx'],
                  influx_node_ip, influx_token, use_grafana, self.path,
-                 self.transport_method, self.customize_string)
+                 self.transport_method, self.customize_string,
+                 self.use_pattern_gen, self.use_dmsa_files)
             )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
@@ -146,7 +150,7 @@ class Build_nodes(slurm_commands):
         file = 'output.py'
         for node in self.node_list.keys():
             logger.info(f'start build node: {node}')
-            logfile = 'logs/build_node_%s.log' % (node)
+            logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (node)
             command = (
                 'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s " %s"'
                 % (node,file,logfile, self.entry_node_ips, self.num_build_nodes ,
@@ -175,7 +179,7 @@ class Build_nodes(slurm_commands):
 class Super_nodes(slurm_commands):
     
     def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, num_build_nodes,build_nodes_ips,build_nodes_eth_ips, num_entry_nodes, 
-                 path, transport_method, customize_string):
+                 path, transport_method, customize_string, use_pattern_gen, use_dmsa_files):
         super().__init__()
         self.node_list = node_list
         self.num_build_nodes = num_build_nodes
@@ -187,6 +191,8 @@ class Super_nodes(slurm_commands):
         self.path = path
         self.transport_method = transport_method
         self.customize_string = customize_string
+        self.use_pattern_gen = use_pattern_gen
+        self.use_dmsa_files = use_dmsa_files
         self.pids = []
         
     def start_flesnet(self,input_files, influx_node_ip, influx_token, use_grafana):
@@ -198,16 +204,17 @@ class Super_nodes(slurm_commands):
                 input_file = next((tup[1] for tup in input_files if tup[0] == 'e_remaining'), None)
             
             logger.info(f'start entry node: {node}, with input file {input_file}')
-            logfile_entry_node = "logs/entry_node_%s.log" % node
-            logfile_build_node = "logs/build_node_%s.log" % node
+            logfile_entry_node = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
+            logfile_build_node = "logs/flesnet/build_nodes/build_node_%s.log" % node
             command = (
-                'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s"' 
+                'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s'
                 % (node,file,input_file,logfile_entry_node, logfile_build_node,
                    self.build_nodes_ips, self.entry_node_ips, 
                    self.num_entry_nodes , self.num_build_nodes,
                    self.node_list[node]['entry_node_idx'], self.node_list[node]['build_node_idx'],
                    influx_node_ip, influx_token, use_grafana, self.path,
-                   self.transport_method, self.customize_string)
+                   self.transport_method, self.customize_string,
+                   self.use_pattern_gen, self.use_dmsa_files)
             )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
@@ -233,7 +240,7 @@ class execution(slurm_commands):
     
     def __init__(self, input_files,num_entrynodes, num_buildnodes, show_total_data, influx_node_ip, influx_token, use_grafana, 
                  overlap_usage_of_nodes,path,transport_method,customize_string, enable_graph, enable_progess_bar,
-                 show_only_entry_nodes):
+                 show_only_entry_nodes, use_pattern_gen, use_dmsa_files):
         super().__init__()
         self.input_files = input_files
         self.num_entrynodes = num_entrynodes 
@@ -249,6 +256,8 @@ class execution(slurm_commands):
         self.enable_graph = enable_graph
         self.enable_progess_bar = enable_progess_bar
         self.show_only_entry_nodes = show_only_entry_nodes
+        self.use_pattern_gen = use_pattern_gen
+        self.use_dmsa_files = use_dmsa_files
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.overlap_nodes = {}
@@ -260,12 +269,12 @@ class execution(slurm_commands):
         self.build_nodes_eth_ips = ""
         self.get_eth_ips()
         self.entry_nodes_cls = Entry_nodes(self.entry_nodes,self.build_nodes_ips,self.build_nodes_eth_ips, self.num_entrynodes,
-                                           self.path, self.transport_method, self.customize_string)
+                                           self.path, self.transport_method, self.customize_string, self.use_pattern_gen, self.use_dmsa_files)
         self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips, self.num_buildnodes,
                                            self.path, self.transport_method, self.customize_string)
         self.super_nodes_cls = Super_nodes(self.overlap_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips, self.num_buildnodes,
                                            self.build_nodes_ips,self.build_nodes_eth_ips, self.num_entrynodes, self.path, 
-                                           self.transport_method, self.customize_string)
+                                           self.transport_method, self.customize_string, self.use_pattern_gen, self.use_dmsa_files)
         
         
     def get_node_list(self):
@@ -360,7 +369,10 @@ class execution(slurm_commands):
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip}
                     build_nodes_cnt += 1
-     
+        
+        Logfile.logfile.entry_nodes_list = self.entry_nodes
+        Logfile.logfile.build_nodes_list = self.build_nodes
+        Logfile.logfile.overlap_nodes_list = self.overlap_nodes
         
     def bijectiv_mapping(self):
         for entry_node, build_node in zip(self.entry_nodes.keys(), self.build_nodes.keys()):
@@ -421,7 +433,7 @@ class execution(slurm_commands):
             entry_nodes_cnt = 0
             total_file_data = 0
             for super_node in self.overlap_nodes.keys():
-                logfile = 'logs/entry_node_%s.log' % (super_node)
+                logfile = 'logs/flesnet/entry_nodes/entry_node_%s.log' % (super_node)
                 #total_data = 1000
                 file_data = 0
                 file_data = next((tup[2] for tup in self.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
@@ -434,7 +446,7 @@ class execution(slurm_commands):
                 
             for super_node in self.overlap_nodes.keys():
                 if not self.show_only_entry_nodes:
-                    logfile_build = 'logs/build_node_%s.log' % (super_node)
+                    logfile_build = 'logs/flesnet/build_nodes/build_node_%s.log' % (super_node)
                     total_data = total_file_data
                     file_names.append((logfile_build,total_data))
             total_data, avg_data_rate = curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes, 
@@ -443,8 +455,9 @@ class execution(slurm_commands):
             entry_nodes_cnt = 0
             total_file_data = 0
             for entry_node in self.entry_nodes.keys():
-                logfile = 'logs/entry_node_%s.log' % (entry_node)
+                logfile = 'logs/flesnet/entry_nodes/entry_node_%s.log' % (entry_node)
                 #total_data = 1000
+                #logfile='testefkEGBW'
                 file_data = 0
                 file_data = next((tup[2] for tup in self.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
                 if file_data is None:
@@ -455,9 +468,11 @@ class execution(slurm_commands):
                 total_file_data += file_data
             if not self.show_only_entry_nodes:
                 for build_node in self.build_nodes.keys():
-                    logfile = 'logs/build_node_%s.log' % (build_node)
+                    logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (build_node)
+                    #logfile='uefjsav'
                     file_data = total_file_data
                     file_names.append((logfile,file_data))
+            #print(file_names)
             total_data, avg_data_rate = curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes, 
                                                        self.enable_graph, self.enable_progess_bar)
         return total_data, avg_data_rate

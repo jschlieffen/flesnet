@@ -6,7 +6,7 @@
 #@author: jschlieffen
 
 """
-Usage: input.py <input_file> <logfile> <ip> <num_entry_nodes> <entry_node_idx> <influx_node_ip> <influx_token> <use_grafana> <path> <transport_method> <customize_string>
+Usage: input.py <input_file> <logfile> <ip> <num_entry_nodes> <entry_node_idx> <influx_node_ip> <influx_token> <use_grafana> <path> <transport_method> <customize_string> <use_pattern_gen> <use_dmsa_files>
 
 Arguments: 
     <input_file> The input dmsa file for the mstool
@@ -20,6 +20,8 @@ Arguments:
     <path> The path to flesnet/mstool
     <transport_method> The transport method (rdma/zeromq, libfabric currently not implemented)
     <customize_string> The remaining params for flesnet
+    <use_pattern_gen> enables/disables usage of the pattern generator
+    <use_dmsa_files> Decides if the input files are dmsa files
 """
 
 import subprocess
@@ -28,40 +30,50 @@ import docopt
 import sys
 import os
 
-def calc_str(ip,num_entry_nodes):
+def calc_str(ip,num_entry_nodes, use_pattern_gen):
     ip_string = ""
     parts = ip.split('sep')
     for part in parts:
         if part != "":
             ip_string += "tcp://" + part + '/0 '
     shm_string = ""
-    for i in range(0,int(num_entry_nodes)):
-        shm_string += "shm:/fles_in_e%s/0 " % (str(i))
+    if use_pattern_gen == '1':
+        for i in range(0,int(num_entry_nodes)):
+            shm_string += "pgen:/fles_in_e%s/0 " % (str(i))
+    else: 
+        for i in range(0,int(num_entry_nodes)):
+            shm_string += "shm:/fles_in_e%s/0 " % (str(i))
     return ip_string, shm_string
 
 
 def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-                transport_method, customize_string):
-    ip_string, shm_string = calc_str(ip, num_entry_nodes)
+                transport_method, customize_string, use_pattern_gen, use_dmsa_files):
+    ip_string, shm_string = calc_str(ip, num_entry_nodes, use_pattern_gen)
     grafana_string = ''
     if use_grafana:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
-    mstool_commands = '%s./mstool -i %s -O fles_in_e%s -D 1 > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx))
+    D_flag = ""
+    if use_dmsa_files == '1':
+        D_flag = "-D 1"
+    if use_pattern_gen == '0':
+        mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
+        result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        time.sleep(1)
     flesnet_commands = (
         '%s./flesnet -t %s -L %s -l 2 -i %s -I %s -O %s %s %s > /dev/null 2>&1 &' 
         % (path,transport_method,logfile,str(entry_node_idx), shm_string,ip_string,
           customize_string, grafana_string)
     )
-    result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    time.sleep(1)
+
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
     while input_data == '':
         input_data = sys.stdin.read().strip()
-    result_mstool.terminate()
+    if use_pattern_gen == '0':
+        result_mstool.terminate()
+        result_mstool.wait()
     result_flesnet.terminate()
-    result_mstool.wait()
     result_flesnet.wait()
     
 
@@ -78,8 +90,10 @@ use_grafana = arg["<use_grafana>"]
 path = arg["<path>"]
 transport_method = arg["<transport_method>"]
 customize_string = arg["<customize_string>"]
+use_pattern_gen = arg["<use_pattern_gen>"]
+use_dmsa_files = arg["<use_dmsa_files>"]
 entry_nodes(input_file,ip, logfile,num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-            transport_method, customize_string)
+            transport_method, customize_string, use_pattern_gen, use_dmsa_files)
 
 
 

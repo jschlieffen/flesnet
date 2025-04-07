@@ -33,7 +33,7 @@ def calculate_progress(current_data, total_data):
 
 def calc_outout_str(input_string):
     
-    pattern = r"logs/(build|entry)_node_(.+?)\.log"
+    pattern = r"logs/flesnet/(build|entry)_nodes/(build|entry)_node_(.+?)\.log"
     
     match = re.search(pattern, input_string)
     if match:
@@ -132,7 +132,7 @@ def draw_Graph(stdscr, data_dict):
         
     plt.theme("dark")
     plt.title("data rate")
-    plt.plot_size(80,20)
+    plt.plot_size(60,15)
     buf = io.StringIO()
     with redirect_stdout(buf):
         plt.show()

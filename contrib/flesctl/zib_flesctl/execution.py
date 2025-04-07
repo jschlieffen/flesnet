@@ -12,6 +12,7 @@ import time
 import sys
 import signal
 from log_msg import *
+import logfile_gen as Logfile
 
 # =============================================================================
 # TODOs: 1. comment code 
@@ -38,22 +39,29 @@ class exec_:
                                      self.Par_.show_total_data, self.Par_.influx_node_ip, self.Par_.influx_token,
                                      self.Par_.use_grafana, self.Par_.overlap_usage_of_nodes, self.Par_.path, 
                                      self.Par_.transport_method, self.Par_.customize_string, self.Par_.show_graph,
-                                     self.Par_.show_progress_bar, self.Par_.show_only_entry_nodes)
+                                     self.Par_.show_progress_bar, self.Par_.show_only_entry_nodes, self.Par_.use_pattern_gen,
+                                     self.Par_.use_dmsa_files)
+        Logfile.logfile.transport_method = self.Par_.transport_method
         self.start_time = time.time()
+        
         self.execution_cls.start_Flesnet()
         total_data, avg_data_rate = self.execution_cls.stop_via_ctrl_c()
         self.end_time = time.time()
-        
+        Logfile.logfile.exec_time = self.end_time - self.start_time
+        Logfile.logfile.avg_data_rate = avg_data_rate
         self.create_end_message(total_data,avg_data_rate)
+        Logfile.logfile.write()
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
 
         
     def signal_handler(self,signum, frame):
         if signum == signal.SIGINT:
-            print(f'\033[31mERROR: received signal {signum}. Handling termination\033[0m')
+            logger.error(f'received signal {signum}. Handling termination')
+            #print(f'\033[31mERROR: received signal {signum}. Handling termination\033[0m')
         elif signum == signal.SIGTERM:
-            print(f'\033[31mERROR: received signal {signum}. Handling termination\033[0m')
+            #print(f'\033[31mERROR: received signal {signum}. Handling termination\033[0m')
+            logger.error(f'received signal {signum}. Handling termination')
         self.cleanup()
     
     def cleanup(self):

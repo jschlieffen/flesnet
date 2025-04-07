@@ -20,9 +20,9 @@ class Params:
         self.build_nodes = 0
         self.path = ""
         self.transport_method = ""
-        self.timeslice_size = 0
-        self.processor_instances = 0
-        self.tsclient_string = ""
+        self.customize_string = "" 
+        self.use_pattern_gen = 0
+        self.use_dmsa_files = 0
         self.input_file_list = []
         self.show_total_data = 0
         self.show_graph = 0
@@ -46,20 +46,22 @@ class Params:
         self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', True)
         self.transport_method = self.get_value('flesnet_commands', 'transport_method', 'str', True)
         self.customize_string = self.get_value('flesnet_commands', 'customize_string', 'str', True)
+        self.use_pattern_gen = self.get_value('mstool_commands', 'use_pattern_gen', 'int', self.use_pattern_gen, False)
+        self.use_dmsa_files = self.get_value('mstool_commands', 'use_dmsa_files', 'int', self.use_dmsa_files, False)
         #self.input_file_list = [(param, value) for param, value in self.config.items('input_file')]
         self.input_file_list = self.get_input_file_list('input_file')
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)
         self.show_graph = self.get_value('Monotoring', 'show_graph', 'int', False)
-        self.show_progress_bar = self.get_value('Monotoring', 'show_progress_bar', 'int', False)
-        self.show_only_entry_nodes = self.get_value('Monotoring', 'show_only_entry_nodes', 'int', False)
-        self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', False)
+        self.show_progress_bar = self.get_value('Monotoring', 'show_progress_bar', 'int', self.show_progress_bar, False)
+        self.show_only_entry_nodes = self.get_value('Monotoring', 'show_only_entry_nodes', 'int', self.show_only_entry_nodes, False)
+        self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', self.overlap_usage_of_nodes, False)
         self.use_grafana = self.get_value('influxdb', 'use_grafana', 'int', True)
-        self.influx_node_ip = self.get_value('influxdb', 'influx_node_ip','str', False)
-        self.influx_token = self.get_value('influxdb', 'token','str', False)
+        self.influx_node_ip = self.get_value('influxdb', 'influx_node_ip','str', self.influx_node_ip, False)
+        self.influx_token = self.get_value('influxdb', 'token','str', self.influx_token, False)
 
         
     
-    def get_value(self, section, param, par_type, required=False):
+    def get_value(self, section, param, par_type, var=None, required=False):
         val = os.getenv(param)
         
         if val is not None:
@@ -72,10 +74,11 @@ class Params:
             else:
                 return self.config.get(section, param)
         elif required:
-            logger.critical(f'Param not set: {param}')
+            logger.critical(f'required Param not set: {param}')
             sys.exit(1)
         else:
-            return None
+            logger.warning(f'not required Param not set: {param}')
+            return var
         
     def get_input_file_list(self,section):
         file_list = []
@@ -93,8 +96,9 @@ class Params:
 
     def validation_params(self):
         if not self.input_file_list:
-            logger.critical('no input files')
-            sys.exit(1)
+            if self.use_pattern_gen == 0:
+                logger.critical('no input files and no usage of the pattern generator')
+                sys.exit(1)
         else:
             for elem in self.input_file_list:
                 if not os.path.isfile(elem[1]):
@@ -110,6 +114,9 @@ class Params:
             self.show_only_entry_nodes = 1
         
         if self.show_progress_bar:
+            if self.use_pattern_gen == 1:
+                logger.warning('Pattern Generator is used, thus there is no limit for the total data. Therefore progress bar is disabled')
+                self.show_progress_bar = 0
             for tup in self.input_file_list:
                 if len(tup) == 2:
                     logger.warning(f'File for entry node {tup[0]} is not set. Requested for the progress bar. Therefore progress bar is disabled')
@@ -120,6 +127,8 @@ def main():
     Par_.validation_params()
     print('\n')
     print(Par_)
+    for handler in logger.handlers[:]:
+        logger.removeHandler(handler)
 
 if __name__ == '__main__':
     main()
