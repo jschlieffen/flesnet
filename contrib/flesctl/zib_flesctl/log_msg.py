@@ -10,6 +10,13 @@ import logging
 from datetime import datetime
 import configparser
 
+
+# =============================================================================
+# This file sets up the logger. It mimics the Logger provided by the 
+# C++ Boost libary. It also writes the log messages to a file 
+# that can be found under logs/flesctl/
+# =============================================================================
+
 class LogColors:
     BLUE = "\033[34m"
     GREEN = "\033[32m"
@@ -60,15 +67,10 @@ def setup_logger():
     
     run_id = config.getint('general', 'run_id')
     config['general']['run_id'] = str(run_id+1)
-    #with open('config.cfg', 'w') as configfile:
-    #    config.write(configfile)
     timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
     file_handler = logging.FileHandler(f'logs/flesctl/Run_{str(run_id+1)}_{timestamp}.log')
     file_handler.setFormatter(BoostLogFormatter())
     logger.addHandler(file_handler)
-    
-    
-
     return logger
 
 

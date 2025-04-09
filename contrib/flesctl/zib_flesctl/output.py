@@ -27,6 +27,16 @@ import docopt
 import sys
 import os
 
+
+# =============================================================================
+# This file starts flesnet on a build node. It is started with 
+#   srun nodelist=node output.py -N 1 <params>  
+# After flesnet is started the program waits for a signal from the 
+# central manager. If it receives a signal it will shut down flesnet 
+# NOTE: If the program does not terminate correctly, it completly suffices 
+#       to just kill the srun process. One does not have to kill  flesnet manually
+# =============================================================================
+
 def calc_str(ip,num_build_nodes):
     ip_string = ""
     parts = ip.split('sep')

@@ -4,3 +4,4 @@ flesctl_venv/
 config.cfg
 config.cfg
 *.cfg
+__pycache__/

@@ -11,10 +11,15 @@ import os
 import sys
 from log_msg import *
 
-#TODO: check if vars are set correctly done
-#TODO: get total data in dependence for the input_file
+# =============================================================================
+# This file reads the params from the config file and checks the validation
+# =============================================================================
+
 class Params:
     
+    # =============================================================================
+    # Here are the default values of the params that are not necessarily required   
+    # =============================================================================
     def __init__(self,config_file):
         self.entry_nodes = 0
         self.build_nodes = 0
@@ -36,10 +41,18 @@ class Params:
         self.config.read(config_file)
         self.get_params(config_file)
         
+    # =============================================================================
+    # only for debug purposes    
+    # =============================================================================
     def __str__(self):
         attributes = ', '.join(f"{key}={value}" for key, value in self.__dict__.items())
         return f"{self.__class__.__name__}({attributes})"
     
+    
+    # =============================================================================
+    # gets the params for the different params and defines if they are required 
+    # or not 
+    # =============================================================================
     def get_params(self, config_file):        
         self.entry_nodes = self.get_value('Number_of_Nodes', 'entry_nodes', 'int', True)
         self.build_nodes = self.get_value('Number_of_Nodes', 'build_nodes', 'int', True)
@@ -48,7 +61,6 @@ class Params:
         self.customize_string = self.get_value('flesnet_commands', 'customize_string', 'str', True)
         self.use_pattern_gen = self.get_value('mstool_commands', 'use_pattern_gen', 'int', self.use_pattern_gen, False)
         self.use_dmsa_files = self.get_value('mstool_commands', 'use_dmsa_files', 'int', self.use_dmsa_files, False)
-        #self.input_file_list = [(param, value) for param, value in self.config.items('input_file')]
         self.input_file_list = self.get_input_file_list('input_file')
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)
         self.show_graph = self.get_value('Monotoring', 'show_graph', 'int', False)
@@ -94,6 +106,10 @@ class Params:
                     file_list.append((entry, path))
         return file_list
 
+    # =============================================================================
+    # Checks the validation of certain parameters. Currently every validation has 
+    # to be added by hand    
+    # =============================================================================
     def validation_params(self):
         if not self.input_file_list:
             if self.use_pattern_gen == 0:
@@ -122,6 +138,9 @@ class Params:
                     logger.warning(f'File for entry node {tup[0]} is not set. Requested for the progress bar. Therefore progress bar is disabled')
                     self.show_progress_bar = 0
 
+# =============================================================================
+# only for dev purpose
+# =============================================================================
 def main():
     Par_ = Params('config.cfg')
     Par_.validation_params()

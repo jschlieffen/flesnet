@@ -6,7 +6,7 @@ TIME_ALLOC=$(grep -E '^time=' config.cfg | cut -d'=' -f2)
 
 echo $TIME_ALLOC
 
-source flesctl_venv/bin/activate
+source flesctrl_venv/bin/activate
 
 NODES=$((ENTRY_NODES_CNT + PROCESSING_NODES_CNT))
 #echo $((NODES+1))

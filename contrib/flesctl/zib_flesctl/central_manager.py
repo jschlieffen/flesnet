@@ -21,31 +21,24 @@ import docopt
 import re
 import monitoring as mon
 import curses
-# import test_terminal_Graph_v2 as test
 from log_msg import *
 import logfile_gen as Logfile
 
+
+# =============================================================================
+# This file deals with scheduling the nodes and starting the import processes.
+# It deals with starting an experiment and clean up after the end of the experiment
+# Note: it is the only file where you can communicate with the different nodes 
+# =============================================================================
+
+# =============================================================================
+# This class deals with the reading of the ips of a node. May be extended in 
+# furture
+# =============================================================================
 class slurm_commands:
     
     def __init__(self):
         None
-        
-    def alloc_nodes(self,node_numbers):
-        command = 'salloc --nodes=%s -p big --constraint=Infiniband --time=00:20:00'%(node_numbers)
-        allocation = subprocess.run(command,shell=True)
-        print(allocation.returncode)
-        return allocation.returncode
-    
-    def pids(self,node_id):
-        command = 'ps aux | grep %s' % (node_id) 
-        try:
-            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            stdout,stderr = result.communicate()
-            return stdout
-        except subprocess.CalledProcessError as e:
-            print('Error')
-            sys.exit(1)
-        return None
 
     def ethernet_ip(self,node_id):
         command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
@@ -76,7 +69,11 @@ class slurm_commands:
         return content2
         
         
-
+# =============================================================================
+# This class is used to start and stop flesnet/mstool for the entry nodes
+# It gets as input the entry node list, the build_node ips and the specifc 
+# attributes for the start of flesnet (e.g. rmda/zeromq)
+# =============================================================================
 class Entry_nodes(slurm_commands):
     
     def __init__(self,node_list,build_nodes_ips,build_nodes_eth_ips, num_entry_nodes,
@@ -132,6 +129,12 @@ class Entry_nodes(slurm_commands):
             print('Error: ', stderr)
             print('\n')
     
+
+# =============================================================================
+# This class is used to start and stop flesnet for the build nodes
+# It gets as input the build node list, the entry node ips and the specifc 
+# attributes for the start of flesnet (e.g. rmda/zeromq)
+# =============================================================================
 class Build_nodes(slurm_commands):
     
     def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, num_build_nodes,
@@ -176,6 +179,12 @@ class Build_nodes(slurm_commands):
             print('Error: ', stderr)
             print('\n')
 
+# =============================================================================
+# This class is used to start and stop flesnet on nodes that are used for both 
+# entry nodes and build nodes. It gets as input the node list, the 
+# entry node ips, build node ips and the specifc 
+# attributes for the start of flesnet (e.g. rmda/zeromq)
+# =============================================================================
 class Super_nodes(slurm_commands):
     
     def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, num_build_nodes,build_nodes_ips,build_nodes_eth_ips, num_entry_nodes, 
@@ -236,6 +245,14 @@ class Super_nodes(slurm_commands):
             print('Error: ', stderr)
             print('\n')
 
+
+# =============================================================================
+# This class is used to firstly schedule the nodes into entry/build nodes, read 
+# the ips and then start flesnet on the entry/build nodes via the classes 
+# entry_nodes, build_nodes, super_nodes. After doing that it starts the
+# either the monotoring if activated or wait until the user says that the 
+# experiment is finished.
+# =============================================================================
 class execution(slurm_commands):
     
     def __init__(self, input_files,num_entrynodes, num_buildnodes, show_total_data, influx_node_ip, influx_token, use_grafana, 
@@ -277,9 +294,15 @@ class execution(slurm_commands):
                                            self.transport_method, self.customize_string, self.use_pattern_gen, self.use_dmsa_files)
         
         
+    # =============================================================================
+    # gets the node list of the current allocations    
+    # =============================================================================
     def get_node_list(self):
         node_str = os.environ.get('SLURM_NODELIST')
         node_list = []
+        if node_str is None:
+            logger.critical('SLURM_NODELIST is not set, Maybe you forget to allocate the nodes')
+            sys.exit(1)
         range_pattern = re.findall(r'(.*?)(\d+)-(\d+)', node_str)
         list_pattern = re.findall(r'(.*?)(\d+(?:,\d+)*)', node_str)
         for base, start, end in range_pattern:
@@ -291,13 +314,20 @@ class execution(slurm_commands):
         node_list = sorted(set(node_list))
         return node_list
     
-    
-    
+        
+    # =============================================================================
+    # These two functions forms the string of the entry/build node ips 
+    # Note: They don't read it out the just forms the string
+    # =============================================================================
     def get_eth_ips(self):
-        for key, val in self.entry_nodes.items():
-            self.entry_nodes_eth_ips += 'shm://' + val['eth_ip'] + '/0'
-        for key, val in self.build_nodes.items():
-            self.build_nodes_eth_ips += 'shm://' + val['eth_ip'] + '/0'
+        if self.overlap_usage_of_nodes:
+            for key,val in self.overlap_nodes.items():
+                self.entry_nodes_ips += val['eth_ip'] + "sep"
+                self.build_nodes_ips += val['eth_ip'] + "sep"
+        for key,val in self.entry_nodes.items():
+            self.entry_nodes_ips += val['eth_ip'] + "sep"
+        for key,val in self.build_nodes.items():
+            self.build_nodes_ips += val['eth_ip'] + "sep"
             
         
     def get_ips(self):
@@ -309,19 +339,20 @@ class execution(slurm_commands):
             self.entry_nodes_ips += val['inf_ip'] + "sep"
         for key,val in self.build_nodes.items():
             self.build_nodes_ips += val['inf_ip'] + "sep"
-            
+    
+    # =============================================================================
+    # This function divides the nodes into entry/build and if activated super nodes
+    # Furthermore the dict consisting the nodes also contains the index, of the nodes
+    # and their ips
+    # =============================================================================
     def schedule_nodes(self):
         node_list = self.get_node_list()
         entry_nodes_cnt = 0
         build_nodes_cnt = 0
-        if node_list is None:
-            logger.critical('SLURM_NODELIST is not set, Maybe you forget to allocate the nodes')
-            sys.exit(1)
-            
-        elif len(node_list) < self.num_entrynodes + self.num_buildnodes:
-            logger.critical('Incorrect Number of nodes, expected: {self.num_entrynodes + self.num_buildnodes}, got: {len(node_list)} ')
-            sys.exit(1)
         if self.overlap_usage_of_nodes:
+            if len(node_list) < max(self.num_entrynodes, self.num_buildnodes):
+                logger.critical('Incorrect Number of nodes, expected: {self.num_entrynodes + self.num_buildnodes}, got: {len(node_list)} ')
+                sys.exit(1)
             for node in node_list:
                 node_ip = self.infiniband_ip(node)
                 node_eth_ip = self.ethernet_ip(node)
@@ -351,6 +382,9 @@ class execution(slurm_commands):
                         'eth_ip' : node_eth_ip}
                     build_nodes_cnt += 1
         else:
+            if len(node_list) < self.num_entrynodes + self.num_buildnodes:
+                logger.critical('Incorrect Number of nodes, expected: {self.num_entrynodes + self.num_buildnodes}, got: {len(node_list)} ')
+                sys.exit(1)
             for node in node_list:
                 node_ip = self.infiniband_ip(node)
                 node_eth_ip = self.ethernet_ip(node)
@@ -373,13 +407,19 @@ class execution(slurm_commands):
         Logfile.logfile.entry_nodes_list = self.entry_nodes
         Logfile.logfile.build_nodes_list = self.build_nodes
         Logfile.logfile.overlap_nodes_list = self.overlap_nodes
-        
+    
+    # =============================================================================
+    # Currently not used  
+    # =============================================================================
     def bijectiv_mapping(self):
         for entry_node, build_node in zip(self.entry_nodes.keys(), self.build_nodes.keys()):
             self.entry_nodes[entry_node]['allocated_build_node'] = build_node
             self.build_nodes[build_node]['allocated_entry_node'] = entry_node
     
     
+    # =============================================================================
+    # This function starts flesnet and partly checks if the start was successful  
+    # =============================================================================
     def start_Flesnet(self):
         if self.overlap_usage_of_nodes:
             res = self.super_nodes_cls.start_flesnet(self.input_files,self.influx_node_ip, self.influx_token, self.use_grafana)
@@ -398,12 +438,11 @@ class execution(slurm_commands):
                     self.build_nodes_cls.stop_flesnet()
                     sys.exit(1)
                     
-                    
-    def start_Flesnet_zeromq(self):
-        self.entry_nodes_cls.start_flesnet_zeromq()
-        self.build_nodes_cls.start_flesnet_zeromq()
-            
-    
+                
+    # =============================================================================
+    # This function either starts the monotoring if activated or it just waits 
+    # until the user stops the program
+    # =============================================================================
     def stop_via_ctrl_c(self):
         time.sleep(2)
         logger.success('flesnet launched successfully')
@@ -417,7 +456,10 @@ class execution(slurm_commands):
                 time.sleep(1)
         self.stop_program()
         return total_data, avg_data_rate
-        
+    
+    # =============================================================================
+    # Stops the experiment and kills every process connected    
+    # =============================================================================
     def stop_program(self):
         time.sleep(2)
         logger.info('stopping flesnet')
@@ -427,6 +469,9 @@ class execution(slurm_commands):
             self.build_nodes_cls.stop_flesnet()
             self.entry_nodes_cls.stop_flesnet()
 
+    # =============================================================================
+    # Starts the monotoring. 
+    # =============================================================================
     def monitoring(self):
         file_names = []
         if self.overlap_nodes:
@@ -451,32 +496,31 @@ class execution(slurm_commands):
                     file_names.append((logfile_build,total_data))
             total_data, avg_data_rate = curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes, 
                                                        self.enable_graph, self.enable_progess_bar)
-        else:
-            entry_nodes_cnt = 0
-            total_file_data = 0
-            for entry_node in self.entry_nodes.keys():
-                logfile = 'logs/flesnet/entry_nodes/entry_node_%s.log' % (entry_node)
-                #total_data = 1000
-                #logfile='testefkEGBW'
-                file_data = 0
-                file_data = next((tup[2] for tup in self.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
-                if file_data is None:
-                    file_data = next((tup[2] for tup in self.input_files if tup[0] == 'e_remaining'), None)
-                
+
+        entry_nodes_cnt = 0
+        total_file_data = 0
+        for entry_node in self.entry_nodes.keys():
+            logfile = 'logs/flesnet/entry_nodes/entry_node_%s.log' % (entry_node)
+            file_data = 0
+            file_data = next((tup[2] for tup in self.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
+            if file_data is None:
+                file_data = next((tup[2] for tup in self.input_files if tup[0] == 'e_remaining'), None)
+            
+            file_names.append((logfile,file_data))
+            entry_nodes_cnt += 1
+            total_file_data += file_data
+        if not self.show_only_entry_nodes:
+            for build_node in self.build_nodes.keys():
+                logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (build_node)
+                file_data = total_file_data
                 file_names.append((logfile,file_data))
-                entry_nodes_cnt += 1
-                total_file_data += file_data
-            if not self.show_only_entry_nodes:
-                for build_node in self.build_nodes.keys():
-                    logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (build_node)
-                    #logfile='uefjsav'
-                    file_data = total_file_data
-                    file_names.append((logfile,file_data))
-            #print(file_names)
-            total_data, avg_data_rate = curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes, 
-                                                       self.enable_graph, self.enable_progess_bar)
+        total_data, avg_data_rate = curses.wrapper(mon.main,file_names,self.num_buildnodes, self.num_entrynodes, 
+                                                   self.enable_graph, self.enable_progess_bar)
         return total_data, avg_data_rate
-        
+
+# =============================================================================
+# only for dev purpose
+# =============================================================================
 def main():
     arg = docopt.docopt(__doc__, version='0.2')
     

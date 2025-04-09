@@ -9,7 +9,10 @@ Created on Mon Apr  7 15:36:20 2025
 from datetime import datetime
 import configparser
 
-
+# =============================================================================
+# This file creates the flesctrl logfile that can be found in 
+# logs/general/
+# =============================================================================
 
 class Logfile:
     def __init__(self):

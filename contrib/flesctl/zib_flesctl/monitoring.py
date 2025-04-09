@@ -17,8 +17,19 @@ from contextlib import redirect_stdout
 import signal
 from log_msg import *
 
+# =============================================================================
+# This file deals with the monotoring by using a mixture of curses for the 
+# terminal control and plotext for the terminal printing.
+# NOTE: Due to technical reasons related to ncurses, this file consists
+# of its own signal handler
+# =============================================================================
+
+# Used for the signal handler
 terminate_program = False
 
+# =============================================================================
+# Gets the data rate from a line in the logfile
+# =============================================================================
 def get_data_rate(log_line):
     match = re.search(r'(\d+\.\d+)\sGB/s', log_line)
     if match:
@@ -26,11 +37,14 @@ def get_data_rate(log_line):
     match = re.search(r'(\d+\.\d+)\sMB/s', log_line)
     if match:
         return float(match.group(1))/1000
-    return 0.0
+    return 0.0 # This line returns 0
 
 def calculate_progress(current_data, total_data):
     return current_data / total_data
 
+# =============================================================================
+# Gives the prefix of the progress bars
+# =============================================================================
 def calc_outout_str(input_string):
     
     pattern = r"logs/flesnet/(build|entry)_nodes/(build|entry)_node_(.+?)\.log"
@@ -42,6 +56,11 @@ def calc_outout_str(input_string):
         formatted_output = f"{node_type} node: {node_id}"
         return formatted_output
 
+
+# =============================================================================
+# draws the progress bars of the entry and build nodes, by using the curses 
+# colours 
+# =============================================================================
 def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes):
     #stdscr.clear()
     bar_width = 50
@@ -67,6 +86,10 @@ def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes):
         
 
 
+# =============================================================================
+# Translate the plotext output, which is written in ANSI to something ncurses 
+# understands (ACS, colour pairs, etc.)
+# =============================================================================
 def strip_and_translate_ansi_escape_sequences(text):
     ansi_escape = re.compile(r'\x1b\[[0-9;]*[m]')
     color_codes = []
@@ -110,12 +133,20 @@ def strip_and_translate_ansi_escape_sequences(text):
 
     return result_text
 
-
+# =============================================================================
+# initialization of all ncurses colours. Maximum is 256
+# =============================================================================
 def init_color_pairs_v2():
     curses.use_default_colors()
     for i in range(0, curses.COLORS):
         curses.init_pair(i, i, -1)
 
+# =============================================================================
+# This function draws the graph in the terminal. For this it uses plotext.
+# Since plotext and ncurses does not work well together, the output 
+# of plotext is redirected into a buffer. The output is then
+# line by line translated and given to ncurses for the displaying
+# =============================================================================
 def draw_Graph(stdscr, data_dict):
     curses.start_color()
 
@@ -160,6 +191,9 @@ def draw_Graph(stdscr, data_dict):
                     x += len(char)
             x = 0
 
+# =============================================================================
+# Currently not used due to bad running time
+# =============================================================================
 def tail_file_v2(file_path):
     f = subprocess.Popen(['tail','-F',file_path],\
             stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -170,7 +204,10 @@ def tail_file_v2(file_path):
         if p.poll(1):
             yield str(f.stdout.readline())
         time.sleep(0.5)
-        
+    
+# =============================================================================
+# mimics the tail function
+# =============================================================================
 def tail_file(file_path):
     f = subprocess.Popen(['tail', '-F', file_path],
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -179,6 +216,11 @@ def tail_file(file_path):
         if rlist:
             yield str(f.stdout.readline(), 'utf-8').strip()
 
+# =============================================================================
+# This function is the main funxtion in of this file. It adds 
+# the current data rate to the data dict and the starts the functions
+# draw_Graph and draw_progress_bar
+# =============================================================================
 def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable_progress_bar):
     global terminate_program
     signal.signal(signal.SIGINT, lambda signum, frame: signal_handler(signum, frame, stdscr))
@@ -213,6 +255,10 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable
     total_data, avg_data_rate = calc_output_msg(data_dict)
     return total_data, avg_data_rate
     
+
+# =============================================================================
+# Calculate the total data sended and the average data rate by all entry nodes
+# =============================================================================
 def calc_output_msg(data_dict):
     total_data = 0
     avg_data_rate = 0
@@ -227,7 +273,13 @@ def calc_output_msg(data_dict):
                     it_counter += 1
     avg_data_rate = avg_data_rate/it_counter
     return total_data, avg_data_rate
-        
+   
+# =============================================================================
+# Defines the signal handler for a clean end of the experiment. Currently only
+# ctrl+c and sigterm are implemented. For safety reasons sigkill is not 
+# implemented so it is recommended to only use it if the other two fails
+# May be changed in the furture
+# ============================================================================
 def signal_handler(signum, frame,stdscr):
     if signum == signal.SIGINT:
         logger.error(f'received signal {signum}. Handling termination')

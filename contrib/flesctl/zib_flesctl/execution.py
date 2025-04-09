@@ -15,12 +15,15 @@ from log_msg import *
 import logfile_gen as Logfile
 
 # =============================================================================
-# TODOs: 1. comment code 
-#        2. write documentation for the code. 
-#        3. make a fitting implementation for the use of sbatch
-#        4. make implementation for libfabric (get libabric run first) 
-#           (maybe to complicated at first do this when I have the time to.)
+# TODOs: 1. make implementation for libfrabric
 # =============================================================================
+
+# =============================================================================
+# This file is the execution file. It starts the logger, signal handler and 
+# the central manager. 
+# =============================================================================
+
+
 class exec_:
     
     def __init__(self):
@@ -32,6 +35,9 @@ class exec_:
         self.start_time = 0
         self.end_time = 0
 
+    # =============================================================================
+    # Starts the simulation  
+    # =============================================================================
     def start_sim(self):
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
@@ -54,15 +60,20 @@ class exec_:
         for handler in logger.handlers[:]:
             logger.removeHandler(handler)
 
-        
+    
+    # =============================================================================
+    # Defines the signal handler for a clean end of the experiment. Currently only
+    # ctrl+c and sigterm are implemented. For safety reasons sigkill is not 
+    # implemented so it is recommended to only use it if the other two fails
+    # May be changed in the furture
+    # =============================================================================
     def signal_handler(self,signum, frame):
         if signum == signal.SIGINT:
             logger.error(f'received signal {signum}. Handling termination')
-            #print(f'\033[31mERROR: received signal {signum}. Handling termination\033[0m')
+            self.cleanup()
         elif signum == signal.SIGTERM:
-            #print(f'\033[31mERROR: received signal {signum}. Handling termination\033[0m')
             logger.error(f'received signal {signum}. Handling termination')
-        self.cleanup()
+            self.cleanup()
     
     def cleanup(self):
         if self.Par_.overlap_usage_of_nodes:

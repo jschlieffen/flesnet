@@ -30,6 +30,17 @@ import docopt
 import sys
 import os
 
+# =============================================================================
+# This file starts mstool and flesnet on an entry node. It is started with 
+#   srun nodelist=node input.py -N 1 <params>  
+# After flesnet is started the program waits for a signal from the 
+# central manager. If it receives a signal it will shut down flesnet and the 
+# mstool. 
+# NOTE: If the program does not terminate correctly, it completly suffices 
+#       to just kill the srun process. One does not have to kill mstool and 
+#       flesnet manually
+# =============================================================================
+
 def calc_str(ip,num_entry_nodes, use_pattern_gen):
     ip_string = ""
     parts = ip.split('sep')
