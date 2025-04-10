@@ -257,7 +257,7 @@ class execution(slurm_commands):
     
     def __init__(self, input_files,num_entrynodes, num_buildnodes, show_total_data, influx_node_ip, influx_token, use_grafana, 
                  overlap_usage_of_nodes,path,transport_method,customize_string, enable_graph, enable_progess_bar,
-                 show_only_entry_nodes, use_pattern_gen, use_dmsa_files):
+                 show_only_entry_nodes, use_pattern_gen, use_dmsa_files, set_node_list, entry_nodes_list,build_nodes_list):
         super().__init__()
         self.input_files = input_files
         self.num_entrynodes = num_entrynodes 
@@ -275,6 +275,9 @@ class execution(slurm_commands):
         self.show_only_entry_nodes = show_only_entry_nodes
         self.use_pattern_gen = use_pattern_gen
         self.use_dmsa_files = use_dmsa_files
+        self.set_node_list = set_node_list
+        self.entry_nodes_list = entry_nodes_list
+        self.build_nodes_list = build_nodes_list
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.overlap_nodes = {}
@@ -322,12 +325,12 @@ class execution(slurm_commands):
     def get_eth_ips(self):
         if self.overlap_usage_of_nodes:
             for key,val in self.overlap_nodes.items():
-                self.entry_nodes_ips += val['eth_ip'] + "sep"
-                self.build_nodes_ips += val['eth_ip'] + "sep"
+                self.entry_nodes_eth_ips += val['eth_ip'] + "sep"
+                self.build_nodes_eth_ips += val['eth_ip'] + "sep"
         for key,val in self.entry_nodes.items():
-            self.entry_nodes_ips += val['eth_ip'] + "sep"
+            self.entry_nodes_eth_ips += val['eth_ip'] + "sep"
         for key,val in self.build_nodes.items():
-            self.build_nodes_ips += val['eth_ip'] + "sep"
+            self.build_nodes_eth_ips += val['eth_ip'] + "sep"
             
         
     def get_ips(self):
@@ -349,9 +352,23 @@ class execution(slurm_commands):
         node_list = self.get_node_list()
         entry_nodes_cnt = 0
         build_nodes_cnt = 0
+        if self.set_node_list == 1:
+            self.schedule_nodes_customized(node_list,entry_nodes_cnt, build_nodes_cnt)
+        else:
+            self.schedule_nodes_randomly(node_list,entry_nodes_cnt, build_nodes_cnt)
+        
+        Logfile.logfile.entry_nodes_list = self.entry_nodes
+        Logfile.logfile.build_nodes_list = self.build_nodes
+        Logfile.logfile.overlap_nodes_list = self.overlap_nodes
+    
+    def schedule_nodes_randomly(self,node_list,entry_nodes_cnt, build_nodes_cnt):
+
         if self.overlap_usage_of_nodes:
-            if len(node_list) < max(self.num_entrynodes, self.num_buildnodes):
-                logger.critical('Incorrect Number of nodes, expected: {self.num_entrynodes + self.num_buildnodes}, got: {len(node_list)} ')
+            if len(node_list) < max(self.num_entrynodes - entry_nodes_cnt, self.num_buildnodes - build_nodes_cnt):
+                logger.critical(f'Incorrect Number of nodes, expected:'
+                                f'{(self.num_entrynodes - entry_nodes_cnt) + (self.num_buildnodes - build_nodes_cnt)}'
+                                f', got: {len(node_list)} '
+                                )
                 sys.exit(1)
             for node in node_list:
                 node_ip = self.infiniband_ip(node)
@@ -382,8 +399,11 @@ class execution(slurm_commands):
                         'eth_ip' : node_eth_ip}
                     build_nodes_cnt += 1
         else:
-            if len(node_list) < self.num_entrynodes + self.num_buildnodes:
-                logger.critical('Incorrect Number of nodes, expected: {self.num_entrynodes + self.num_buildnodes}, got: {len(node_list)} ')
+            if len(node_list) < (self.num_entrynodes - entry_nodes_cnt) + (self.num_buildnodes - build_nodes_cnt):
+                logger.critical(f'Incorrect Number of nodes, expected:'
+                                f'{(self.num_entrynodes - entry_nodes_cnt) + (self.num_buildnodes - build_nodes_cnt)}'
+                                f', got: {len(node_list)} '
+                                )
                 sys.exit(1)
             for node in node_list:
                 node_ip = self.infiniband_ip(node)
@@ -404,9 +424,78 @@ class execution(slurm_commands):
                         'eth_ip' : node_eth_ip}
                     build_nodes_cnt += 1
         
-        Logfile.logfile.entry_nodes_list = self.entry_nodes
-        Logfile.logfile.build_nodes_list = self.build_nodes
-        Logfile.logfile.overlap_nodes_list = self.overlap_nodes
+    def schedule_nodes_customized(self,node_list,entry_nodes_cnt, build_nodes_cnt):
+        #print(node_list)
+        node_list_remaining = node_list[: ]
+        if self.overlap_usage_of_nodes:
+        
+            if len(node_list) < max(self.num_entrynodes, self.num_buildnodes):
+                logger.critical(f'Incorrect Number of nodes, expected: {self.num_entrynodes + self.num_buildnodes}, got: {len(node_list)} ')
+                sys.exit(1)
+            for node in node_list:
+                node_ip = self.infiniband_ip(node)
+                node_eth_ip = self.ethernet_ip(node)
+                time.sleep(1)
+                
+                if node in self.entry_nodes_list and node in self.build_nodes_list:
+                    self.overlap_nodes[node] = {
+                        'node' : node,
+                        'entry_node_idx' : entry_nodes_cnt,
+                        'build_node_idx' : build_nodes_cnt,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip}
+                    entry_nodes_cnt += 1
+                    build_nodes_cnt += 1
+                    node_list_remaining.remove(node)
+                elif node in self.entry_nodes_list:
+                    self.entry_nodes[node] = {
+                        'node' : node,
+                        'entry_node_idx' : entry_nodes_cnt,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip}
+                    entry_nodes_cnt += 1
+                    node_list_remaining.remove(node)
+                elif node in self.build_nodes_list:
+                    self.build_nodes[node] = {
+                        'node' : node,
+                        'build_node_idx' : build_nodes_cnt,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip}
+                    build_nodes_cnt += 1
+                    node_list_remaining.remove(node)
+        else:
+            if len(node_list) < self.num_entrynodes + self.num_buildnodes:
+                logger.critical(f'Incorrect Number of nodes, expected: {self.num_entrynodes + self.num_buildnodes}, got: {len(node_list)} ')
+                sys.exit(1)
+            for node in node_list:
+                node_ip = self.infiniband_ip(node)
+                node_eth_ip = self.ethernet_ip(node)
+                time.sleep(1)
+                if node in self.entry_nodes_list:
+                    #print(node)
+                    self.entry_nodes[node] = {
+                        'node' : node,
+                        'entry_node_idx' : entry_nodes_cnt,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip}
+                    entry_nodes_cnt += 1
+                    node_list_remaining.remove(node)
+                elif node in self.build_nodes_list:
+                    self.build_nodes[node] = {
+                        'node' : node,
+                        'build_node_idx' : build_nodes_cnt,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip}
+                    build_nodes_cnt += 1
+                    node_list_remaining.remove(node)
+        if entry_nodes_cnt < self.num_entrynodes or build_nodes_cnt < self.num_buildnodes:
+            logger.warning(
+                f'The number of nodes assigned for the entry/build nodes does not match the number '
+                f'of entry/build nodes. Expected {self.num_entrynodes}, got {entry_nodes_cnt} for the ' 
+                f'entry nodes. Expected {self.num_buildnodes}, got {build_nodes_cnt} for the '
+                f'build nodes. Proceed by assembling the missing entry/build nodes randomly'
+            )
+            self.schedule_nodes_randomly(node_list_remaining, entry_nodes_cnt, build_nodes_cnt)
     
     # =============================================================================
     # Currently not used  

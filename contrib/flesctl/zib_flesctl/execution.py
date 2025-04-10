@@ -15,7 +15,9 @@ from log_msg import *
 import logfile_gen as Logfile
 
 # =============================================================================
-# TODOs: 1. make implementation for libfrabric
+# TODOs: 1. Add possibility to choose the entry and build nodes manually.
+#           Note: one also has to rewrite exec.sh 
+#        2. make implementation for libfrabric
 # =============================================================================
 
 # =============================================================================
@@ -46,7 +48,8 @@ class exec_:
                                      self.Par_.use_grafana, self.Par_.overlap_usage_of_nodes, self.Par_.path, 
                                      self.Par_.transport_method, self.Par_.customize_string, self.Par_.show_graph,
                                      self.Par_.show_progress_bar, self.Par_.show_only_entry_nodes, self.Par_.use_pattern_gen,
-                                     self.Par_.use_dmsa_files)
+                                     self.Par_.use_dmsa_files, self.Par_.set_node_list, self.Par_.entry_nodes_list,
+                                     self.Par_.build_nodes_list)
         Logfile.logfile.transport_method = self.Par_.transport_method
         self.start_time = time.time()
         

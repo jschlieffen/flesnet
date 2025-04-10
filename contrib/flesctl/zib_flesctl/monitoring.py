@@ -52,7 +52,7 @@ def calc_outout_str(input_string):
     match = re.search(pattern, input_string)
     if match:
         node_type = match.group(1) 
-        node_id = match.group(2)
+        node_id = match.group(3)
         formatted_output = f"{node_type} node: {node_id}"
         return formatted_output
 

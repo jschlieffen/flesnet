@@ -76,7 +76,6 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
         % (path,transport_method,logfile,str(entry_node_idx), shm_string,ip_string,
           customize_string, grafana_string)
     )
-
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
     while input_data == '':

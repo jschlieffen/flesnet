@@ -23,6 +23,9 @@ class Params:
     def __init__(self,config_file):
         self.entry_nodes = 0
         self.build_nodes = 0
+        self.set_node_list=0
+        self.entry_nodes_list=[]
+        self.build_nodes_list=[]
         self.path = ""
         self.transport_method = ""
         self.customize_string = "" 
@@ -56,6 +59,9 @@ class Params:
     def get_params(self, config_file):        
         self.entry_nodes = self.get_value('Number_of_Nodes', 'entry_nodes', 'int', True)
         self.build_nodes = self.get_value('Number_of_Nodes', 'build_nodes', 'int', True)
+        self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
+        self.entry_nodes_list = self.get_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)
+        self.build_nodes_list = self.get_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)
         self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', True)
         self.transport_method = self.get_value('flesnet_commands', 'transport_method', 'str', True)
         self.customize_string = self.get_value('flesnet_commands', 'customize_string', 'str', True)
@@ -106,6 +112,25 @@ class Params:
                     file_list.append((entry, path))
         return file_list
 
+    def get_list(self,section, param, var=None, required=False):
+        val = os.getenv(param)
+        
+        if val is not None:
+            #print('test')
+            return val.split(',')
+        elif self.config.has_option(section, param):
+            list_str = self.config.get(section,param)
+            #print('test')
+            #print(list_str)
+            val = [item.strip() for item in list_str.split(',')]
+            return val
+        elif required:
+            logger.critical(f'required Param not set: {param}')
+            sys.exit(1)
+        else:
+            logger.warning(f'not required Param not set: {param}')
+            return var
+            
     # =============================================================================
     # Checks the validation of certain parameters. Currently every validation has 
     # to be added by hand    
@@ -134,7 +159,7 @@ class Params:
                 logger.warning('Pattern Generator is used, thus there is no limit for the total data. Therefore progress bar is disabled')
                 self.show_progress_bar = 0
             for tup in self.input_file_list:
-                if len(tup) == 2:
+                if len(tup) == 1:
                     logger.warning(f'File for entry node {tup[0]} is not set. Requested for the progress bar. Therefore progress bar is disabled')
                     self.show_progress_bar = 0
 
