@@ -361,6 +361,12 @@ class execution(slurm_commands):
         Logfile.logfile.build_nodes_list = self.build_nodes
         Logfile.logfile.overlap_nodes_list = self.overlap_nodes
     
+        
+    # =============================================================================
+    # Help function for schedule nodes. Used if the user does not want to set the 
+    # entry and build nodes or the given entry and build nodes does not suffices
+    # to get the given number of entry and build nodes
+    # =============================================================================
     def schedule_nodes_randomly(self,node_list,entry_nodes_cnt, build_nodes_cnt):
 
         if self.overlap_usage_of_nodes:
@@ -423,7 +429,11 @@ class execution(slurm_commands):
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip}
                     build_nodes_cnt += 1
-        
+            
+    # =============================================================================
+    # Help function for schedule nodes. Used if the user wants to set the
+    # entry nodes and build nodes manually
+    # =============================================================================
     def schedule_nodes_customized(self,node_list,entry_nodes_cnt, build_nodes_cnt):
         #print(node_list)
         node_list_remaining = node_list[: ]
