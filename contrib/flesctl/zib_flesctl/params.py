@@ -136,15 +136,16 @@ class Params:
     # to be added by hand    
     # =============================================================================
     def validation_params(self):
-        if not self.input_file_list:
-            if self.use_pattern_gen == 0:
-                logger.critical('no input files and no usage of the pattern generator')
-                sys.exit(1)
-        else:
-            for elem in self.input_file_list:
-                if not os.path.isfile(elem[1]):
-                    logger.critical(f'File {elem[1]} does not exist')
+        if self.use_pattern_gen != 1:
+            if not self.input_file_list:
+                if self.use_pattern_gen == 0:
+                    logger.critical('no input files and no usage of the pattern generator')
                     sys.exit(1)
+            else:
+                for elem in self.input_file_list:
+                    if not os.path.isfile(elem[1]):
+                        logger.critical(f'File {elem[1]} does not exist')
+                        sys.exit(1)
         for program in ['./mstool', './flesnet']:
             program_path = self.path + program
             if not (os.path.isfile(program_path) and os.access(program_path, os.X_OK)):
