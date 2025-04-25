@@ -15,9 +15,9 @@ from log_msg import *
 import logfile_gen as Logfile
 
 # =============================================================================
-# TODOs: 1. Add possibility to choose the entry and build nodes manually.
-#           Note: one also has to rewrite exec.sh 
-#        2. make implementation for libfrabric
+# TODOs:1. make possibility to name the flesnet logfiles (ask nico about it)
+#       2. write another benchmarking program
+#       3. make implementation for libfrabric
 # =============================================================================
 
 # =============================================================================

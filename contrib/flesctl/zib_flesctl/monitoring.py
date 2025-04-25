@@ -213,8 +213,10 @@ def tail_file(file_path):
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     while True:
         rlist, _, _ = select.select([f.stdout], [], [], 1) 
+        line = str(f.stdout.readline(), 'utf-8').strip()
         if rlist:
-            yield str(f.stdout.readline(), 'utf-8').strip()
+            if "STATUS:" in line or "INFO:" in line:
+                yield line
 
 # =============================================================================
 # This function is the main funxtion in of this file. It adds 

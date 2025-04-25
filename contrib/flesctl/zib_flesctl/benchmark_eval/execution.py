@@ -1,0 +1,68 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Apr 25 15:41:42 2025
+
+@author: jschlieffen
+"""
+import benchmark_eval as be
+import plots 
+import re
+#import docopt
+import os
+
+class execution:
+    
+    def __init__(self,flesctl_logfile):
+        self.entry_nodes = []
+        self.build_nodes = []
+        if not (os.path.isfile(flesctl_logfile)):
+            print('file does not exist')
+        self.get_node_names(flesctl_logfile)
+        self.data_rates_entry_nodes = {}
+        self.shm_usages_entry_nodes = {}
+        
+    def get_node_names(self,flesctl_logfile_path):
+        with open(flesctl_logfile_path, "r") as file:
+            flesctl_logfile = file.read()
+        pattern = re.compile(r"([a-zA-Z0-9-]+)\s+as\s+index\s+(\d+)")
+        nodes_info = []
+        node_types = ['Entry', 'Build']
+        for node_type in node_types:
+            #print(node_type)
+            matches = re.findall(f'{node_type} nodes:([\s\S]*?)(?=\n[A-Za-z]|$)', flesctl_logfile)
+            #print(matches)
+            if matches:
+                for match in matches:
+                    for name, index in re.findall(pattern, match):
+                        nodes_info.append({'node_name': name, 'node_type': node_type, 'index': int(index)})
+        #print(nodes_info)
+        for node in nodes_info:
+            if node['node_type'] == 'Entry':
+                self.entry_nodes.append((node['node_name'], node['index']))
+            elif node['node_type'] == 'Build':
+                self.build_nodes.append((node['node_name'], node['index']))
+
+    def start_plots_entry_nodes(self):
+        #print(self.entry_nodes)
+        for entry_node in self.entry_nodes:
+            #print(entry_node[0])
+            Logfile_reader_cls = be.Logfile_reader(f"../logs/flesnet/entry_nodes/entry_node_{entry_node[0]}.log", "entry_node")
+            self.data_rates_entry_nodes[f"entry_node_{entry_node[0]}"] = Logfile_reader_cls.data_rate
+            self.shm_usages_entry_nodes[f"entry_node_{entry_node[0]}"] = Logfile_reader_cls.data_shms
+        #print(self.data_rates_entry_nodes)
+        #print(self.shm_usages_entry_nodes)
+        cp_cls = plots.create_plots(self.data_rates_entry_nodes, self.shm_usages_entry_nodes)
+        cp_cls.plot_total_data_rate()
+        cp_cls.plot_avg_data_rate()
+        cp_cls.plot_data_rate_single()
+        cp_cls.plot_shm_usage()
+        cp_cls.plot_shm_usage_single()
+
+def main():
+    
+    exec_cls = execution("../logs/general/Run_13_2025-04-25-15-28-00.log")
+    exec_cls.start_plots_entry_nodes()
+    
+if __name__ == '__main__':
+    main()

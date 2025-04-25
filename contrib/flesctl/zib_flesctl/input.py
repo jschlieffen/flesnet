@@ -72,7 +72,7 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
         result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         time.sleep(1)
     flesnet_commands = (
-        '%s./flesnet -t %s -L %s -l 2 -i %s -I %s -O %s %s %s > /dev/null 2>&1 &' 
+        '%s./flesnet -t %s -L %s -l 1 -i %s -I %s -O %s %s %s > /dev/null 2>&1 &' 
         % (path,transport_method,logfile,str(entry_node_idx), shm_string,ip_string,
           customize_string, grafana_string)
     )

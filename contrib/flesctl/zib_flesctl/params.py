@@ -116,12 +116,9 @@ class Params:
         val = os.getenv(param)
         
         if val is not None:
-            #print('test')
             return val.split(',')
         elif self.config.has_option(section, param):
             list_str = self.config.get(section,param)
-            #print('test')
-            #print(list_str)
             val = [item.strip() for item in list_str.split(',')]
             return val
         elif required:

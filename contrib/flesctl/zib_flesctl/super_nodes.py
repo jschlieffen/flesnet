@@ -77,7 +77,7 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
         result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         time.sleep(1)
     flesnet_commands = (
-        '%s./flesnet -t %s -L %s -l 2 -i %s -I %s -O %s %s %s > /dev/null 2>&1 &'
+        '%s./flesnet -t %s -L %s -l 1 -i %s -I %s -O %s %s %s > /dev/null 2>&1 &'
         % (path, transport_method, logfile_entry_node,str(entry_node_idx), shm_string,
            ip_string, customize_string, grafana_string)
     )
@@ -110,7 +110,7 @@ def build_nodes(entry_nodes_ip,logfile_build_nodes, num_build_nodes, build_node_
     if use_grafana:
         grafana_string = '-m influx2:%s:8086:flesnet_status: ' % (influx_node_ip)
     flesnet_commands = (
-        '%s./flesnet -t %s -L %s -l 2 -I %s -o %s -O %s %s %s > /dev/null 2>&1 &' 
+        '%s./flesnet -t %s -L %s -l 1 -I %s -o %s -O %s %s %s > /dev/null 2>&1 &' 
         % (path, transport_method,logfile_build_nodes,ip_string, build_node_idx,
            shm_string, customize_string, grafana_string)
     )
