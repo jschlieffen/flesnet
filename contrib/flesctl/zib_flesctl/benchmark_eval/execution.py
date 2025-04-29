@@ -1,15 +1,28 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Apr 25 15:41:42 2025
+#Created on Fri Apr 25 15:41:42 2025
 
-@author: jschlieffen
+#@author: jschlieffen
+
 """
+Usage: 
+    execution.py <flesctrl_logfile> [--verbose] [--mode=<mode>...]
+    
+Options:
+    <flesctrl_logfile>  The general logfile of the flesctrl
+    --verbose           flag for verbose mode [default: False]
+    --mode=<mode>...       The mode for the execution (deserialization/plots etc.) [default: all]
+"""
+
+
+
 import Logfile_reader as LR
+import Logfile_handler as LH
 import plots 
 import re
-#import docopt
+import docopt
 import os
+import sys
 
 class execution:
     
@@ -31,14 +44,11 @@ class execution:
         nodes_info = []
         node_types = ['Entry', 'Build']
         for node_type in node_types:
-            #print(node_type)
             matches = re.findall(f'{node_type} nodes:([\s\S]*?)(?=\n[A-Za-z]|$)', flesctl_logfile)
-            #print(matches)
             if matches:
                 for match in matches:
                     for name, index in re.findall(pattern, match):
                         nodes_info.append({'node_name': name, 'node_type': node_type, 'index': int(index)})
-        #print(nodes_info)
         for node in nodes_info:
             if node['node_type'] == 'Entry':
                 self.entry_nodes.append((node['node_name'], node['index']))
@@ -59,6 +69,12 @@ class execution:
             self.data_rates_build_nodes[f"build_node_{build_node[0]}"] = Logfile_reader_cls.data_rate
             self.shm_usages_build_nodes[f"build_node_{build_node[0]}"] = Logfile_reader_cls.data_shms
 
+    #def get_data_from_deserialzation(self):
+        
+        
+    def serialize_data_rates(self):
+        Logfile_serializer = LH.serialize_data(self.timestamps, self.data_rates, self.shm_usage, self.flesctl_logfile)
+
     def start_plots_entry_nodes(self):
 
         cp_cls = plots.create_plots_entry_nodes(self.data_rates_entry_nodes, self.shm_usages_entry_nodes)
@@ -69,7 +85,6 @@ class execution:
         cp_cls.plot_shm_usage_single()
 
     def start_plots_build_nodes(self):
-
         cp_cls = plots.create_plots_build_nodes(self.data_rates_build_nodes, self.shm_usages_build_nodes)
         cp_cls.plot_total_data_rate()
         cp_cls.plot_avg_data_rate()
@@ -80,9 +95,36 @@ class execution:
 
 def main():
     
-    exec_cls = execution("../logs/general/Run_13_2025-04-25-15-28-00.log")
-    exec_cls.start_plots_entry_nodes()
-    exec_cls.start_plots_build_nodes()
+    #exec_cls = execution("../logs/general/Run_13_2025-04-25-15-28-00.log")
+    #exec_cls.start_plots_entry_nodes()
+    #exec_cls.start_plots_build_nodes()
+    args = docopt(__doc__)
+    logfile = args['<flesctrl_logfile>']
+    modes = args['--mode']
+    verbose = bool(args['--verbose'])
+    validate_params(logfile,modes,verbose)
+    exec_cls = execution(logfile)
+    if 'flesctrl_logfile' in modes:
+        exec_cls.get_data_from_logfile()
+    else:
+        exec_cls
+    if 'create_plots' in modes:
+        exec_cls.start_plots_entry_nodes()
+        exec_cls.start_plots_build_nodes()
+    
+def validate_params(logfile,modes,verbose):
+    if not os.path.isfile(logfile):
+        print('file does not exist')
+        sys.exit(1)
+    valid_modes = ['flesctrl_logfile','serialization','create_plots']
+    
+    for mode in modes:
+        if 'all' in modes:
+            modes = ['flesctrl_logfile','serialization','create_plots']
+            break
+        elif mode not in valid_modes:
+            print('Unknown mode')
+            sys.exit(1)
     
 if __name__ == '__main__':
     main()
