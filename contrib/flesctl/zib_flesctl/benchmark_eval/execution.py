@@ -5,7 +5,7 @@ Created on Fri Apr 25 15:41:42 2025
 
 @author: jschlieffen
 """
-import benchmark_eval as be
+import Logfile_reader as LR
 import plots 
 import re
 #import docopt
@@ -21,6 +21,8 @@ class execution:
         self.get_node_names(flesctl_logfile)
         self.data_rates_entry_nodes = {}
         self.shm_usages_entry_nodes = {}
+        self.data_rates_build_nodes = {}
+        self.shm_usages_build_nodes = {}
         
     def get_node_names(self,flesctl_logfile_path):
         with open(flesctl_logfile_path, "r") as file:
@@ -43,26 +45,44 @@ class execution:
             elif node['node_type'] == 'Build':
                 self.build_nodes.append((node['node_name'], node['index']))
 
-    def start_plots_entry_nodes(self):
-        #print(self.entry_nodes)
+    def get_data_from_logfile(self):
         for entry_node in self.entry_nodes:
-            #print(entry_node[0])
-            Logfile_reader_cls = be.Logfile_reader(f"../logs/flesnet/entry_nodes/entry_node_{entry_node[0]}.log", "entry_node")
+            Logfile_reader_cls = LR.Logfile_reader_entry_node(f"../logs/flesnet/entry_nodes/entry_node_{entry_node[0]}.log")
+            Logfile_reader_cls.extract_data_rates()
+            Logfile_reader_cls.extract_data_shms_entry_node()
             self.data_rates_entry_nodes[f"entry_node_{entry_node[0]}"] = Logfile_reader_cls.data_rate
             self.shm_usages_entry_nodes[f"entry_node_{entry_node[0]}"] = Logfile_reader_cls.data_shms
-        #print(self.data_rates_entry_nodes)
-        #print(self.shm_usages_entry_nodes)
-        cp_cls = plots.create_plots(self.data_rates_entry_nodes, self.shm_usages_entry_nodes)
+        for build_node in self.build_nodes:
+            Logfile_reader_cls = LR.Logfile_reader_build_node(f"../logs/flesnet/build_nodes/build_node_{build_node[0]}.log")
+            Logfile_reader_cls.extract_data_rates()
+            Logfile_reader_cls.extract_data_shms_build_node()
+            self.data_rates_build_nodes[f"build_node_{build_node[0]}"] = Logfile_reader_cls.data_rate
+            self.shm_usages_build_nodes[f"build_node_{build_node[0]}"] = Logfile_reader_cls.data_shms
+
+    def start_plots_entry_nodes(self):
+
+        cp_cls = plots.create_plots_entry_nodes(self.data_rates_entry_nodes, self.shm_usages_entry_nodes)
         cp_cls.plot_total_data_rate()
         cp_cls.plot_avg_data_rate()
         cp_cls.plot_data_rate_single()
         cp_cls.plot_shm_usage()
         cp_cls.plot_shm_usage_single()
 
+    def start_plots_build_nodes(self):
+
+        cp_cls = plots.create_plots_build_nodes(self.data_rates_build_nodes, self.shm_usages_build_nodes)
+        cp_cls.plot_total_data_rate()
+        cp_cls.plot_avg_data_rate()
+        cp_cls.plot_data_rate_single()
+        cp_cls.plot_shm_usage_assemble()
+        cp_cls.plot_shm_usage_single_node_avg()
+        cp_cls.plot_shm_usage_single_node_single_entry_node()
+
 def main():
     
     exec_cls = execution("../logs/general/Run_13_2025-04-25-15-28-00.log")
     exec_cls.start_plots_entry_nodes()
+    exec_cls.start_plots_build_nodes()
     
 if __name__ == '__main__':
     main()
