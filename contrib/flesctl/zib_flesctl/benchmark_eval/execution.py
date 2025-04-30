@@ -29,6 +29,7 @@ class execution:
     def __init__(self,flesctl_logfile):
         self.entry_nodes = []
         self.build_nodes = []
+        self.flesctl_logfile = flesctl_logfile
         if not (os.path.isfile(flesctl_logfile)):
             print('file does not exist')
         self.get_node_names(flesctl_logfile)
@@ -73,7 +74,12 @@ class execution:
         
         
     def serialize_data_rates(self):
-        Logfile_serializer = LH.serialize_data(self.timestamps, self.data_rates, self.shm_usage, self.flesctl_logfile)
+        Logfile_serializer_entry_nodes = LH.serialize_data("e",self.data_rates_entry_nodes, self.shm_usages_entry_nodes, self.flesctl_logfile)
+        Logfile_serializer_entry_nodes.serialize_data_rates()
+        Logfile_serializer_entry_nodes.serialize_shm_usage_entry_nodes()
+        Logfile_serializer_build_nodes = LH.serialize_data("b", self.data_rates_build_nodes, self.shm_usages_build_nodes, self.flesctl_logfile)
+        Logfile_serializer_build_nodes.serialize_data_rates()
+        Logfile_serializer_build_nodes.serialize_shm_usage_build_nodes()
 
     def start_plots_entry_nodes(self):
 
@@ -98,26 +104,33 @@ def main():
     #exec_cls = execution("../logs/general/Run_13_2025-04-25-15-28-00.log")
     #exec_cls.start_plots_entry_nodes()
     #exec_cls.start_plots_build_nodes()
-    args = docopt(__doc__)
+    args = docopt.docopt(__doc__)
     logfile = args['<flesctrl_logfile>']
     modes = args['--mode']
     verbose = bool(args['--verbose'])
-    validate_params(logfile,modes,verbose)
+    modes = validate_params(logfile,modes,verbose)
     exec_cls = execution(logfile)
+    #print(modes)
     if 'flesctrl_logfile' in modes:
+        #print('test1')
         exec_cls.get_data_from_logfile()
     else:
         exec_cls
     if 'create_plots' in modes:
+        #print('test')
         exec_cls.start_plots_entry_nodes()
         exec_cls.start_plots_build_nodes()
+    
+    if 'serialization' in modes:
+        exec_cls.serialize_data_rates()
+    
     
 def validate_params(logfile,modes,verbose):
     if not os.path.isfile(logfile):
         print('file does not exist')
         sys.exit(1)
     valid_modes = ['flesctrl_logfile','serialization','create_plots']
-    
+    #print(modes)
     for mode in modes:
         if 'all' in modes:
             modes = ['flesctrl_logfile','serialization','create_plots']
@@ -125,6 +138,9 @@ def validate_params(logfile,modes,verbose):
         elif mode not in valid_modes:
             print('Unknown mode')
             sys.exit(1)
-    
+    #print(modes)
+    return modes
+
+
 if __name__ == '__main__':
     main()
