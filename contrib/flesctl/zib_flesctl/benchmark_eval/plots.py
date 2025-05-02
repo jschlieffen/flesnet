@@ -13,15 +13,31 @@ class create_plots_entry_nodes:
     
     def __init__(self,data_rates,shm_usages):
         self.time_stmps = []
+        self.time_stmps_shm_usage = []
         self.data_rates = data_rates
         self.shm_usages = shm_usages
         self.get_time_stmps()
         
     
-    def get_time_stmps(self):
+    def get_time_stmps_v2(self):
         largest_key = max(self.data_rates, key=lambda k: len(self.data_rates[k]))
         largest_dict = self.data_rates[largest_key]
         self.time_stmps = [key for key in largest_dict.keys()]
+        largest_key = max(self.shm_usages, key=lambda k: len(self.shm_usages[k]))
+        largest_dict = self.shm_usages[largest_key]
+        self.time_stmps_shm_usage = [key for key in largest_dict.keys()]
+    
+    def get_time_stmps(self):
+        all_timestamps = set()
+        for inner_dict in self.data_rates.values():
+            all_timestamps.update(inner_dict.keys())
+        self.time_stmps = sorted(all_timestamps)
+        all_timestamps = set()
+        #print(self.shm_usages)
+        for inner_dict in self.shm_usages.values():
+            all_timestamps.update(inner_dict.keys())
+        self.time_stmps_shm_usage = sorted(all_timestamps)
+        
     
     def plot_total_data_rate(self):
         #print('test')
@@ -79,6 +95,7 @@ class create_plots_entry_nodes:
         if not os.path.exists(path):
             os.makedirs(path)
         path = path + '/'
+        time_stamps = self.get_time_stmps()
         for key,val in self.data_rates.items():
             total_data_rate = []
             for time_stmp in self.time_stmps:
@@ -109,7 +126,7 @@ class create_plots_entry_nodes:
         sending = []
         freeing = []
         free = []
-        for time_stmp in self.time_stmps:
+        for time_stmp in self.time_stmps_shm_usage:
             used_avg = 0
             sending_avg = 0
             freeing_avg = 0
@@ -127,10 +144,11 @@ class create_plots_entry_nodes:
             freeing.append(freeing_avg/num_nodes)
             free.append(free_avg/num_nodes)
         plt.figure(figsize=(10, 6))
-        plt.plot(self.time_stmps, used, marker='o', linestyle='-', color='red', label='used')
-        plt.plot(self.time_stmps, sending, marker='o', linestyle='-', color='green', label='sending')
-        plt.plot(self.time_stmps, freeing, marker='o', linestyle='-', color='orange', label='freeing')
-        plt.plot(self.time_stmps, free, marker='o', linestyle='-', color='purple', label='free')
+        plt.plot(self.time_stmps_shm_usage, used, marker='o', linestyle='-', color='red', label='used')
+        plt.plot(self.time_stmps_shm_usage, sending, marker='o', linestyle='-', color='green', label='sending')
+        plt.plot(self.time_stmps_shm_usage, freeing, marker='o', linestyle='-', color='orange', label='freeing')
+        plt.plot(self.time_stmps_shm_usage, free, marker='o', linestyle='-', color='purple', label='free')
+        plt.ylim(0,100)
         plt.xlabel("Timestamp")
         plt.ylabel("Shm usage in %")
         plt.title("Average Shm usage")
@@ -153,7 +171,7 @@ class create_plots_entry_nodes:
             sending = []
             freeing = []
             free = []
-            for time_stmp in self.time_stmps:
+            for time_stmp in self.time_stmps_shm_usage:
                 if time_stmp in shm_dict:
                     val = shm_dict[time_stmp]
                     used.append(val['used'])
@@ -166,10 +184,11 @@ class create_plots_entry_nodes:
                     freeing.append(0)
                     free.append(0)
             plt.figure(figsize=(10, 6))
-            plt.plot(self.time_stmps, used, marker='o', linestyle='-', color='red', label='used')
-            plt.plot(self.time_stmps, sending, marker='o', linestyle='-', color='green', label='sending')
-            plt.plot(self.time_stmps, freeing, marker='o', linestyle='-', color='orange', label='freeing')
-            plt.plot(self.time_stmps, free, marker='o', linestyle='-', color='purple', label='free')
+            plt.plot(self.time_stmps_shm_usage, used, marker='o', linestyle='-', color='red', label='used')
+            plt.plot(self.time_stmps_shm_usage, sending, marker='o', linestyle='-', color='green', label='sending')
+            plt.plot(self.time_stmps_shm_usage, freeing, marker='o', linestyle='-', color='orange', label='freeing')
+            plt.plot(self.time_stmps_shm_usage, free, marker='o', linestyle='-', color='purple', label='free')
+            plt.ylim(0,100)
             plt.xlabel("Timestamp")
             plt.ylabel("Shm usage in %")
             plt.title(f"Shm usage for node {key}")
@@ -186,15 +205,37 @@ class create_plots_build_nodes:
      
      def __init__(self,data_rates,shm_usages):
          self.time_stmps = []
+         self.time_stmps_shm_usage = []
          self.data_rates = data_rates
          self.shm_usages = shm_usages
          self.get_time_stmps()
          
      
-     def get_time_stmps(self):
+     def get_time_stmps_v2(self):
          largest_key = max(self.data_rates, key=lambda k: len(self.data_rates[k]))
          largest_dict = self.data_rates[largest_key]
          self.time_stmps = [key for key in largest_dict.keys()]
+         max_len = 0
+         timestamps = []
+         #print(data_rates)
+         for outer_dict in self.shm_usages.values():
+             #print(outer_dict)
+             for inner_dict in outer_dict.values():
+                 if len(inner_dict) > max_len:
+                     max_len = len(inner_dict)
+                     self.time_stmps_shm_usage = list(inner_dict.keys())
+                     
+     def get_time_stmps(self):
+        all_timestamps = set()
+        for inner_dict in self.data_rates.values():
+            all_timestamps.update(inner_dict.keys())
+        self.time_stmps = sorted(all_timestamps)
+        all_timestamps = set()
+        for outer_dict in self.shm_usages.values():
+            for inner_dict in outer_dict.values():
+                all_timestamps.update(inner_dict.keys())
+        
+        self.time_stmps_shm_usage = sorted(all_timestamps)
      
      def plot_total_data_rate(self):
          #print('test')
@@ -281,7 +322,7 @@ class create_plots_build_nodes:
         used = []
         freeing = []
         free = []
-        for time_stmp in self.time_stmps:
+        for time_stmp in self.time_stmps_shm_usage:
             used_avg = 0
             freeing_avg = 0
             free_avg = 0
@@ -297,9 +338,10 @@ class create_plots_build_nodes:
             freeing.append(freeing_avg/num_nodes)
             free.append(free_avg/num_nodes)
         plt.figure(figsize=(10, 6))
-        plt.plot(self.time_stmps, used, marker='o', linestyle='-', color='red', label='used')
-        plt.plot(self.time_stmps, freeing, marker='o', linestyle='-', color='orange', label='freeing')
-        plt.plot(self.time_stmps, free, marker='o', linestyle='-', color='purple', label='free')
+        plt.plot(self.time_stmps_shm_usage, used, marker='o', linestyle='-', color='red', label='used')
+        plt.plot(self.time_stmps_shm_usage, freeing, marker='o', linestyle='-', color='orange', label='freeing')
+        plt.plot(self.time_stmps_shm_usage, free, marker='o', linestyle='-', color='purple', label='free')
+        plt.ylim(0,100)
         plt.xlabel("Timestamp")
         plt.ylabel("Shm usage in %")
         plt.title("Average Shm usage")
@@ -321,7 +363,7 @@ class create_plots_build_nodes:
             used = []
             freeing = []
             free = []
-            for time_stmp in self.time_stmps:
+            for time_stmp in self.time_stmps_shm_usage:
                 for shm_dict in entry_node.values():
                     used_avg = 0
                     freeing_avg = 0
@@ -332,17 +374,15 @@ class create_plots_build_nodes:
                         freeing_avg += val['freeing']
                         free_avg += val['free']
                     else:
-                        used.append(0)
-                        freeing.append(0)
-                        free.append(0)
                         break
                 used.append(used_avg/num_nodes)
                 freeing.append(freeing_avg/num_nodes)
                 free.append(free_avg/num_nodes)
             plt.figure(figsize=(10, 6))
-            plt.plot(self.time_stmps, used, marker='o', linestyle='-', color='red', label='used')
-            plt.plot(self.time_stmps, freeing, marker='o', linestyle='-', color='orange', label='freeing')
-            plt.plot(self.time_stmps, free, marker='o', linestyle='-', color='purple', label='free')
+            plt.plot(self.time_stmps_shm_usage, used, marker='o', linestyle='-', color='red', label='used')
+            plt.plot(self.time_stmps_shm_usage, freeing, marker='o', linestyle='-', color='orange', label='freeing')
+            plt.plot(self.time_stmps_shm_usage, free, marker='o', linestyle='-', color='purple', label='free')
+            plt.ylim(0,100)
             plt.xlabel("Timestamp")
             plt.ylabel("Shm usage in %")
             plt.title(f"Shm usage for node {key}")
@@ -364,7 +404,7 @@ class create_plots_build_nodes:
                 used = []
                 freeing = []
                 free = []
-                for time_stmp in self.time_stmps:
+                for time_stmp in self.time_stmps_shm_usage:
                     if time_stmp in shm_dict:
                         val = shm_dict[time_stmp]
                         used.append(val['used'])
@@ -375,9 +415,10 @@ class create_plots_build_nodes:
                         freeing.append(0)
                         free.append(0)
                 plt.figure(figsize=(10, 6))
-                plt.plot(self.time_stmps, used, marker='o', linestyle='-', color='red', label='used')
-                plt.plot(self.time_stmps, freeing, marker='o', linestyle='-', color='orange', label='freeing')
-                plt.plot(self.time_stmps, free, marker='o', linestyle='-', color='purple', label='free')
+                plt.plot(self.time_stmps_shm_usage, used, marker='o', linestyle='-', color='red', label='used')
+                plt.plot(self.time_stmps_shm_usage, freeing, marker='o', linestyle='-', color='orange', label='freeing')
+                plt.plot(self.time_stmps_shm_usage, free, marker='o', linestyle='-', color='purple', label='free')
+                plt.ylim(0,100)
                 plt.xlabel("Timestamp")
                 plt.ylabel("Shm usage in %")
                 plt.title(f"Shm usage for build node {key_build_node} and entry node {key_entry_node}")

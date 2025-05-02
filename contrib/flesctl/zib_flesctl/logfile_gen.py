@@ -8,6 +8,7 @@ Created on Mon Apr  7 15:36:20 2025
 
 from datetime import datetime
 import configparser
+import os
 
 # =============================================================================
 # This file creates the flesctrl logfile that can be found in 
@@ -33,6 +34,14 @@ class Logfile:
             config.write(configfile, space_around_delimiters=False)
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         logfile_name = f'logs/general/Run_{str(run_id+1)}_{timestamp}.log'
+        dir = os.path.dirname(__file__)
+        path = os.path.join(dir,'tmp')
+        if not os.path.exists(path):
+            os.makedirs(path)
+        #os.environ['flesctl_logfile_name'] = logfile_name
+        tmp_file_name = f"{path}/file_name.txt"
+        with open(tmp_file_name, "w") as f:
+            f.write(logfile_name)
         with open(logfile_name, 'w') as file:
             file.write(f'The total number of nodes allocated: {self.num_nodes} \n')
             if self.overlap_nodes_list:

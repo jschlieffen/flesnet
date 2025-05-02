@@ -11,13 +11,14 @@ import central_manager as cm
 import time
 import sys
 import signal
+import os
+os.environ['write_logfile'] = '1'
 from log_msg import *
 import logfile_gen as Logfile
 
 # =============================================================================
-# TODOs:1. make possibility to name the flesnet logfiles (ask nico about it)
-#       2. write another benchmarking program
-#       3. make implementation for libfrabric
+# TODOs:1. make possibility to name the flesnet logfile
+#       2. make implementation for libfrabric
 # =============================================================================
 
 # =============================================================================

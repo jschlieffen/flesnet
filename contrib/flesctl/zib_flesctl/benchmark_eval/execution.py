@@ -23,6 +23,19 @@ import re
 import docopt
 import os
 import sys
+from pathlib import Path
+#sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+#print(__file__)
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(script_dir, '..'))
+os.environ['write_logfile'] = '0'
+from log_msg import *
+script_dir = Path(__file__).resolve().parent
+os.chdir(script_dir)
+#sys.path.append(os.path.abspath('../'))
+
+from deepdiff import DeepDiff
+from datetime import datetime
 
 class execution:
     
@@ -31,7 +44,8 @@ class execution:
         self.build_nodes = []
         self.flesctl_logfile = flesctl_logfile
         if not (os.path.isfile(flesctl_logfile)):
-            print('file does not exist')
+            logger.critical('file does not exist')
+            sys.exit(1)
         self.get_node_names(flesctl_logfile)
         self.data_rates_entry_nodes = {}
         self.shm_usages_entry_nodes = {}
@@ -80,7 +94,69 @@ class execution:
         Logfile_serializer_build_nodes = LH.serialize_data("b", self.data_rates_build_nodes, self.shm_usages_build_nodes, self.flesctl_logfile)
         Logfile_serializer_build_nodes.serialize_data_rates()
         Logfile_serializer_build_nodes.serialize_shm_usage_build_nodes()
-
+        logger.success('serialization process finished')
+        
+    def deserialize_data(self):
+        deserializer_entry_nodes = LH.deserialize_data("e",self.flesctl_logfile)
+        deserializer_entry_nodes.deserialize_data_rates()
+        self.data_rates_entry_nodes = deserializer_entry_nodes.data_rate
+        deserializer_entry_nodes.deserialize_shm_usage_entry_nodes()
+        self.shm_usages_entry_nodes = deserializer_entry_nodes.shm_usage
+        deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
+        deserialzer_build_nodes.deserialize_data_rates()
+        self.data_rates_build_nodes = deserialzer_build_nodes.data_rate
+        deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
+        self.shm_usages_build_nodes = deserialzer_build_nodes.shm_usage
+        
+    def check_deserialization(self):
+        self.serialize_data_rates()
+        deserializer_entry_nodes = LH.deserialize_data("e",self.flesctl_logfile)
+        deserializer_entry_nodes.deserialize_data_rates()
+        data_rates = deserializer_entry_nodes.data_rate
+        if data_rates == self.data_rates_entry_nodes:
+            logger.success('serialization process succeeded')
+        else:
+            logger.error('serialization process not succeeded')
+            #print(self.data_rates_entry_nodes)
+            diff = DeepDiff(self.data_rates_entry_nodes, data_rates)
+            #print(diff)
+            #print(data_rates)
+        deserializer_entry_nodes.deserialize_shm_usage_entry_nodes()
+        shm_usage = deserializer_entry_nodes.shm_usage
+        if shm_usage == self.shm_usages_entry_nodes:
+            logger.success('serialization process succeeded')
+        else:
+            logger.error('serialization process not succeeded')
+            diff = DeepDiff(self.shm_usages_entry_nodes, shm_usage)
+            #print(self.shm_usages_entry_nodes)
+            #print(diff)
+            #print(self.shm_usages_entry_nodes['entry_node_htc-cmp506'][datetime(2025, 4, 25, 15, 27, 59)])
+            #print(shm_usage['entry_node_htc-cmp506'][datetime(2025, 4, 25, 15, 27, 59)])
+        deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
+        deserialzer_build_nodes.deserialize_data_rates()
+        data_rates_build_nodes = deserialzer_build_nodes.data_rate
+        if data_rates_build_nodes == self.data_rates_build_nodes:
+            logger.success('serialization process succeeded')
+        else:
+            logger.error('serialization process not succeeded')
+            diff = DeepDiff(self.data_rates_build_nodes, data_rates_build_nodes)
+            #print(diff)
+        deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
+        shm_usage_build_nodes = deserialzer_build_nodes.shm_usage
+        if shm_usage_build_nodes == self.shm_usages_build_nodes:
+            logger.success('serialization process succeeded')
+        else:
+            logger.error('serialization process not succeeded')
+            diff = DeepDiff(self.shm_usages_build_nodes, shm_usage_build_nodes)
+            #print(diff)
+            #for key, vals in shm_usage_build_nodes.items():
+                #for key1,vals1 in vals.items():
+                    #print(f'dict: {key}, entry: {key1}')
+                    #print(vals)
+                    #print(self.shm_usages_build_nodes[key])
+                    #diff = DeepDiff(self.shm_usages_build_nodes[key][key1],vals1)
+                    #print(diff)
+    
     def start_plots_entry_nodes(self):
 
         cp_cls = plots.create_plots_entry_nodes(self.data_rates_entry_nodes, self.shm_usages_entry_nodes)
@@ -115,7 +191,7 @@ def main():
         #print('test1')
         exec_cls.get_data_from_logfile()
     else:
-        exec_cls
+        exec_cls.deserialize_data()
     if 'create_plots' in modes:
         #print('test')
         exec_cls.start_plots_entry_nodes()
@@ -123,20 +199,26 @@ def main():
     
     if 'serialization' in modes:
         exec_cls.serialize_data_rates()
+        #exec_cls.deserialize_data() 
+        if 'check_serialization' in modes:
+            exec_cls.check_deserialization() 
     
     
 def validate_params(logfile,modes,verbose):
     if not os.path.isfile(logfile):
-        print('file does not exist')
+        logger.critical('logfile does not exist')
         sys.exit(1)
-    valid_modes = ['flesctrl_logfile','serialization','create_plots']
+    valid_modes = ['flesctrl_logfile','serialization','check_serialization','create_plots']
     #print(modes)
+    if modes == []:
+        logger.warning('It is quite pointless to not do anything')
+        #sys.exit(1)
     for mode in modes:
         if 'all' in modes:
-            modes = ['flesctrl_logfile','serialization','create_plots']
+            modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots']
             break
         elif mode not in valid_modes:
-            print('Unknown mode')
+            logger.critical('Unknown mode')
             sys.exit(1)
     #print(modes)
     return modes
