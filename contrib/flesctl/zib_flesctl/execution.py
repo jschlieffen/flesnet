@@ -17,8 +17,11 @@ from log_msg import *
 import logfile_gen as Logfile
 
 # =============================================================================
-# TODOs:1. make possibility to name the flesnet logfile
-#       2. make implementation for libfrabric
+# TODOs:1. finish timeslice-forwarding 
+#       2. restructure file and folder org.
+#       3. collectl connection
+#       4. make possibility to name the flesnet logfile
+#       5. make implementation for libfrabric
 # =============================================================================
 
 # =============================================================================
@@ -26,7 +29,14 @@ import logfile_gen as Logfile
 # the central manager. 
 # =============================================================================
 
-
+# =============================================================================
+# TODO timeslice-forwarding:
+#       1. params for the timeslice-forwarding
+#       2. start in execution file
+#       3. restructure assembling in nodes
+#       4. rewriting allocation
+#       5. testing
+# =============================================================================
 class exec_:
     
     def __init__(self):

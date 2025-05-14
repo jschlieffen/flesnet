@@ -8,8 +8,8 @@
 Usage: output.py <logfile> <ip> <num_build_nodes> <build_node_idx> <influx_node_ip> <influx_token> <use_grafana> <path> <transport_method> <customize_string>
 
 Arguments: 
-    <ip> The ip address to use
     <logfile> The Logfile to use
+    <ip> The ip address to use
     <num_build_nodes> The number of build nodes
     <build_node_idx> The index of the current build node
     <influx_node_ip> The ip of the where the influx container is runnning

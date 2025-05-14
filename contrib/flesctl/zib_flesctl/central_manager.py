@@ -29,6 +29,7 @@ import logfile_gen as Logfile
 # This file deals with scheduling the nodes and starting the import processes.
 # It deals with starting an experiment and clean up after the end of the experiment
 # Note: it is the only file where you can communicate with the different nodes 
+#       Thus for debugging purposes it is recommended to look at this file
 # =============================================================================
 
 # =============================================================================
@@ -167,7 +168,7 @@ class Build_nodes(slurm_commands):
                 logger.error('ERROR {e} occurried in build node: {node}. Shutdown flesnet')
                 return 'shutdown'            
             self.pids += [result]
-            logger.success(f'start successful')
+        logger.success(f'start of build nodes successful')
         return None
     
 
@@ -238,6 +239,60 @@ class Super_nodes(slurm_commands):
     
 
     def stop_flesnet(self):
+        for pid in self.pids:
+            pid.stdin.write('stop')
+            stdout, stderr = pid.communicate()
+            print('Output: ',stdout)
+            print('Error: ', stderr)
+            print('\n')
+
+
+#TODO: make port depended on node
+class timeslice_forwarding(slurm_commands):
+    
+    def __init__(self,node_list,build_nodes, influx_node_ip, influx_token, use_grafana, port):
+        
+        super().__init__()
+        self.node_list = node_list
+        self.build_nodes = build_nodes
+        self.use_grafana = use_grafana
+        self.influx_node_ip = influx_node_ip
+        self.influx_token = influx_token
+        self.port = port
+        self.rec2build = []
+
+        
+    #TODO: move function to assemble nodes and restructer rec2build
+    def assemble_receiving_nodes2build_nodes(self):
+        cnt = 0
+        for build_node_id,build_node in self.build_nodes.items():
+            self.rec2build.append((self.node_list[cnt],build_node))
+            cnt += 1
+            
+        Logfile.logfile.rec2build = self.rec2build
+        
+    def start_receivers(self):
+        file = ''
+        for receiving_node,build_node in self.rec2build:
+            logger.info(f"start timeslice forwarding node {receiving_node} for build node {build_node['node']}")
+            logfile = 'logs/flesnet/tsclient/receiving_node_%s.log' % (receiving_node)
+            build_node_ip = build_node['ip']
+            command = (
+                    'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s'
+                    % (receiving_node,file,logfile, build_node_ip, self.influx_token, self.influx_node_ip, self.use_grafana, self.path
+                        )
+                )
+            try:
+                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
+            except subprocess.CalledProcessError as e:
+                logger.error('ERROR {e} occurried in timeslice-forwarding: {receiving_node}. Shutdown flesnet')
+                return 'shutdown' 
+            self.pids += [result]
+        logger.success('start of timeslice receivers successful')
+        return None
+        
+            
+    def stop_timeslice_forwarding(self):
         for pid in self.pids:
             pid.stdin.write('stop')
             stdout, stderr = pid.communicate()
@@ -619,6 +674,7 @@ class execution(slurm_commands):
 
 # =============================================================================
 # only for dev purpose
+# TODO: clean up this mess
 # =============================================================================
 def main():
     arg = docopt.docopt(__doc__, version='0.2')
