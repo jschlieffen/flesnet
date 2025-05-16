@@ -62,6 +62,11 @@ def setup_logger(write_logfile):
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(BoostLogFormatter())
     logger.addHandler(console_handler)
+    # Disable matplotlib logging propagation
+    matplotlib_logger = logging.getLogger('matplotlib')
+    matplotlib_logger.setLevel(logging.WARNING)  # Set the desired log level
+    matplotlib_logger.propagate = False  # Disable propagation
+
     if write_logfile == '1':
         config = configparser.ConfigParser()
         config.read('config.cfg')

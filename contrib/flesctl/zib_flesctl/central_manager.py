@@ -56,6 +56,7 @@ class slurm_commands:
         return content2
     
     def infiniband_ip(self,node_id):
+        print(node_id)
         command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
         try:
             result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -248,38 +249,35 @@ class Super_nodes(slurm_commands):
 
 
 #TODO: make port depended on node
-class timeslice_forwarding(slurm_commands):
+class Timeslice_forwarding(slurm_commands):
     
-    def __init__(self,node_list,build_nodes, influx_node_ip, influx_token, use_grafana, port):
+    def __init__(self,rec2build, influx_node_ip, influx_token, use_grafana, path, port, write_data_to_file, analyze_data):
         
         super().__init__()
-        self.node_list = node_list
-        self.build_nodes = build_nodes
+        self.rec2build = rec2build
         self.use_grafana = use_grafana
         self.influx_node_ip = influx_node_ip
         self.influx_token = influx_token
+        self.path = path
         self.port = port
-        self.rec2build = []
+        self.write_data_to_file = write_data_to_file
+        self.analyze_data = analyze_data
+        self.pids = []
 
         
-    #TODO: move function to assemble nodes and restructer rec2build
-    def assemble_receiving_nodes2build_nodes(self):
-        cnt = 0
-        for build_node_id,build_node in self.build_nodes.items():
-            self.rec2build.append((self.node_list[cnt],build_node))
-            cnt += 1
-            
-        Logfile.logfile.rec2build = self.rec2build
+
         
     def start_receivers(self):
-        file = ''
+        file = 'timeslice_forwarding.py'
         for receiving_node,build_node in self.rec2build:
             logger.info(f"start timeslice forwarding node {receiving_node} for build node {build_node['node']}")
             logfile = 'logs/flesnet/tsclient/receiving_node_%s.log' % (receiving_node)
-            build_node_ip = build_node['ip']
+            #print(build_node)
+            build_node_ip = build_node['inf_ip']
             command = (
-                    'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s'
-                    % (receiving_node,file,logfile, build_node_ip, self.influx_token, self.influx_node_ip, self.use_grafana, self.path
+                    'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s'
+                    % (receiving_node,file,logfile, build_node_ip, self.influx_token, self.influx_node_ip, self.use_grafana, self.path,
+                       self.port, self.write_data_to_file, self.analyze_data
                         )
                 )
             try:
@@ -312,7 +310,8 @@ class execution(slurm_commands):
     
     def __init__(self, input_files,num_entrynodes, num_buildnodes, show_total_data, influx_node_ip, influx_token, use_grafana, 
                  overlap_usage_of_nodes,path,transport_method,customize_string, enable_graph, enable_progess_bar,
-                 show_only_entry_nodes, use_pattern_gen, use_dmsa_files, set_node_list, entry_nodes_list,build_nodes_list):
+                 show_only_entry_nodes, use_pattern_gen, use_dmsa_files, set_node_list, entry_nodes_list,build_nodes_list,activate_timesliceforwarding,
+                 write_data_to_file,analyze_data,port):
         super().__init__()
         self.input_files = input_files
         self.num_entrynodes = num_entrynodes 
@@ -333,16 +332,24 @@ class execution(slurm_commands):
         self.set_node_list = set_node_list
         self.entry_nodes_list = entry_nodes_list
         self.build_nodes_list = build_nodes_list
+        self.activate_timesliceforwarding = activate_timesliceforwarding
+        self.write_data_to_file = write_data_to_file
+        self.analyze_data = analyze_data
+        self.port = port
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.overlap_nodes = {}
         self.schedule_nodes()
+
         self.entry_nodes_ips = ""
         self.build_nodes_ips = ""
         self.get_ips()
         self.entry_nodes_eth_ips = ""
         self.build_nodes_eth_ips = ""
         self.get_eth_ips()
+        if self.activate_timesliceforwarding:
+            self.rec2build = []
+            self.assemble_receiving_nodes2build_nodes()
         self.entry_nodes_cls = Entry_nodes(self.entry_nodes,self.build_nodes_ips,self.build_nodes_eth_ips, self.num_entrynodes,
                                            self.path, self.transport_method, self.customize_string, self.use_pattern_gen, self.use_dmsa_files)
         self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips, self.num_buildnodes,
@@ -350,7 +357,10 @@ class execution(slurm_commands):
         self.super_nodes_cls = Super_nodes(self.overlap_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips, self.num_buildnodes,
                                            self.build_nodes_ips,self.build_nodes_eth_ips, self.num_entrynodes, self.path, 
                                            self.transport_method, self.customize_string, self.use_pattern_gen, self.use_dmsa_files)
-        
+    
+        if self.activate_timesliceforwarding:
+            self.timeslice_forwarding_cls = Timeslice_forwarding(self.rec2build, self.influx_node_ip, self.influx_token, self.use_grafana,
+                                                                 self.path , self.port, self.write_data_to_file, self.analyze_data)
         
     # =============================================================================
     # gets the node list of the current allocations    
@@ -365,11 +375,17 @@ class execution(slurm_commands):
         list_pattern = re.findall(r'(.*?)(\d+(?:,\d+)*)', node_str)
         for base, start, end in range_pattern:
             start, end = int(start), int(end)
-            node_list.extend([f"htc-cmp{i}" for i in range(start, end + 1)])
+            if start < 10:
+                node_list.extend([f"htc-cmp00{i}" for i in range(start, end + 1)])
+            elif start < 100:    
+                node_list.extend([f"htc-cmp0{i}" for i in range(start, end + 1)])
+            else:
+                node_list.extend([f"htc-cmp{i}" for i in range(start, end + 1)])
         for base, numbers in list_pattern:
             num_list = numbers.split(",")
             node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
         node_list = sorted(set(node_list))
+        print(node_list)
         return node_list
     
         
@@ -571,27 +587,51 @@ class execution(slurm_commands):
             self.build_nodes[build_node]['allocated_entry_node'] = entry_node
     
     
+    def assemble_receiving_nodes2build_nodes(self):
+        node_list = self.get_node_list()
+        unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes]
+        if len(unused_nodes) < self.num_buildnodes:
+            logger.critical(f"Number of nodes are not sufficient for the Timeslice-forwarding. Number of nodes remaining {len(unused_nodes)}, expected: {self.num_buildnodes} Shutting down")
+            sys.exit(1)
+        cnt = 0
+        for build_node_id,build_node in self.build_nodes.items():
+            self.rec2build.append((unused_nodes[cnt],build_node))
+            cnt += 1
+        
     # =============================================================================
     # This function starts flesnet and partly checks if the start was successful  
     # =============================================================================
     def start_Flesnet(self):
+        if self.activate_timesliceforwarding:
+            res = self.timeslice_forwarding_cls.start_receivers()
+            if res == 'shutdown':
+                self.timeslice_forwarding_cls.stop_timeslice_forwarding()
+                time.sleep(1)
+                sys.exit()
         if self.overlap_usage_of_nodes:
             res = self.super_nodes_cls.start_flesnet(self.input_files,self.influx_node_ip, self.influx_token, self.use_grafana)
             if res == 'shutdown':
+                if self.activate_timesliceforwarding:
+                    self.timeslice_forwarding_cls.stop_timeslice_forwarding()
                 self.super_nodes_cls.stop_flesnet()
                 sys.exit(1)
         else:
             res = self.entry_nodes_cls.start_flesnet(self.input_files,self.influx_node_ip, self.influx_token, self.use_grafana)
             if res == 'shutdown':
+                if self.activate_timesliceforwarding:
+                    self.timeslice_forwarding_cls.stop_timeslice_forwarding()
                 self.entry_nodes_cls.stop_flesnet()
                 sys.exit(1)
             else:    
                 res = self.build_nodes_cls.start_flesnet(self.influx_node_ip, self.influx_token, self.use_grafana)
                 if res == 'shutdown':
+                    if self.activate_timesliceforwarding:
+                        self.timeslice_forwarding_cls.stop_timeslice_forwarding()
                     self.entry_nodes_cls.stop_flesnet()
                     self.build_nodes_cls.stop_flesnet()
                     sys.exit(1)
-                    
+
+        
                 
     # =============================================================================
     # This function either starts the monotoring if activated or it just waits 
@@ -622,6 +662,10 @@ class execution(slurm_commands):
         else:
             self.build_nodes_cls.stop_flesnet()
             self.entry_nodes_cls.stop_flesnet()
+        print(self.activate_timesliceforwarding)
+        if self.activate_timesliceforwarding:
+            print('test')
+            self.timeslice_forwarding_cls.stop_timeslice_forwarding()
 
     # =============================================================================
     # Starts the monotoring. 

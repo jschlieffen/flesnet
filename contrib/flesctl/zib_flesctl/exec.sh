@@ -12,8 +12,12 @@ if [ "$SET_NODE_LIST" -eq 1 ]; then
 
     source flesctrl_venv/bin/activate
 
-
-    NODES=$((ENTRY_NODES_CNT + PROCESSING_NODES_CNT))
+    ACTIVATE_TIMESLICEFORWARDING=$(grep "^activate_timesliceforwarding" config.cfg | cut -d'=' -f2)
+    if  [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
+        NODES=$((ENTRY_NODES_CNT + 2*PROCESSING_NODES_CNT))
+    else
+        NODES=$((ENTRY_NODES_CNT + PROCESSING_NODES_CNT))
+    fi
     NTASKS=4
     MEM=16G
     p="big"
@@ -24,12 +28,19 @@ if [ "$SET_NODE_LIST" -eq 1 ]; then
 else
     source flesctrl_venv/bin/activate
 
-    NODES=$((ENTRY_NODES_CNT + PROCESSING_NODES_CNT))
+    ACTIVATE_TIMESLICEFORWARDING=$(grep "^activate_timesliceforwarding" config.cfg | cut -d'=' -f2)
+
+    echo $ACTIVATE_TIMESLICEFORWARDING
+    if  [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
+        NODES=$((ENTRY_NODES_CNT + 2*PROCESSING_NODES_CNT))
+    else
+        NODES=$((ENTRY_NODES_CNT + PROCESSING_NODES_CNT))
+    fi
     #echo $((NODES+1))
     NTASKS=4
     MEM=16G
     p="big"
     TIME=$TIME_ALLOC
 
-    salloc --mem $MEM -p $p --nodes=$NODES --constraint=Infiniband --time=$TIME 
+    salloc --mem $MEM -p $p -x htc-cmp127 --nodes=$NODES --constraint=Infiniband --time=$TIME 
 fi

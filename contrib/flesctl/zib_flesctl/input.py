@@ -61,7 +61,7 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
                 transport_method, customize_string, use_pattern_gen, use_dmsa_files):
     ip_string, shm_string = calc_str(ip, num_entry_nodes, use_pattern_gen)
     grafana_string = ''
-    if use_grafana:
+    if use_grafana == '1':
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
     D_flag = ""

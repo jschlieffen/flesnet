@@ -6,12 +6,14 @@
 
 """
 Usage: 
-    execution.py <flesctrl_logfile> [--verbose] [--mode=<mode>...]
+    execution.py <flesctrl_logfile> [--verbose] [--mode=<mode>...] [--starttime=<starttime>] [--endtime=<endtime>]
     
 Options:
-    <flesctrl_logfile>  The general logfile of the flesctrl
-    --verbose           flag for verbose mode [default: False]
-    --mode=<mode>...       The mode for the execution (deserialization/plots etc.) [default: all]
+    <flesctrl_logfile>             The general logfile of the flesctrl
+    --verbose                      flag for verbose mode [default: False]
+    --mode=<mode>...               The mode for the execution (deserialization/plots etc.) [default: all]
+    --starttime=<starttime>        The start time if only a given interval should be printed. Have to be passed like 13:45:00 [default: 00:00:00]
+    --endtime=<endtime>            The end time if only a given interval should be printed. Have to be passed like 13:45:00 [default: 00:00:00]
 """
 
 
@@ -156,24 +158,34 @@ class execution:
                     #print(self.shm_usages_build_nodes[key])
                     #diff = DeepDiff(self.shm_usages_build_nodes[key][key1],vals1)
                     #print(diff)
-    
-    def start_plots_entry_nodes(self):
 
-        cp_cls = plots.create_plots_entry_nodes(self.data_rates_entry_nodes, self.shm_usages_entry_nodes)
+
+    
+    def start_plots_entry_nodes(self,starttime,endtime):
+
+        cp_cls = plots.create_plots_entry_nodes(self.data_rates_entry_nodes, self.shm_usages_entry_nodes,starttime,endtime)
         cp_cls.plot_total_data_rate()
         cp_cls.plot_avg_data_rate()
         cp_cls.plot_data_rate_single()
+        cp_cls.plot_data_rate_mean_max_min()
+        cp_cls.box_plot_data_rates()
+        cp_cls.bar_plots_data_rates()
         cp_cls.plot_shm_usage()
         cp_cls.plot_shm_usage_single()
+        logger.success('created plots for entry nodes')
 
-    def start_plots_build_nodes(self):
-        cp_cls = plots.create_plots_build_nodes(self.data_rates_build_nodes, self.shm_usages_build_nodes)
+    def start_plots_build_nodes(self,starttime,endtime):
+        cp_cls = plots.create_plots_build_nodes(self.data_rates_build_nodes, self.shm_usages_build_nodes,starttime,endtime)
         cp_cls.plot_total_data_rate()
         cp_cls.plot_avg_data_rate()
         cp_cls.plot_data_rate_single()
+        cp_cls.plot_data_rate_mean_max_min()
+        cp_cls.box_plot_data_rates()
+        cp_cls.bar_plots_data_rates()
         cp_cls.plot_shm_usage_assemble()
         cp_cls.plot_shm_usage_single_node_avg()
         cp_cls.plot_shm_usage_single_node_single_entry_node()
+        logger.success('created plots for build nodes')
 
 def main():
     
@@ -184,6 +196,8 @@ def main():
     logfile = args['<flesctrl_logfile>']
     modes = args['--mode']
     verbose = bool(args['--verbose'])
+    starttime = args['--starttime']
+    endtime = args['--endtime']
     modes = validate_params(logfile,modes,verbose)
     exec_cls = execution(logfile)
     #print(modes)
@@ -194,8 +208,8 @@ def main():
         exec_cls.deserialize_data()
     if 'create_plots' in modes:
         #print('test')
-        exec_cls.start_plots_entry_nodes()
-        exec_cls.start_plots_build_nodes()
+        exec_cls.start_plots_entry_nodes(starttime,endtime)
+        exec_cls.start_plots_build_nodes(starttime,endtime)
     
     if 'serialization' in modes:
         exec_cls.serialize_data_rates()
@@ -221,6 +235,7 @@ def validate_params(logfile,modes,verbose):
             logger.critical('Unknown mode')
             sys.exit(1)
     #print(modes)
+    
     return modes
 
 

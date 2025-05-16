@@ -53,7 +53,7 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
     ip_string, shm_string = calc_str(ip, num_build_nodes)
     
     grafana_string = ''
-    if use_grafana:
+    if use_grafana == '1':
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '-m influx2:%s:8086:flesnet_status: ' % (influx_node_ip)
     flesnet_commands = (
@@ -63,6 +63,7 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
     )
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
+    print(flesnet_commands)
     while input_data == '':
         input_data = sys.stdin.read().strip()
     result_flesnet.terminate()

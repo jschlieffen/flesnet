@@ -32,6 +32,10 @@ class Params:
         self.use_pattern_gen = 0
         self.use_dmsa_files = 0
         self.input_file_list = []
+        self.activate_timesliceforwarding = 0
+        self.write_data_to_file = ""
+        self.analyze_data = 0
+        self.port = 0
         self.show_total_data = 0
         self.show_graph = 0
         self.show_progress_bar = 0
@@ -40,7 +44,7 @@ class Params:
         self.influx_node_ip = ""
         self.influx_token = ""
         self.overlap_usage_of_nodes = 0
-        self.config = cfg.ConfigParser()
+        self.config = cfg.ConfigParser(interpolation=None)
         self.config.read(config_file)
         self.get_params(config_file)
         
@@ -68,6 +72,10 @@ class Params:
         self.use_pattern_gen = self.get_value('mstool_commands', 'use_pattern_gen', 'int', self.use_pattern_gen, False)
         self.use_dmsa_files = self.get_value('mstool_commands', 'use_dmsa_files', 'int', self.use_dmsa_files, False)
         self.input_file_list = self.get_input_file_list('input_file')
+        self.activate_timesliceforwarding = self.get_value('tsclient_commands', 'activate_timesliceforwarding','int', True)
+        self.write_data_to_file = self.get_value('tsclient_commands', 'write_data_to_file', 'str', self.write_data_to_file, False)
+        self.analyze_data = self.get_value('tsclient_commands', 'analyze_data', 'str', self.analyze_data, False)
+        self.port = self.get_value('tsclient_commands', 'port', 'str', self.port, False)
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)
         self.show_graph = self.get_value('Monotoring', 'show_graph', 'int', False)
         self.show_progress_bar = self.get_value('Monotoring', 'show_progress_bar', 'int', self.show_progress_bar, False)
@@ -160,6 +168,15 @@ class Params:
                 if len(tup) == 1:
                     logger.warning(f'File for entry node {tup[0]} is not set. Requested for the progress bar. Therefore progress bar is disabled')
                     self.show_progress_bar = 0
+        if self.activate_timesliceforwarding == 1:
+            if int(self.port) < 1023:
+                logger.critical(f"used port for timeslice-forwarding: {self.port} is privileged, thus cannot be used")
+                sys.exit(1)
+            if self.port not in self.customize_string:
+                logger.critical(f"used port for timeslice-forwarding: {self.port} does not coincide with the port used in flesnet")
+                sys.exit(1)
+            if self.write_data_to_file != '0':
+                logger.warning(f"The .tsa file is written in {self.path} unless you gave a path to the output file")
 
 # =============================================================================
 # only for dev purpose

@@ -60,7 +60,8 @@ class exec_:
                                      self.Par_.transport_method, self.Par_.customize_string, self.Par_.show_graph,
                                      self.Par_.show_progress_bar, self.Par_.show_only_entry_nodes, self.Par_.use_pattern_gen,
                                      self.Par_.use_dmsa_files, self.Par_.set_node_list, self.Par_.entry_nodes_list,
-                                     self.Par_.build_nodes_list)
+                                     self.Par_.build_nodes_list, self.Par_.activate_timesliceforwarding, 
+                                     self.Par_.write_data_to_file, self.Par_.analyze_data, self.Par_.port)
         Logfile.logfile.transport_method = self.Par_.transport_method
         self.start_time = time.time()
         
@@ -95,9 +96,20 @@ class exec_:
         else:
             self.execution_cls.entry_nodes_cls.stop_flesnet()
             self.execution_cls.build_nodes_cls.stop_flesnet()
+        if self.Par_.activate_timesliceforwarding:
+            print('test123')
+            self.execution_cls.timeslice_forwarding_cls.stop_timeslice_forwarding()
         self.running = False
+        self.create_logfile()
         sys.exit(1)
+        
     
+    def create_logfile(self):
+        Logfile.logfile.write()
+        for handler in logger.handlers[:]:
+            logger.removeHandler(handler)
+            
+            
     def create_end_message(self,total_data, avg_data_rate):
         if self.running:
             elapsed_seconds = self.end_time - self.start_time
