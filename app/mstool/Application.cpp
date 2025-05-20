@@ -16,7 +16,8 @@
 #include <memory>
 #include <stdexcept>
 #include <thread>
-#include<cstdlib>
+#include <cstdlib>
+#include <stdint.h>
 
 Application::Application(Parameters const& par) : par_(par) {
 
@@ -110,6 +111,8 @@ void Application::run() {
       std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
       throw std::bad_alloc();
     }
+    uint64_t msg_start =1;
+    uint64_t msg_end =2;
     uint8_t* free_pointer = content_ptr;
     while (auto microslicedescriptor = source_descriptors->get()) {
       std::shared_ptr<const fles::MicrosliceDescriptor> ms_desc(std::move(microslicedescriptor));
@@ -118,6 +121,8 @@ void Application::run() {
       if (last_index == 0){
           last_index = current_index;
       }
+      //TODO: default malloc size runterschrauben.
+      //Florian oder Nico fragen, ob das noch so bestehen soll.
       const auto t2 = std::chrono::high_resolution_clock::now();
       const auto current_time_long = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
       uint64_t current_time = to_uint64_t(current_time_long.count());
@@ -136,9 +141,25 @@ void Application::run() {
         acc_size += data_size;
         if (acc_size >= par_.malloc_size) {
           acc_size = data_size;
+          /*
           free(free_pointer);
           content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
           free_pointer=content_ptr;
+          */
+          content_ptr = free_pointer;
+        }
+        //*content_ptr=msg_start;
+        //*(content_ptr+data_size)=msg_end;
+        msg_start = rand();
+        msg_end = rand();
+        memcpy((uint8_t*)(content_ptr), &msg_start, sizeof(uint64_t));
+        uint8_t* end_ptr = content_ptr + data_size -1;
+        memcpy((uint8_t*)(end_ptr), &msg_end, sizeof(uint64_t));
+        for (int i = 0; i < 50; ++i) {
+            uint64_t rnd_value = ((uint64_t)rand() << 32) | rand();
+            size_t max_offset = data_size - sizeof(uint64_t);
+            size_t offset = rand() % (max_offset + 1);  
+            memcpy(content_ptr + offset, &rnd_value, sizeof(uint64_t));
         }
         std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(desc_, content_ptr); 
         sink->put(ms);
