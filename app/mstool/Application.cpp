@@ -111,6 +111,11 @@ void Application::run() {
       std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
       throw std::bad_alloc();
     }
+    std::cout<<"test1"<<std::endl;
+    for (size_t i = 0; i < par_.malloc_size; ++i) {
+      content_ptr[i] = static_cast<uint8_t>(rand());
+    }
+    std::cout<<"test2"<<std::endl;
     uint64_t msg_start =1;
     uint64_t msg_end =2;
     uint8_t* free_pointer = content_ptr;
@@ -138,18 +143,21 @@ void Application::run() {
         if (par_.malloc_size<=desc_.size){
           throw std::invalid_argument("malloc call is smaller than size of ms");
         }
+        
         acc_size += data_size;
         if (acc_size >= par_.malloc_size) {
           acc_size = data_size;
-          /*
+          
           free(free_pointer);
           content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
           free_pointer=content_ptr;
-          */
+          
           content_ptr = free_pointer;
         }
-        //*content_ptr=msg_start;
-        //*(content_ptr+data_size)=msg_end;
+        content_ptr = content_ptr+data_size;
+        /*
+        content_ptr=msg_start;
+        (content_ptr+data_size)=msg_end;
         msg_start = rand();
         msg_end = rand();
         memcpy((uint8_t*)(content_ptr), &msg_start, sizeof(uint64_t));
@@ -161,9 +169,11 @@ void Application::run() {
             size_t offset = rand() % (max_offset + 1);  
             memcpy(content_ptr + offset, &rnd_value, sizeof(uint64_t));
         }
+        */
         std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(desc_, content_ptr); 
         sink->put(ms);
-        content_ptr = content_ptr+data_size;
+        //size_t offset = rand() % (par_.malloc_size/2);
+        //content_ptr = free_pointer + offset;
         if (content_ptr == nullptr){
           std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
           throw std::bad_alloc();
