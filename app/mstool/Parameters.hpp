@@ -35,5 +35,5 @@ struct Parameters {
   size_t dump_verbosity = 0;
   std::string output_shm;
   std::string output_archive;
-  long long malloc_size = 5000000000;
+  long long malloc_size = 1000000000;
 };
