@@ -29,6 +29,8 @@ In order to create all necessary folders, setting up the virtual enviroment, dow
 
 This only needs to be done once, unless changes in the code appeared.
 
+NOTE: It is recommended to create the folders like that, due to the fact that some paths cannot easily be found in the code and are not created automatically
+
 Getting started
 ---------------
 
