@@ -20,6 +20,7 @@ class create_plots_entry_nodes:
         self.time_stmps_shm_usage = []
         self.data_rates = data_rates
         self.shm_usages = shm_usages
+        
         if time_start != "00:00:00":
             time_start_dt = parser.parse(time_start)
             time_end_dt = parser.parse(time_end)
@@ -42,15 +43,17 @@ class create_plots_entry_nodes:
             all_timestamps.update(inner_dict.keys())
         self.time_stmps = sorted(all_timestamps)
         all_timestamps = set()
-        #print(self.shm_usages)
+
         for inner_dict in self.shm_usages.values():
             all_timestamps.update(inner_dict.keys())
         self.time_stmps_shm_usage = sorted(all_timestamps)
         
     #def get_time_stmps_interval(self):
     def get_time_stmps(self, start_time=None, end_time=None):
+
         def in_interval(ts):
-            return (start_time is None or ts >= start_time) and (end_time is None or ts <= end_time)
+
+            return (start_time.time() is None or ts.time() >= start_time.time()) and (end_time.time() is None or ts.time() <= end_time.time())
         all_timestamps = set()
         for inner_dict in self.data_rates.values():
             all_timestamps.update(ts for ts in inner_dict.keys() if in_interval(ts))
@@ -62,7 +65,6 @@ class create_plots_entry_nodes:
             
     
     def plot_total_data_rate(self):
-        #print('test')
         dir = os.path.dirname(__file__)
         path = os.path.join(dir,'plots/general/entry_nodes')
         if not os.path.exists(path):
@@ -141,6 +143,8 @@ class create_plots_entry_nodes:
             
         plt.figure(figsize=(10, 6))
         plt.fill_between(self.time_stmps, min_rate, max_rate, color='lightgrey', label='Range (min data rate-max data rate)')
+        plt.plot(self.time_stmps, max_rate, color='black', linestyle='--', linewidth=1, label='Max rate')
+        plt.plot(self.time_stmps, min_rate, color='black', linestyle='--', linewidth=1, label='Min rate')
         plt.plot(self.time_stmps, avg_data_rate, linestyle='-', color='b')
         plt.xlabel("Timestamp")
         plt.ylabel("Data rate in GB")
@@ -202,7 +206,10 @@ class create_plots_entry_nodes:
                 else:
                     avg_entry_node += 0
                     cnt += 1
-            averages.append(avg_entry_node/cnt)
+            if cnt != 0:
+                averages.append(avg_entry_node/cnt)
+            else:
+                averages.append(avg_entry_node)
         
         labels = list(self.data_rates.keys())
         cmap = plt.get_cmap('viridis')
@@ -280,7 +287,6 @@ class create_plots_entry_nodes:
             sending_avg = 0
             freeing_avg = 0
             free_avg = 0
-            #print(self.shm_usages)
             for shm_dict in self.shm_usages.values():
                 if time_stmp in shm_dict:
                     val = shm_dict[time_stmp]
@@ -393,7 +399,7 @@ class create_plots_build_nodes:
         
      def get_time_stmps(self, start_time=None, end_time=None):
          def in_interval(ts):
-             return (start_time is None or ts >= start_time) and (end_time is None or ts <= end_time)
+             return (start_time.time() is None or ts.time() >= start_time.time()) and (end_time.time() is None or ts.time() <= end_time.time())
          all_timestamps = set()
          for inner_dict in self.data_rates.values():
              all_timestamps.update(ts for ts in inner_dict.keys() if in_interval(ts))
@@ -533,6 +539,8 @@ class create_plots_build_nodes:
             
         plt.figure(figsize=(10, 6))
         plt.fill_between(self.time_stmps, min_rate, max_rate, color='lightgrey', label='Range (min data rate-max data rate)')
+        plt.plot(self.time_stmps, max_rate, color='black', linestyle='--', linewidth=1, label='Max rate')
+        plt.plot(self.time_stmps, min_rate, color='black', linestyle='--', linewidth=1, label='Min rate')
         plt.plot(self.time_stmps, avg_data_rate,  linestyle='-', color='b')
         plt.xlabel("Timestamp")
         plt.ylabel("Data rate in GB")
@@ -561,7 +569,11 @@ class create_plots_build_nodes:
                 else:
                     avg_build_node += 0
                     cnt += 1
-            averages.append(avg_build_node/cnt)
+            #averages.append(avg_build_node/cnt)
+            if cnt != 0:
+                averages.append(avg_build_node/cnt)
+            else:
+                averages.append(avg_build_node)
         
         labels = list(self.data_rates.keys())
         cmap = plt.get_cmap('viridis')
@@ -615,7 +627,6 @@ class create_plots_build_nodes:
             used_avg = 0
             freeing_avg = 0
             free_avg = 0
-            #print(self.shm_usages)
             for build_node in self.shm_usages.values():
                 for shm_dict in build_node.values():
                     if time_stmp in shm_dict:

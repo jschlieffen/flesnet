@@ -61,7 +61,8 @@ class exec_:
                                      self.Par_.show_progress_bar, self.Par_.show_only_entry_nodes, self.Par_.use_pattern_gen,
                                      self.Par_.use_dmsa_files, self.Par_.set_node_list, self.Par_.entry_nodes_list,
                                      self.Par_.build_nodes_list, self.Par_.activate_timesliceforwarding, 
-                                     self.Par_.write_data_to_file, self.Par_.analyze_data, self.Par_.port)
+                                     self.Par_.write_data_to_file, self.Par_.analyze_data, self.Par_.port, self.Par_.use_infiniband, 
+                                     self.Par_.use_collectl)
         Logfile.logfile.transport_method = self.Par_.transport_method
         self.start_time = time.time()
         

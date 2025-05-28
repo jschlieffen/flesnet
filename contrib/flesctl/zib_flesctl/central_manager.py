@@ -36,39 +36,36 @@ import logfile_gen as Logfile
 # This class deals with the reading of the ips of a node. May be extended in 
 # furture
 # =============================================================================
-class slurm_commands:
-    
-    def __init__(self):
-        None
 
-    def ethernet_ip(self,node_id):
-        command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
-        try:
-            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)    
-            stdout,stderr = result.communicate()
-        except subprocess.CalledProcessError as e:
-            logger.error(f'ERROR: {e} Error occurred at reading ips')
-            sys.exit(1)
-        match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
-        content = match.group(1)
-        match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
-        content2 = match2.group(1)
-        return content2
+
+def ethernet_ip(node_id):
+    command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
+    try:
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)    
+        stdout,stderr = result.communicate()
+    except subprocess.CalledProcessError as e:
+        logger.error(f'ERROR: {e} Error occurred at reading ips')
+        sys.exit(1)
+    match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
+    content = match.group(1)
+    match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
+    content2 = match2.group(1)
+    return content2
     
-    def infiniband_ip(self,node_id):
-        print(node_id)
-        command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
-        try:
-            result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            stdout,stderr = result.communicate()
-        except subprocess.CalledProcessError as e:
-            logger.error(f'ERROR: {e} Error occurred at reading ips')
-            sys.exit(1)
-        match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
-        content = match.group(1)
-        match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
-        content2 = match2.group(1)
-        return content2
+def infiniband_ip(node_id):
+    #print(node_id)
+    command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
+    try:
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout,stderr = result.communicate()
+    except subprocess.CalledProcessError as e:
+        logger.error(f'ERROR: {e} Error occurred at reading ips')
+        sys.exit(1)
+    match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
+    content = match.group(1)
+    match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
+    content2 = match2.group(1)
+    return content2
         
         
 # =============================================================================
@@ -76,10 +73,11 @@ class slurm_commands:
 # It gets as input the entry node list, the build_node ips and the specifc 
 # attributes for the start of flesnet (e.g. rmda/zeromq)
 # =============================================================================
-class Entry_nodes(slurm_commands):
+class Entry_nodes:
     
     def __init__(self,node_list,build_nodes_ips,build_nodes_eth_ips, num_entry_nodes,
-                 path, transport_method, customize_string, use_pattern_gen, use_dmsa_files):
+                 path, transport_method, customize_string, use_pattern_gen, use_dmsa_files,
+                 use_infiniband, use_collectl):
         super().__init__()
         self.node_list = node_list
         self.build_nodes_ips = build_nodes_ips
@@ -90,6 +88,8 @@ class Entry_nodes(slurm_commands):
         self.customize_string = customize_string
         self.use_pattern_gen = use_pattern_gen
         self.use_dmsa_files = use_dmsa_files
+        self.use_infiniband = use_infiniband
+        self.use_collectl= use_collectl
         self.pids = []
     
 
@@ -103,14 +103,27 @@ class Entry_nodes(slurm_commands):
             
             logger.info(f'start entry node: {node}, with input file {input_file}')
             logfile = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
-            command = (
-                'srun --nodelist=%s --oversubscribe -N 1 %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s' 
-                % (node,file,input_file,logfile,self.build_nodes_ips, 
-                self.num_entry_nodes ,self.node_list[node]['entry_node_idx'],
-                 influx_node_ip, influx_token, use_grafana, self.path,
-                 self.transport_method, self.customize_string,
-                 self.use_pattern_gen, self.use_dmsa_files)
-            )
+            logfile_collectl = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
+            if self.use_infiniband:
+                command = (
+                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s' 
+                    % (node,file,input_file,logfile,self.build_nodes_ips, 
+                    self.num_entry_nodes ,self.node_list[node]['entry_node_idx'],
+                     influx_node_ip, influx_token, use_grafana, self.path,
+                     self.transport_method, self.customize_string,
+                     self.use_pattern_gen, self.use_dmsa_files, self.use_infiniband,
+                     self.use_collectl, logfile_collectl)
+                )
+            else:
+                command = (
+                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s' 
+                    % (node,file,input_file,logfile,self.build_nodes_eth_ips, 
+                    self.num_entry_nodes ,self.node_list[node]['entry_node_idx'],
+                     influx_node_ip, influx_token, use_grafana, self.path,
+                     self.transport_method, self.customize_string,
+                     self.use_pattern_gen, self.use_dmsa_files, self.use_infiniband,
+                     self.use_collectl, logfile_collectl)
+                )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
@@ -137,10 +150,11 @@ class Entry_nodes(slurm_commands):
 # It gets as input the build node list, the entry node ips and the specifc 
 # attributes for the start of flesnet (e.g. rmda/zeromq)
 # =============================================================================
-class Build_nodes(slurm_commands):
+class Build_nodes:
     
     def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, num_build_nodes,
-                 path, transport_method, customize_string):
+                 path, transport_method, customize_string, use_infiniband,
+                 use_collectl):
         super().__init__()
         self.node_list = node_list
         self.num_build_nodes = num_build_nodes
@@ -149,6 +163,8 @@ class Build_nodes(slurm_commands):
         self.path = path
         self.transport_method = transport_method
         self.customize_string = customize_string
+        self.use_infiniband = use_infiniband
+        self.use_collectl = use_collectl
         self.pids = []
         
     def start_flesnet(self, influx_node_ip, influx_token, use_grafana):
@@ -156,13 +172,25 @@ class Build_nodes(slurm_commands):
         for node in self.node_list.keys():
             logger.info(f'start build node: {node}')
             logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (node)
-            command = (
-                'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s " %s"'
-                % (node,file,logfile, self.entry_node_ips, self.num_build_nodes ,
-                   self.node_list[node]['build_node_idx'], influx_node_ip, 
-                   influx_token, use_grafana, self.path,
-                   self.transport_method,self.customize_string)
-            )
+            logfile_collectl = 'logs/collectl/build_nodes/build_node_%s.log' % (node)
+            if self.use_infiniband == 1:
+                command = (
+                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s'
+                    % (node,file,logfile, self.entry_node_ips, self.num_build_nodes ,
+                       self.node_list[node]['build_node_idx'], influx_node_ip, 
+                       influx_token, use_grafana, self.path,
+                       self.transport_method,self.customize_string,self.use_infiniband,
+                       self.use_collectl, logfile_collectl)
+                )
+            else: 
+                command = (
+                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s'
+                    % (node,file,logfile, self.entry_node_eth_ips, self.num_build_nodes ,
+                       self.node_list[node]['build_node_idx'], influx_node_ip, 
+                       influx_token, use_grafana, self.path,
+                       self.transport_method,self.customize_string,self.use_infiniband,
+                       self.use_collectl, logfile_collectl)
+                )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
@@ -187,10 +215,10 @@ class Build_nodes(slurm_commands):
 # entry node ips, build node ips and the specifc 
 # attributes for the start of flesnet (e.g. rmda/zeromq)
 # =============================================================================
-class Super_nodes(slurm_commands):
+class Super_nodes:
     
     def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, num_build_nodes,build_nodes_ips,build_nodes_eth_ips, num_entry_nodes, 
-                 path, transport_method, customize_string, use_pattern_gen, use_dmsa_files):
+                 path, transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl):
         super().__init__()
         self.node_list = node_list
         self.num_build_nodes = num_build_nodes
@@ -204,6 +232,8 @@ class Super_nodes(slurm_commands):
         self.customize_string = customize_string
         self.use_pattern_gen = use_pattern_gen
         self.use_dmsa_files = use_dmsa_files
+        self.use_infiniband = use_infiniband
+        self.use_collectl = use_collectl
         self.pids = []
         
     def start_flesnet(self,input_files, influx_node_ip, influx_token, use_grafana):
@@ -217,16 +247,32 @@ class Super_nodes(slurm_commands):
             logger.info(f'start entry node: {node}, with input file {input_file}')
             logfile_entry_node = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
             logfile_build_node = "logs/flesnet/build_nodes/build_node_%s.log" % node
-            command = (
-                'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s'
-                % (node,file,input_file,logfile_entry_node, logfile_build_node,
-                   self.build_nodes_ips, self.entry_node_ips, 
-                   self.num_entry_nodes , self.num_build_nodes,
-                   self.node_list[node]['entry_node_idx'], self.node_list[node]['build_node_idx'],
-                   influx_node_ip, influx_token, use_grafana, self.path,
-                   self.transport_method, self.customize_string,
-                   self.use_pattern_gen, self.use_dmsa_files)
-            )
+            logfile_collectl_entry_node = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
+            logfile_collectl_build_node = "logs/collectl/build_nodes/build_node_%s.csv" % node
+            if self.use_infiniband:
+                command = (
+                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s'
+                    % (node,file,input_file,logfile_entry_node, logfile_build_node,
+                       self.build_nodes_ips, self.entry_node_ips, 
+                       self.num_entry_nodes , self.num_build_nodes,
+                       self.node_list[node]['entry_node_idx'], self.node_list[node]['build_node_idx'],
+                       influx_node_ip, influx_token, use_grafana, self.path,
+                       self.transport_method, self.customize_string,
+                       self.use_pattern_gen, self.use_dmsa_files,self.use_infiniband,
+                       self.use_collectl, logfile_collectl_entry_node)
+                )
+            else:
+                command = (
+                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s'
+                    % (node,file,input_file,logfile_entry_node, logfile_build_node,
+                       self.build_nodes_eth_ips, self.entry_node_eth_ips, 
+                       self.num_entry_nodes , self.num_build_nodes,
+                       self.node_list[node]['entry_node_idx'], self.node_list[node]['build_node_idx'],
+                       influx_node_ip, influx_token, use_grafana, self.path,
+                       self.transport_method, self.customize_string,
+                       self.use_pattern_gen, self.use_dmsa_files, self.use_infiniband,
+                       self.use_collectl, logfile_collectl_build_node)
+                )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
@@ -249,9 +295,9 @@ class Super_nodes(slurm_commands):
 
 
 #TODO: make port depended on node
-class Timeslice_forwarding(slurm_commands):
+class Timeslice_forwarding:
     
-    def __init__(self,rec2build, influx_node_ip, influx_token, use_grafana, path, port, write_data_to_file, analyze_data):
+    def __init__(self,rec2build, influx_node_ip, influx_token, use_grafana, path, port, write_data_to_file, analyze_data, use_infiniband, use_collectl):
         
         super().__init__()
         self.rec2build = rec2build
@@ -262,6 +308,8 @@ class Timeslice_forwarding(slurm_commands):
         self.port = port
         self.write_data_to_file = write_data_to_file
         self.analyze_data = analyze_data
+        self.use_infiniband = use_infiniband
+        self.use_collectl = use_collectl
         self.pids = []
 
         
@@ -273,11 +321,12 @@ class Timeslice_forwarding(slurm_commands):
             logger.info(f"start timeslice forwarding node {receiving_node} for build node {build_node['node']}")
             logfile = 'logs/flesnet/tsclient/receiving_node_%s.log' % (receiving_node)
             #print(build_node)
+            logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.log' % (receiving_node)
             build_node_ip = build_node['inf_ip']
             command = (
-                    'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s'
+                    'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s %s %s %s'
                     % (receiving_node,file,logfile, build_node_ip, self.influx_token, self.influx_node_ip, self.use_grafana, self.path,
-                       self.port, self.write_data_to_file, self.analyze_data
+                       self.port, self.write_data_to_file, self.analyze_data,  self.use_infiniband, self.use_collectl, logfile_collectl
                         )
                 )
             try:
@@ -306,12 +355,12 @@ class Timeslice_forwarding(slurm_commands):
 # either the monotoring if activated or wait until the user says that the 
 # experiment is finished.
 # =============================================================================
-class execution(slurm_commands):
+class execution:
     
     def __init__(self, input_files,num_entrynodes, num_buildnodes, show_total_data, influx_node_ip, influx_token, use_grafana, 
                  overlap_usage_of_nodes,path,transport_method,customize_string, enable_graph, enable_progess_bar,
                  show_only_entry_nodes, use_pattern_gen, use_dmsa_files, set_node_list, entry_nodes_list,build_nodes_list,activate_timesliceforwarding,
-                 write_data_to_file,analyze_data,port):
+                 write_data_to_file,analyze_data,port,use_infiniband, use_collectl):
         super().__init__()
         self.input_files = input_files
         self.num_entrynodes = num_entrynodes 
@@ -336,6 +385,8 @@ class execution(slurm_commands):
         self.write_data_to_file = write_data_to_file
         self.analyze_data = analyze_data
         self.port = port
+        self.use_infiniband = use_infiniband
+        self.use_collectl = use_collectl
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.overlap_nodes = {}
@@ -351,16 +402,19 @@ class execution(slurm_commands):
             self.rec2build = []
             self.assemble_receiving_nodes2build_nodes()
         self.entry_nodes_cls = Entry_nodes(self.entry_nodes,self.build_nodes_ips,self.build_nodes_eth_ips, self.num_entrynodes,
-                                           self.path, self.transport_method, self.customize_string, self.use_pattern_gen, self.use_dmsa_files)
+                                           self.path, self.transport_method, self.customize_string, self.use_pattern_gen, self.use_dmsa_files,
+                                           self.use_infiniband, self.use_collectl)
         self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips, self.num_buildnodes,
-                                           self.path, self.transport_method, self.customize_string)
+                                           self.path, self.transport_method, self.customize_string, self.use_infiniband, self.use_collectl)
         self.super_nodes_cls = Super_nodes(self.overlap_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips, self.num_buildnodes,
                                            self.build_nodes_ips,self.build_nodes_eth_ips, self.num_entrynodes, self.path, 
-                                           self.transport_method, self.customize_string, self.use_pattern_gen, self.use_dmsa_files)
+                                           self.transport_method, self.customize_string, self.use_pattern_gen, self.use_dmsa_files,
+                                           self.use_infiniband, self.use_collectl)
     
         if self.activate_timesliceforwarding:
             self.timeslice_forwarding_cls = Timeslice_forwarding(self.rec2build, self.influx_node_ip, self.influx_token, self.use_grafana,
-                                                                 self.path , self.port, self.write_data_to_file, self.analyze_data)
+                                                                 self.path , self.port, self.write_data_to_file, self.analyze_data, self.use_infiniband,
+                                                                 self.use_collectl)
         
     # =============================================================================
     # gets the node list of the current allocations    
@@ -385,7 +439,7 @@ class execution(slurm_commands):
             num_list = numbers.split(",")
             node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
         node_list = sorted(set(node_list))
-        print(node_list)
+        #print(node_list)
         return node_list
     
         
@@ -448,8 +502,8 @@ class execution(slurm_commands):
                                 )
                 sys.exit(1)
             for node in node_list:
-                node_ip = self.infiniband_ip(node)
-                node_eth_ip = self.ethernet_ip(node)
+                node_ip = infiniband_ip(node)
+                node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
                 
                 if entry_nodes_cnt < self.num_entrynodes and build_nodes_cnt < self.num_buildnodes:
@@ -483,8 +537,8 @@ class execution(slurm_commands):
                                 )
                 sys.exit(1)
             for node in node_list:
-                node_ip = self.infiniband_ip(node)
-                node_eth_ip = self.ethernet_ip(node)
+                node_ip = infiniband_ip(node)
+                node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
                 if entry_nodes_cnt < self.num_entrynodes:
                     self.entry_nodes[node] = {
@@ -514,8 +568,8 @@ class execution(slurm_commands):
                 logger.critical(f'Incorrect Number of nodes, expected: {self.num_entrynodes + self.num_buildnodes}, got: {len(node_list)} ')
                 sys.exit(1)
             for node in node_list:
-                node_ip = self.infiniband_ip(node)
-                node_eth_ip = self.ethernet_ip(node)
+                node_ip = infiniband_ip(node)
+                node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
                 
                 if node in self.entry_nodes_list and node in self.build_nodes_list:
@@ -549,8 +603,8 @@ class execution(slurm_commands):
                 logger.critical(f'Incorrect Number of nodes, expected: {self.num_entrynodes + self.num_buildnodes}, got: {len(node_list)} ')
                 sys.exit(1)
             for node in node_list:
-                node_ip = self.infiniband_ip(node)
-                node_eth_ip = self.ethernet_ip(node)
+                node_ip = infiniband_ip(node)
+                node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
                 if node in self.entry_nodes_list:
                     #print(node)
@@ -662,9 +716,9 @@ class execution(slurm_commands):
         else:
             self.build_nodes_cls.stop_flesnet()
             self.entry_nodes_cls.stop_flesnet()
-        print(self.activate_timesliceforwarding)
+        #print(self.activate_timesliceforwarding)
         if self.activate_timesliceforwarding:
-            print('test')
+            #print('test')
             self.timeslice_forwarding_cls.stop_timeslice_forwarding()
 
     # =============================================================================

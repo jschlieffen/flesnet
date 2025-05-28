@@ -44,6 +44,7 @@ class execution:
     def __init__(self,flesctl_logfile):
         self.entry_nodes = []
         self.build_nodes = []
+
         self.flesctl_logfile = flesctl_logfile
         if not (os.path.isfile(flesctl_logfile)):
             logger.critical('file does not exist')

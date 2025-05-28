@@ -5,7 +5,7 @@
 
 #@author: jschlieffen
 """
-Usage: output.py <logfile> <ip> <num_build_nodes> <build_node_idx> <influx_node_ip> <influx_token> <use_grafana> <path> <transport_method> <customize_string>
+Usage: output.py <logfile> <ip> <num_build_nodes> <build_node_idx> <influx_node_ip> <influx_token> <use_grafana> <path> <transport_method> <customize_string> <use_infiniband> <use_collectl> <logfile_collectl>
 
 Arguments: 
     <logfile> The Logfile to use
@@ -18,6 +18,9 @@ Arguments:
     <path> The path to flesnet/mstool
     <transport_method> The transport method (rdma/zeromq, libfabric currently not implemented)
     <customize_string> The remaining params for flesnet
+    <use_infiniband> Decides whether infiniband shall be used or ethernet
+    <use_collectl> Decides if collectl should be used for tracking the network usage
+    <logfile_collectl> The csv-file which collectl should use
 """
 
 
@@ -48,10 +51,20 @@ def calc_str(ip,num_build_nodes):
         shm_string += "shm:/fles_out_b%s/0 " % (str(i))
     return ip_string, shm_string
 
+def start_collectl(use_infiniband, csvfile_name):
+    if use_infiniband == '1':
+        collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
+    else:
+        collectl_command = f"collectl --plot --sep , -i 1 -sn > {csvfile_name}"
+    result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    time.sleep(1)
+    return result_collectl
+
 def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-                transport_method, customize_string):
+                transport_method, customize_string, use_infininband, use_collectl, logfile_collectl):
     ip_string, shm_string = calc_str(ip, num_build_nodes)
-    
+    if use_collectl == '1':
+        result_collectl = start_collectl(use_infiniband, logfile_collectl)
     grafana_string = ''
     if use_grafana == '1':
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
@@ -66,6 +79,9 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
     print(flesnet_commands)
     while input_data == '':
         input_data = sys.stdin.read().strip()
+    if use_collectl == '1':
+        result_collectl.terminate()
+        result_collectl.wait()
     result_flesnet.terminate()
     result_flesnet.wait()
 
@@ -81,5 +97,9 @@ use_grafana = arg["<use_grafana>"]
 path = arg["<path>"]
 transport_method = arg["<transport_method>"]
 customize_string = arg["<customize_string>"]
+use_infiniband = arg['<use_infiniband>']
+use_collectl = arg['<use_collectl>']
+logfile_collectl = arg['<logfile_collectl>']
+
 build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-            transport_method, customize_string)
+            transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl)

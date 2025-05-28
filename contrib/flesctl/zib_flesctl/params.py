@@ -23,11 +23,13 @@ class Params:
     def __init__(self,config_file):
         self.entry_nodes = 0
         self.build_nodes = 0
+        self.use_collectl = 0
         self.set_node_list=0
         self.entry_nodes_list=[]
         self.build_nodes_list=[]
         self.path = ""
         self.transport_method = ""
+        self.use_infiniband = 1
         self.customize_string = "" 
         self.use_pattern_gen = 0
         self.use_dmsa_files = 0
@@ -63,11 +65,13 @@ class Params:
     def get_params(self, config_file):        
         self.entry_nodes = self.get_value('Number_of_Nodes', 'entry_nodes', 'int', True)
         self.build_nodes = self.get_value('Number_of_Nodes', 'build_nodes', 'int', True)
+        self.use_collectl = self.get_value('general', 'use_collectl','int',True)
         self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
         self.entry_nodes_list = self.get_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)
         self.build_nodes_list = self.get_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)
         self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', True)
         self.transport_method = self.get_value('flesnet_commands', 'transport_method', 'str', True)
+        self.use_infiniband = self.get_value('flesnet_commands','use_infiniband','int', self.use_infiniband, False)
         self.customize_string = self.get_value('flesnet_commands', 'customize_string', 'str', True)
         self.use_pattern_gen = self.get_value('mstool_commands', 'use_pattern_gen', 'int', self.use_pattern_gen, False)
         self.use_dmsa_files = self.get_value('mstool_commands', 'use_dmsa_files', 'int', self.use_dmsa_files, False)
