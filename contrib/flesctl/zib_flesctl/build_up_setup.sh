@@ -16,6 +16,12 @@ function create_venv() {
     deactivate
 }
 
+function create_config() {
+
+    cp config_example.cfg config.cfg
+
+}
+
 function create_folders() {
 
     mkdir logs
@@ -32,4 +38,5 @@ function create_folders() {
 }
 
 create_venv
+create_config
 create_folders
