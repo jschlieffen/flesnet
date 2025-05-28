@@ -15,12 +15,24 @@ To execute the code one needs at least Python 3.6 and in addition the libaries
 
 If you use a virtual env. it is recommended to name it flesctrl_venv, since the file ./exec.sh starts it automatically then. 
 
-Getting started
----------------
+First usage
+-----------
+
 
 The code itself reads the params from the file **`config.cfg`**. This has to be structered just as the file **`config_example.cfg`**. The usage of each parameter is explained also there.
 
 NOTE: After the first execution of the program flesctrl removes the comments, that explain the usage of the params. Thus it is recommended to create a new config, rather than just renaming **`config_example.cfg`**.
+
+In order to create all necessary folders, setting up the virtual enviroment, downloading all used libaries, one can execute the file 
+
+`./build_up_setup.sh`
+
+This only needs to be done once, unless changes in the code appeared.
+
+NOTE: It is recommended to create the folders like that, due to the fact that some paths cannot easily be found in the code and are not created automatically
+
+Getting started
+---------------
 
 To start flesctrl one needs to firstly allocate the nodes required. This can be done by using the command
 
