@@ -60,11 +60,19 @@ def start_collectl(use_infiniband, csvfile_name):
     time.sleep(1)
     return result_collectl
 
+def start_collectl_cpu(csv_file_name):
+    cpu_csv_file_name = csv_file_name.replace(".csv", "_cpu_usage.csv")
+    collectl_command = f"collectl --plot --sep , -i 1 -sC > {cpu_csv_file_name}"
+    result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    time.sleep(1)
+    return result_collectl
+
 def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
                 transport_method, customize_string, use_infininband, use_collectl, logfile_collectl):
     ip_string, shm_string = calc_str(ip, num_build_nodes)
     if use_collectl == '1':
         result_collectl = start_collectl(use_infiniband, logfile_collectl)
+        result_collectl_cpu = start_collectl_cpu(logfile_collectl)
     grafana_string = ''
     if use_grafana == '1':
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
@@ -74,14 +82,17 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
         % (path, transport_method, logfile, ip_string, build_node_idx, shm_string, 
            customize_string, grafana_string)
     )
+    print(flesnet_commands)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
-    print(flesnet_commands)
+    #print(flesnet_commands)
     while input_data == '':
         input_data = sys.stdin.read().strip()
     if use_collectl == '1':
         result_collectl.terminate()
         result_collectl.wait()
+        result_collectl_cpu.terminate()
+        result_collectl_cpu.wait()
     result_flesnet.terminate()
     result_flesnet.wait()
 

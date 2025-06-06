@@ -6,11 +6,12 @@
 
 """
 Usage: 
-    execution.py <flesctrl_logfile> [--verbose] [--mode=<mode>...] [--starttime=<starttime>] [--endtime=<endtime>]
+    execution.py <flesctrl_logfile> [--verbose] [--collectl_used] [--mode=<mode>...] [--starttime=<starttime>] [--endtime=<endtime>]
     
 Options:
     <flesctrl_logfile>             The general logfile of the flesctrl
     --verbose                      flag for verbose mode [default: False]
+    --collectl_used                Decides whether collectl was used to track data or not [default: False]
     --mode=<mode>...               The mode for the execution (deserialization/plots etc.) [default: all]
     --starttime=<starttime>        The start time if only a given interval should be printed. Have to be passed like 13:45:00 [default: 00:00:00]
     --endtime=<endtime>            The end time if only a given interval should be printed. Have to be passed like 13:45:00 [default: 00:00:00]
@@ -20,7 +21,9 @@ Options:
 
 import Logfile_reader as LR
 import Logfile_handler as LH
+import collectl_logfile_reader as CLR
 import plots 
+import plots_collectl as Cplots
 import re
 import docopt
 import os
@@ -44,7 +47,7 @@ class execution:
     def __init__(self,flesctl_logfile):
         self.entry_nodes = []
         self.build_nodes = []
-
+        self.receiving_nodes = []
         self.flesctl_logfile = flesctl_logfile
         if not (os.path.isfile(flesctl_logfile)):
             logger.critical('file does not exist')
@@ -54,24 +57,42 @@ class execution:
         self.shm_usages_entry_nodes = {}
         self.data_rates_build_nodes = {}
         self.shm_usages_build_nodes = {}
+        self.data_rates_collectl = {}
+        self.cpu_usage_collectl = {}
+        self.timeslice_forwarding_activated = False
         
     def get_node_names(self,flesctl_logfile_path):
         with open(flesctl_logfile_path, "r") as file:
             flesctl_logfile = file.read()
         pattern = re.compile(r"([a-zA-Z0-9-]+)\s+as\s+index\s+(\d+)")
+        receiving_pattern = re.compile(r"([a-zA-Z0-9-]+)\s+was connected to\s+([a-zA-Z0-9-]+)")
         nodes_info = []
-        node_types = ['Entry', 'Build']
+        node_types = ['Entry', 'Build', 'receiving']
         for node_type in node_types:
             matches = re.findall(f'{node_type} nodes:([\s\S]*?)(?=\n[A-Za-z]|$)', flesctl_logfile)
             if matches:
                 for match in matches:
-                    for name, index in re.findall(pattern, match):
-                        nodes_info.append({'node_name': name, 'node_type': node_type, 'index': int(index)})
+                    if node_type in ['Entry', 'Build']:
+                        for name, index in re.findall(pattern, match):
+                            nodes_info.append({
+                                'node_name': name,
+                                'node_type': node_type,
+                                'index': int(index)
+                            })
+                    elif node_type == 'receiving':
+                        for recv_name, build_name in re.findall(receiving_pattern, match):
+                            nodes_info.append({
+                                'node_name': build_name,
+                                'node_type': node_type,
+                                'connected_to': recv_name
+                            })
         for node in nodes_info:
             if node['node_type'] == 'Entry':
                 self.entry_nodes.append((node['node_name'], node['index']))
             elif node['node_type'] == 'Build':
                 self.build_nodes.append((node['node_name'], node['index']))
+            elif node['node_type'] == 'receiving':
+                self.receiving_nodes.append((node['node_name'], node['connected_to']))
 
     def get_data_from_logfile(self):
         for entry_node in self.entry_nodes:
@@ -88,7 +109,42 @@ class execution:
             self.shm_usages_build_nodes[f"build_node_{build_node[0]}"] = Logfile_reader_cls.data_shms
 
     #def get_data_from_deserialzation(self):
-        
+
+    def get_data_collectl(self):
+        self.data_rates_collectl['entry_nodes'] = {}
+        self.cpu_usage_collectl['entry_nodes'] = {}
+        self.data_rates_collectl['build_nodes'] = {}
+        self.cpu_usage_collectl['build_nodes'] = {}
+        if self.receiving_nodes != []:
+            self.timeslice_forwarding_activated = True
+            self.data_rates_collectl['receiving_nodes'] = {}
+            self.cpu_usage_collectl['receiving_nodes'] = {}
+        for entry_node in self.entry_nodes:
+            Logfile_name = f"../logs/collectl/entry_nodes/entry_node_{entry_node[0]}.csv"
+            Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
+            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'entry_node')
+            Logfile_reader_cls.extract_infiniband_usage()
+            Logfile_reader_cls.extract_cpu_usage()
+            self.data_rates_collectl['entry_nodes'][f"entry_nodes_{entry_node[0]}"] = Logfile_reader_cls.data_rates
+            self.cpu_usage_collectl['entry_nodes'][f"entry_nodes_{entry_node[0]}"] = Logfile_reader_cls.cpu_usage
+        for build_node in self.build_nodes:
+            Logfile_name = f"../logs/collectl/build_nodes/build_node_{build_node[0]}.csv"
+            Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
+            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'build_node')
+            Logfile_reader_cls.extract_infiniband_usage()
+            Logfile_reader_cls.extract_cpu_usage()
+            self.data_rates_collectl['build_nodes'][f"build_nodes_{build_node[0]}"] = Logfile_reader_cls.data_rates
+            self.cpu_usage_collectl['build_nodes'][f"build_nodes_{build_node[0]}"] = Logfile_reader_cls.cpu_usage
+        for receiving_node in self.receiving_nodes:
+            #print(receiving_node)
+            Logfile_name = f"../logs/collectl/tsclient/receiving_node_{receiving_node[0]}.csv"
+            Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
+            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'tsclient')
+            Logfile_reader_cls.extract_infiniband_usage()
+            Logfile_reader_cls.extract_cpu_usage()
+            #print(Logfile_reader_cls.data_rates)
+            self.data_rates_collectl['receiving_nodes'][f"receiving_nodes_{receiving_node[0]}"] = Logfile_reader_cls.data_rates
+            self.cpu_usage_collectl['receiving_nodes'][f"receiving_nodes_{receiving_node[0]}"] = Logfile_reader_cls.cpu_usage
         
     def serialize_data_rates(self):
         Logfile_serializer_entry_nodes = LH.serialize_data("e",self.data_rates_entry_nodes, self.shm_usages_entry_nodes, self.flesctl_logfile)
@@ -187,6 +243,17 @@ class execution:
         cp_cls.plot_shm_usage_single_node_avg()
         cp_cls.plot_shm_usage_single_node_single_entry_node()
         logger.success('created plots for build nodes')
+        
+    def start_plots_collectl(self,starttime,endtime):
+        
+        cp_cls = Cplots.create_plots_collectl(self.data_rates_collectl, self.cpu_usage_collectl ,self.timeslice_forwarding_activated, starttime,endtime)
+        cp_cls.plot_total_data_rate()
+        cp_cls.plot_avg_data_rate()
+        cp_cls.plot_data_rate_mean_max_min()
+        cp_cls.plot_data_rate_single()
+        cp_cls.bar_plots_data_rates()
+        cp_cls.plot_cpu_usage_avg()
+        logger.success('created plots from collectl data')
 
 def main():
     
@@ -196,21 +263,31 @@ def main():
     args = docopt.docopt(__doc__)
     logfile = args['<flesctrl_logfile>']
     modes = args['--mode']
+    collectl_used = bool(args['--collectl_used'])
     verbose = bool(args['--verbose'])
     starttime = args['--starttime']
     endtime = args['--endtime']
+    #print(starttime)
+    #print(endtime)
     modes = validate_params(logfile,modes,verbose)
     exec_cls = execution(logfile)
     #print(modes)
     if 'flesctrl_logfile' in modes:
         #print('test1')
         exec_cls.get_data_from_logfile()
+        if collectl_used:
+            exec_cls.get_data_collectl()
+            #print(exec_cls.data_rates_collectl)
+            #print(exec_cls.cpu_usage_collectl)
+            
     else:
         exec_cls.deserialize_data()
     if 'create_plots' in modes:
         #print('test')
         exec_cls.start_plots_entry_nodes(starttime,endtime)
         exec_cls.start_plots_build_nodes(starttime,endtime)
+        if collectl_used:
+            exec_cls.start_plots_collectl(starttime, endtime)
     
     if 'serialization' in modes:
         exec_cls.serialize_data_rates()

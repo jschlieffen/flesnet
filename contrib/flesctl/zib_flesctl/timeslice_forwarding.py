@@ -54,10 +54,18 @@ def start_collectl(use_infiniband, csvfile_name):
     time.sleep(1)
     return result_collectl
 
+def start_collectl_cpu(csv_file_name):
+    cpu_csv_file_name = csv_file_name.replace(".csv", "_cpu_usage.csv")
+    collectl_command = f"collectl --plot --sep , -i 1 -sC > {cpu_csv_file_name}"
+    result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    time.sleep(1)
+    return result_collectl
+
 def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_data_to_file, analyze_data, use_infiniband, use_collectl, logfile_collectl):
     ip_string,output_file_string,analyze_data_string = calc_ip_str(ip, port, write_data_to_file, path, analyze_data)
     if use_collectl == '1':
         result_collectl = start_collectl(use_infiniband, logfile_collectl)
+        result_collectl_cpu = start_collectl_cpu(logfile_collectl)
     grafana_string = ''
     if use_grafana == '1':
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
@@ -74,6 +82,8 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
     if use_collectl == '1':
         result_collectl.terminate()
         result_collectl.wait()
+        result_collectl_cpu.terminate()
+        result_collectl_cpu.wait()
     result_tsclient.terminate()
     result_tsclient.wait()
     

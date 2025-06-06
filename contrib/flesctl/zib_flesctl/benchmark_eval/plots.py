@@ -50,10 +50,8 @@ class create_plots_entry_nodes:
         
     #def get_time_stmps_interval(self):
     def get_time_stmps(self, start_time=None, end_time=None):
-
         def in_interval(ts):
-
-            return (start_time.time() is None or ts.time() >= start_time.time()) and (end_time.time() is None or ts.time() <= end_time.time())
+            return (start_time is None or ts.time() >= start_time.time()) and (end_time is None or ts.time() <= end_time.time())
         all_timestamps = set()
         for inner_dict in self.data_rates.values():
             all_timestamps.update(ts for ts in inner_dict.keys() if in_interval(ts))
@@ -145,7 +143,7 @@ class create_plots_entry_nodes:
         plt.fill_between(self.time_stmps, min_rate, max_rate, color='lightgrey', label='Range (min data rate-max data rate)')
         plt.plot(self.time_stmps, max_rate, color='black', linestyle='--', linewidth=1, label='Max rate')
         plt.plot(self.time_stmps, min_rate, color='black', linestyle='--', linewidth=1, label='Min rate')
-        plt.plot(self.time_stmps, avg_data_rate, linestyle='-', color='b')
+        plt.plot(self.time_stmps, avg_data_rate, linestyle='-', color='k')
         plt.xlabel("Timestamp")
         plt.ylabel("Data rate in GB")
         plt.title("Average data rate with maximum and minium")
@@ -399,7 +397,7 @@ class create_plots_build_nodes:
         
      def get_time_stmps(self, start_time=None, end_time=None):
          def in_interval(ts):
-             return (start_time.time() is None or ts.time() >= start_time.time()) and (end_time.time() is None or ts.time() <= end_time.time())
+             return (start_time is None or ts.time() >= start_time.time()) and (end_time is None or ts.time() <= end_time.time())
          all_timestamps = set()
          for inner_dict in self.data_rates.values():
              all_timestamps.update(ts for ts in inner_dict.keys() if in_interval(ts))
@@ -541,7 +539,7 @@ class create_plots_build_nodes:
         plt.fill_between(self.time_stmps, min_rate, max_rate, color='lightgrey', label='Range (min data rate-max data rate)')
         plt.plot(self.time_stmps, max_rate, color='black', linestyle='--', linewidth=1, label='Max rate')
         plt.plot(self.time_stmps, min_rate, color='black', linestyle='--', linewidth=1, label='Min rate')
-        plt.plot(self.time_stmps, avg_data_rate,  linestyle='-', color='b')
+        plt.plot(self.time_stmps, avg_data_rate,  linestyle='-', color='k')
         plt.xlabel("Timestamp")
         plt.ylabel("Data rate in GB")
         plt.title("Average data rate with maximum and minium build nodes")

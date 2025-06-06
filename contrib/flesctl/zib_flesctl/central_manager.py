@@ -172,7 +172,7 @@ class Build_nodes:
         for node in self.node_list.keys():
             logger.info(f'start build node: {node}')
             logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (node)
-            logfile_collectl = 'logs/collectl/build_nodes/build_node_%s.log' % (node)
+            logfile_collectl = 'logs/collectl/build_nodes/build_node_%s.csv' % (node)
             if self.use_infiniband == 1:
                 command = (
                     'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s'
@@ -321,7 +321,7 @@ class Timeslice_forwarding:
             logger.info(f"start timeslice forwarding node {receiving_node} for build node {build_node['node']}")
             logfile = 'logs/flesnet/tsclient/receiving_node_%s.log' % (receiving_node)
             #print(build_node)
-            logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.log' % (receiving_node)
+            logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.csv' % (receiving_node)
             build_node_ip = build_node['inf_ip']
             command = (
                     'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s %s %s %s'
@@ -485,6 +485,8 @@ class execution:
         Logfile.logfile.entry_nodes_list = self.entry_nodes
         Logfile.logfile.build_nodes_list = self.build_nodes
         Logfile.logfile.overlap_nodes_list = self.overlap_nodes
+        #if self.activate_timesliceforwarding:
+            
     
         
     # =============================================================================
@@ -651,7 +653,7 @@ class execution:
         for build_node_id,build_node in self.build_nodes.items():
             self.rec2build.append((unused_nodes[cnt],build_node))
             cnt += 1
-        
+        Logfile.logfile.receiving_node_list = self.rec2build
     # =============================================================================
     # This function starts flesnet and partly checks if the start was successful  
     # =============================================================================

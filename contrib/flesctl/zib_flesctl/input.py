@@ -62,9 +62,16 @@ def calc_str(ip,num_entry_nodes, use_pattern_gen):
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == '1':
         collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
-        print(collectl_command)
+        #print(collectl_command)
     else:
         collectl_command = f"collectl --plot --sep , -i 1 -sn > {csvfile_name}"
+    result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    time.sleep(1)
+    return result_collectl
+
+def start_collectl_cpu(csv_file_name):
+    cpu_csv_file_name = csv_file_name.replace(".csv", "_cpu_usage.csv")
+    collectl_command = f"collectl --plot --sep , -i 1 -sC > {cpu_csv_file_name}"
     result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     time.sleep(1)
     return result_collectl
@@ -74,6 +81,7 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
     ip_string, shm_string = calc_str(ip, num_entry_nodes, use_pattern_gen)
     if use_collectl == '1':
         result_collectl = start_collectl(use_infiniband, logfile_collectl)
+        result_collectl_cpu = start_collectl_cpu(logfile_collectl)
     grafana_string = ''
     if use_grafana == '1':
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
@@ -85,11 +93,13 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
         mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
         result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         time.sleep(1)
+    customize_string = customize_string.replace("--processor-instances 1 -e", "--processor-instances 0 -e")
     flesnet_commands = (
         '%s./flesnet -t %s -L %s -l 1 -i %s -I %s -O %s %s %s > /dev/null 2>&1 &' 
         % (path,transport_method,logfile,str(entry_node_idx), shm_string,ip_string,
           customize_string, grafana_string)
     )
+    print(flesnet_commands)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
     while input_data == '':
@@ -97,6 +107,8 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
     if use_collectl == '1':
         result_collectl.terminate()
         result_collectl.wait()
+        result_collectl_cpu.terminate()
+        result_collectl_cpu.wait()
     if use_pattern_gen == '0':
         result_mstool.terminate()
         result_mstool.wait()

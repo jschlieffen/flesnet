@@ -11,7 +11,7 @@ function execute_iteration() {
 
     rm -rf tmp
 
-    python3 $benchmark_eval $Logfile --mode='all'
+    python3 $benchmark_eval $Logfile --collectl_used --mode='all'
 }
 
 execute_iteration

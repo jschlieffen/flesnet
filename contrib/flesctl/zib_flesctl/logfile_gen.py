@@ -21,6 +21,7 @@ class Logfile:
         self.entry_nodes_list = {}
         self.build_nodes_list = {}
         self.overlap_nodes_list = {}
+        self.receiving_node_list = {}
         self.avg_data_rate = 0
         self.exec_time = 0
         self.transport_method = ''
@@ -60,6 +61,12 @@ class Logfile:
                 for key,val in self.build_nodes_list.items():
                     idx = val['build_node_idx']
                     file.write(f'   {key} as index {idx} \n')
+            if self.receiving_node_list:
+                file.write('receiving nodes: \n')
+                for receiving_node,build_node in self.receiving_node_list:
+                    #idx = val['receiving_node_idx']
+                    build_node_name = build_node['node']
+                    file.write(f'   {build_node_name} was connected to {receiving_node} \n')
 
             file.write(f'The average data rate of this run was: {self.avg_data_rate}\n')
             file.write(f'The execution time of this run was: {self.exec_time}\n')
