@@ -17,10 +17,10 @@ from log_msg import *
 import logfile_gen as Logfile
 
 # =============================================================================
-# TODOs:1. finish timeslice-forwarding 
-#       2. restructure file and folder org.
-#       3. collectl connection
-#       4. make possibility to name the flesnet logfile
+# TODOs:1. finish timeslice-forwarding                      done
+#       2. restructure file and folder org. 
+#       3. collectl connection                              done
+#       4. make possibility to name the flesnet logfile     not gonna happen
 #       5. make implementation for libfrabric
 # =============================================================================
 
@@ -29,14 +29,6 @@ import logfile_gen as Logfile
 # the central manager. 
 # =============================================================================
 
-# =============================================================================
-# TODO timeslice-forwarding:
-#       1. params for the timeslice-forwarding
-#       2. start in execution file
-#       3. restructure assembling in nodes
-#       4. rewriting allocation
-#       5. testing
-# =============================================================================
 class exec_:
     
     def __init__(self):
@@ -98,7 +90,7 @@ class exec_:
             self.execution_cls.entry_nodes_cls.stop_flesnet()
             self.execution_cls.build_nodes_cls.stop_flesnet()
         if self.Par_.activate_timesliceforwarding:
-            print('test123')
+            #print('test123')
             self.execution_cls.timeslice_forwarding_cls.stop_timeslice_forwarding()
         self.running = False
         self.create_logfile()

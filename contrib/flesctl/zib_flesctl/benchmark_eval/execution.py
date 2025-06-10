@@ -42,6 +42,15 @@ os.chdir(script_dir)
 from deepdiff import DeepDiff
 from datetime import datetime
 
+
+# ===============================================================================
+# TODOs: 1. implement cpu usage plots for allocated cpus
+#        2. implement deserialization/serialization for collectl data
+#        3. make folder structure for plots/data depending on run id and timestmp
+#        4. get more cpus in allocation, when timeslice-forwarding is used
+#        5. clean up code
+#        6. comment code 
+# ===============================================================================
 class execution:
     
     def __init__(self,flesctl_logfile):
