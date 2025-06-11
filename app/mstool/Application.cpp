@@ -112,9 +112,11 @@ void Application::run() {
       throw std::bad_alloc();
     }
     std::cout<<"test1"<<std::endl;
+   
     for (size_t i = 0; i < par_.malloc_size; ++i) {
       free_ptr[i] = static_cast<uint8_t>(rand());
     }
+        
     std::cout<<"test2"<<std::endl;
     uint64_t msg_start =1;
     uint64_t msg_end =2;
@@ -181,7 +183,7 @@ void Application::run() {
 
         std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(desc_, content_ptr); 
         sink->put(ms);
-	acc_size += data_size % 1000;
+	acc_size += 10000;
         //size_t offset = rand() % (par_.malloc_size/2);
         //content_ptr = free_pointer + offset;
         if (content_ptr == nullptr){

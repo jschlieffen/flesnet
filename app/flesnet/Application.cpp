@@ -158,7 +158,7 @@ void Application::create_input_channel_senders() {
       if (param.count("descsize") != 0u) {
         descsize = stou(param.at("descsize"));
       }
-      uint32_t size_mean = 1024; // 1 kiB
+      uint32_t size_mean = 102400; // 1 kiB
       if (param.count("mean") != 0u) {
         size_mean = stou(param.at("mean"));
       }
