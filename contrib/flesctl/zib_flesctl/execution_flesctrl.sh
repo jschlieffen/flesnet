@@ -25,8 +25,13 @@ function create_output_folder() {
     local flesctrl_Logfile=$1
     local delete_folder_after_cp=$2
 
+    
+    
+    filename="${flesctrl_Logfile##*/}"       
+    foldername="Runs/${filename%.*}"    
+    echo "$foldername"             
 
-    foldername="Runs/$(echo ${flesctrl_Logfile} | cut -d "/" -f 2 | cut -d "." -f 1)"
+    #foldername="Runs/$(echo ${flesctrl_Logfile} | cut -d "/" -f 2 | cut -d "." -f 1)"
 
     echo $foldername
 
@@ -48,11 +53,30 @@ function create_output_folder() {
         rm -rf $plot_folder
 
         rm -rf $logfolder
+
+	create_folders
     fi
 
     # Also copy the flesnet logfiles, as well as the collectl logfiles.
 }
 
-#execute_iteration
+function create_folders() {
 
-create_output_folder ../Run_50_2025-06-06-19-10-20.log 0
+    mkdir logs
+
+    mkdir logs/general
+    
+    mkdir logs/collectl
+
+    mkdir logs/collectl/entry_nodes
+
+    mkdir logs/collectl/build_nodes
+
+    mkdir logs/collectl/tsclient
+}
+
+
+
+execute_iteration
+
+#create_output_folder ../Run_50_2025-06-06-19-10-20.log 0

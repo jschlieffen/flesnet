@@ -247,7 +247,7 @@ class create_plots_collectl:
                         if node_type == 'entry_nodes':
                             avg += node[time_stmp]['KBOut']/1000000
                         elif node_type == 'build_nodes':
-                            avg = node[time_stmp]['KBIn']/1000000
+                            avg += node[time_stmp]['KBIn']/1000000
                             if self.timeslice_forwarding_activated:
                                 avg_out += node[time_stmp]['KBOut']/1000000
                         elif node_type == 'receiving_nodes':
@@ -256,7 +256,9 @@ class create_plots_collectl:
                     else:
                         avg += 0
                         cnt += 1
+                        
                 if cnt != 0:
+                    #print(node_type, ': ', cnt)
                     averages.append(avg/cnt)
                     if self.timeslice_forwarding_activated and node_type == 'build_nodes':
                         averages_out.append(avg_out/cnt)

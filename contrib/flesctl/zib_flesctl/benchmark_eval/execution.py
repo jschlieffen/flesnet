@@ -22,6 +22,7 @@ Options:
 import Logfile_reader as LR
 import Logfile_handler as LH
 import collectl_logfile_reader as CLR
+import collectl_Logfile_handler as CLH
 import plots 
 import plots_collectl as Cplots
 import re
@@ -164,6 +165,11 @@ class execution:
         Logfile_serializer_build_nodes.serialize_shm_usage_build_nodes()
         logger.success('serialization process finished')
         
+    def serialize_data_rates_collectl(self):
+        Logfile_serializer = CLH.serialize_data(self.data_rates_collectl, self.cpu_usage_collectl, self.flesctl_logfile, self.timeslice_forwarding_activated)
+        Logfile_serializer.serialize_data()
+        Logfile_serializer.serialize_cpu_usage()
+    
     def deserialize_data(self):
         deserializer_entry_nodes = LH.deserialize_data("e",self.flesctl_logfile)
         deserializer_entry_nodes.deserialize_data_rates()
@@ -300,6 +306,8 @@ def main():
     
     if 'serialization' in modes:
         exec_cls.serialize_data_rates()
+        if collectl_used:
+            exec_cls.serialize_data_rates_collectl()
         #exec_cls.deserialize_data() 
         if 'check_serialization' in modes:
             exec_cls.check_deserialization() 
