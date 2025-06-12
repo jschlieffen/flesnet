@@ -126,13 +126,14 @@ class execution:
         self.data_rates_collectl['build_nodes'] = {}
         self.cpu_usage_collectl['build_nodes'] = {}
         if self.receiving_nodes != []:
+            #print('test12344')
             self.timeslice_forwarding_activated = True
             self.data_rates_collectl['receiving_nodes'] = {}
             self.cpu_usage_collectl['receiving_nodes'] = {}
         for entry_node in self.entry_nodes:
             Logfile_name = f"../logs/collectl/entry_nodes/entry_node_{entry_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
-            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'entry_node')
+            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'entry_node',self.timeslice_forwarding_activated)
             Logfile_reader_cls.extract_infiniband_usage()
             Logfile_reader_cls.extract_cpu_usage()
             self.data_rates_collectl['entry_nodes'][f"entry_nodes_{entry_node[0]}"] = Logfile_reader_cls.data_rates
@@ -140,7 +141,7 @@ class execution:
         for build_node in self.build_nodes:
             Logfile_name = f"../logs/collectl/build_nodes/build_node_{build_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
-            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'build_node')
+            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'build_node',self.timeslice_forwarding_activated)
             Logfile_reader_cls.extract_infiniband_usage()
             Logfile_reader_cls.extract_cpu_usage()
             self.data_rates_collectl['build_nodes'][f"build_nodes_{build_node[0]}"] = Logfile_reader_cls.data_rates
@@ -149,7 +150,7 @@ class execution:
             #print(receiving_node)
             Logfile_name = f"../logs/collectl/tsclient/receiving_node_{receiving_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
-            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'tsclient')
+            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'tsclient', self.timeslice_forwarding_activated)
             Logfile_reader_cls.extract_infiniband_usage()
             Logfile_reader_cls.extract_cpu_usage()
             #print(Logfile_reader_cls.data_rates)
@@ -181,6 +182,14 @@ class execution:
         self.data_rates_build_nodes = deserialzer_build_nodes.data_rate
         deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
         self.shm_usages_build_nodes = deserialzer_build_nodes.shm_usage
+    
+    def deserialize_data_collectl(self):
+        Logfile_deserializer = CLH.deserialize_data(self.flesctl_logfile, self.timeslice_forwarding_activated)
+        Logfile_deserializer.deserialize_data()
+        Logfile_deserializer.deserialize_cpu_usage()
+        self.data_rates_collectl = Logfile_deserializer.data_rate
+        self.cpu_usage_collectl = Logfile_deserializer.cpu_usage
+        
         
     def check_deserialization(self):
         self.serialize_data_rates()
@@ -232,7 +241,70 @@ class execution:
                     #print(diff)
 
 
-    
+    def check_deserialization_collectl(self):
+        self.serialize_data_rates_collectl()
+        Logfile_deserializer = CLH.deserialize_data(self.flesctl_logfile, self.timeslice_forwarding_activated)
+        Logfile_deserializer.deserialize_data()
+        Logfile_deserializer.deserialize_cpu_usage()
+        data_rates = Logfile_deserializer.data_rate
+        cpu_usage = Logfile_deserializer.cpu_usage
+        if data_rates == self.data_rates_collectl:
+            logger.success('serialization process for collectl succeeded')
+        else:
+            logger.error('serialization process not succeeded')
+            diff = DeepDiff(self.data_rates_collectl, data_rates)
+            #print(data_rates)
+            #print(self.data_rates_collectl)
+            print(diff)
+        if cpu_usage == self.cpu_usage_collectl:
+            logger.success('serialization process collectl succeeded')
+        else:
+            logger.error('serialization process not succeeded')
+            diff = DeepDiff(self.cpu_usage_collectl, cpu_usage)
+            print(cpu_usage)
+            print(self.cpu_usage_collectl)
+            print(diff)
+            
+            
+    def start_plots_entry_nodes(self,starttime,endtime):
+
+        cp_cls = plots.create_plots_entry_nodes(self.data_rates_entry_nodes, self.shm_usages_entry_nodes,starttime,endtime)
+        cp_cls.plot_total_data_rate()
+        cp_cls.plot_avg_data_rate()
+        cp_cls.plot_data_rate_single()
+        cp_cls.plot_data_rate_mean_max_min()
+        cp_cls.box_plot_data_rates()
+        cp_cls.bar_plots_data_rates()
+        cp_cls.plot_shm_usage()
+        cp_cls.plot_shm_usage_single()
+        logger.success('created plots for entry nodes')
+
+    def start_plots_build_nodes(self,starttime,endtime):
+        cp_cls = plots.create_plots_build_nodes(self.data_rates_build_nodes, self.shm_usages_build_nodes,starttime,endtime)
+        cp_cls.plot_total_data_rate()
+        cp_cls.plot_avg_data_rate()
+        cp_cls.plot_data_rate_single()
+        cp_cls.plot_data_rate_mean_max_min()
+        cp_cls.box_plot_data_rates()
+        cp_cls.bar_plots_data_rates()
+        cp_cls.plot_shm_usage_assemble()
+        cp_cls.plot_shm_usage_single_node_avg()
+        cp_cls.plot_shm_usage_single_node_single_entry_node()
+        logger.success('created plots for build nodes')
+        
+    def start_plots_collectl(self,starttime,endtime):
+        
+        cp_cls = Cplots.create_plots_collectl(self.data_rates_collectl, self.cpu_usage_collectl ,self.timeslice_forwarding_activated, starttime,endtime)
+        cp_cls.plot_total_data_rate()
+        cp_cls.plot_avg_data_rate()
+        cp_cls.plot_data_rate_mean_max_min()
+        cp_cls.plot_data_rate_single()
+        cp_cls.bar_plots_data_rates()
+        cp_cls.plot_cpu_usage_avg()
+        logger.success('created plots from collectl data')
+
+
+
     def start_plots_entry_nodes(self,starttime,endtime):
 
         cp_cls = plots.create_plots_entry_nodes(self.data_rates_entry_nodes, self.shm_usages_entry_nodes,starttime,endtime)
@@ -297,6 +369,8 @@ def main():
             
     else:
         exec_cls.deserialize_data()
+        if collectl_used:
+            exec_cls.deserialize_data_collectl()
     if 'create_plots' in modes:
         #print('test')
         exec_cls.start_plots_entry_nodes(starttime,endtime)
@@ -309,8 +383,10 @@ def main():
         if collectl_used:
             exec_cls.serialize_data_rates_collectl()
         #exec_cls.deserialize_data() 
-        if 'check_serialization' in modes:
-            exec_cls.check_deserialization() 
+    if 'check_serialization' in modes:
+        exec_cls.check_deserialization() 
+        if collectl_used:
+            exec_cls.check_deserialization_collectl()
     
     
 def validate_params(logfile,modes,verbose):

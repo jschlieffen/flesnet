@@ -14,10 +14,11 @@ import re
 
 class collectl_reader:
     
-    def __init__(self,Logfile_name_infiniband,Logfile_name_cpu, node_type):
+    def __init__(self,Logfile_name_infiniband,Logfile_name_cpu, node_type, timeslice_forwarding_activated):
         self.Logfile_infiniband = self.read_file(Logfile_name_infiniband)
         self.Logfile_cpu_usage = self.read_file(Logfile_name_cpu)
         self.node_type = node_type
+        self.timeslice_forwarding_activated = timeslice_forwarding_activated
         self.data_rates = {}
         self.cpu_usage = {}
 
@@ -42,11 +43,15 @@ class collectl_reader:
                         'KBOut' : int(row['[IB]OutKB'])
                     }
             elif self.node_type == 'build_node':
-                self.data_rates[timestamp] = {
-                        'KBIn' : int(row['[IB]InKB']),
-                        'KBOut' : int(row['[IB]OutKB'])
-                    }
-            
+                if self.timeslice_forwarding_activated:
+                    self.data_rates[timestamp] = {
+                            'KBIn' : int(row['[IB]InKB']),
+                            'KBOut' : int(row['[IB]OutKB'])
+                        }
+                else:
+                    self.data_rates[timestamp] = {
+                            'KBIn' : int(row['[IB]InKB'])
+                        }
     def get_num_cpus(self,header):
         cpu_ids = set()
         for col in header:
