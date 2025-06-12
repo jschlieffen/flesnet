@@ -67,10 +67,30 @@ def start_collectl_cpu(csv_file_name):
     time.sleep(1)
     return result_collectl
 
+def get_alloc_cpus(filename):
+    taskset_command = "taskset -cp $$"
+    result_taskset = subprocess.Popen(taskset_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = result_taskset.communicate()
+    match = stdout.split(":")[-1].strip()
+    entries = match.split(",")
+    alloc_cpus = []
+    for entry in entries:
+        if "-" in entry:
+            start, end = map(int, entry.split("-"))
+            alloc_cpus.extend(range(start,end + 1))
+        else:
+            alloc_cpus.append(int(entry))
+    with open(filename, "w") as file:
+        for cpu in alloc_cpus:
+            file.write(f"{cpu}\n")
+
 def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
                 transport_method, customize_string, use_infininband, use_collectl, logfile_collectl):
     ip_string, shm_string = calc_str(ip, num_build_nodes)
     if use_collectl == '1':
+        basename = os.path.splitext(os.path.basename(logfile))[0]
+        filename_cpus = f"tmp/{basename}.txt"
+        get_alloc_cpus(filename_cpus)
         result_collectl = start_collectl(use_infiniband, logfile_collectl)
         result_collectl_cpu = start_collectl_cpu(logfile_collectl)
     grafana_string = ''

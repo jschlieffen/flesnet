@@ -93,6 +93,7 @@ class Entry_nodes:
         self.pids = []
     
 
+    #TODO: make cpu param
     def start_flesnet(self,input_files, influx_node_ip, influx_token, use_grafana):
         file = 'input.py'
         node_cnt = 0
@@ -106,7 +107,7 @@ class Entry_nodes:
             logfile_collectl = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
             if self.use_infiniband:
                 command = (
-                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s' 
+                    'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s' 
                     % (node,file,input_file,logfile,self.build_nodes_ips, 
                     self.num_entry_nodes ,self.node_list[node]['entry_node_idx'],
                      influx_node_ip, influx_token, use_grafana, self.path,
@@ -175,7 +176,7 @@ class Build_nodes:
             logfile_collectl = 'logs/collectl/build_nodes/build_node_%s.csv' % (node)
             if self.use_infiniband == 1:
                 command = (
-                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s'
+                    'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s'
                     % (node,file,logfile, self.entry_node_ips, self.num_build_nodes ,
                        self.node_list[node]['build_node_idx'], influx_node_ip, 
                        influx_token, use_grafana, self.path,

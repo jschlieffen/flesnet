@@ -18,7 +18,8 @@ import logfile_gen as Logfile
 
 # =============================================================================
 # TODOs:1. finish timeslice-forwarding                      done
-#       2. restructure file and folder org. 
+#       2. restructure file and folder org.                 improvement needed
+#       3. make threads for mstool etc.
 #       3. collectl connection                              done
 #       4. make possibility to name the flesnet logfile     not gonna happen
 #       5. make implementation for libfrabric

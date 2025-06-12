@@ -24,7 +24,7 @@ if [ "$SET_NODE_LIST" -eq 1 ]; then
     TIME=$TIME_ALLOC
     NODELIST="$ENTRY_NODES_LIST,$BUILD_NODES_LIST"
 
-    salloc --mem $MEM -p $p --nodes=$NODES --nodelist=$NODELIST --constraint=Infiniband --time=$TIME 
+    salloc --mem=$MEM --ntasks-per-node=6 -c 6 -p $p --nodes=$NODES --nodelist=$NODELIST --constraint=Infiniband --time=$TIME 
 else
     source flesctrl_venv/bin/activate
 
@@ -42,5 +42,6 @@ else
     p="big"
     TIME=$TIME_ALLOC
 
-    salloc --mem $MEM -p $p -x htc-cmp127 --nodes=$NODES --constraint=Infiniband --time=$TIME 
+    salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 -c 6 -p $p -x htc-cmp127 --constraint=Infiniband --time=$TIME 
+
 fi

@@ -9,12 +9,14 @@ Created on Fri Jun  6 11:58:03 2025
 import csv
 from datetime import datetime
 import re
+import os
 
 
 
 class collectl_reader:
     
-    def __init__(self,Logfile_name_infiniband,Logfile_name_cpu, node_type, timeslice_forwarding_activated):
+    def __init__(self, node_name,Logfile_name_infiniband,Logfile_name_cpu, node_type, timeslice_forwarding_activated):
+        self.node_name = node_name
         self.Logfile_infiniband = self.read_file(Logfile_name_infiniband)
         self.Logfile_cpu_usage = self.read_file(Logfile_name_cpu)
         self.node_type = node_type
@@ -60,11 +62,22 @@ class collectl_reader:
                 cpu_ids.add(int(match.group(1)))
         return len(cpu_ids)
         
+
+    def get_alloc_cpus(self):
+        #print(self.Logfile_infiniband)
+        #node = os.path.splitext(os.path.basename(self.Logfile_infiniband))[0]
+        filename = f"../tmp/{self.node_name}.txt"
+        with open(filename, "r") as f:
+            cpus = [int(line.strip()) for line in f if line.strip().isdigit()]
+        return cpus
+        
     #TODO: make avg over allocated cpus from flesnet
     def extract_cpu_usage(self):
         header = (self.Logfile_cpu_usage[0])
         #print(header)
         num_cpus = self.get_num_cpus(header)
+        cpus_alloc = self.get_alloc_cpus()
+        
         for row in self.Logfile_cpu_usage:
             dt = row['#Date'] + ' ' + row['Time']
             timestamp = datetime.strptime(dt, "%Y%m%d %H:%M:%S")
@@ -76,7 +89,10 @@ class collectl_reader:
             self.cpu_usage[timestamp] = {
                     'overall_avg' : avg_usage
                 }
-                
+            for i in cpus_alloc:
+                val = int(row[f'[CPU:{i}]Idle%'])
+                self.cpu_usage[timestamp][i] = val
+        #print(self.cpu_usage)
         #idle_indices = [i for i,col in enumerate(header) if 'Idle%' in col]
         
                 

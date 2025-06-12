@@ -340,7 +340,7 @@ class create_plots_collectl:
                 plt.close()
                 
     def plot_cpu_usage_avg(self):
-        for node_type in self.data_rates.keys():
+        for node_type in self.cpu_usage.keys():
             dir = os.path.dirname(__file__)
             path = os.path.join(dir,f'plots/collectl_plots/cpu_usage/{node_type}')
             if not os.path.exists(path):
@@ -368,5 +368,44 @@ class create_plots_collectl:
                 plt.close()
                 
                     
-        
+    def plot_cpu_usage_single(self):
+        for node_type in self.cpu_usage.keys():
+            dir = os.path.dirname(__file__)
+            path = os.path.join(dir,f'plots/collectl_plots/cpu_usage/{node_type}')
+            if not os.path.exists(path):
+                os.makedirs(path)
+            path = path + '/'
+            for key, val in self.cpu_usage[node_type].items():
+                first_timestmp = next((item for item in self.time_stmps[node_type] if item in val), None)
+                #print(val)
+                print(first_timestmp)
+                alloc_cpus = [cpu for cpu in val[first_timestmp].keys() if cpu != 'overall_avg']
+                cpu_usage = {}
+                for timestmp in self.time_stmps[node_type]:
+                    if timestmp in val:
+                        for cpu in alloc_cpus:
+                            if cpu not in cpu_usage:
+                                cpu_usage[cpu] = []
+                            usg = 100 - val[timestmp][cpu]
+                            cpu_usage[cpu].append(usg)
+                    else:
+                        for cpu in alloc_cpus:
+                            if cpu not in cpu_usage:
+                                cpu_usage[cpu] = []
+                            usg = 0
+                            cpu_usage[cpu].append(usg)
+                plt.figure(figsize=(10, 6))
+                for cpu in alloc_cpus:
+                    plt.plot(self.time_stmps[node_type], cpu_usage[cpu], linestyle='-', label=f'CPU: {cpu}')
+                plt.xlabel("Timestamp")
+                plt.ylabel("Used cpu in %")
+                plt.title(f"CPU usage for allocated CPUs for node {key}")
+                plt.xticks(rotation=45)
+                plt.grid(True)
+                plt.tight_layout()
+                #plt.show()
+                plt.legend()
+                plt.savefig(path + f'cpu_usage_alloc_{key}.png')
+                plt.close()
+                    
     

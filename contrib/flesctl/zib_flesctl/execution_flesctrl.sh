@@ -9,8 +9,6 @@ function execute_iteration() {
     Logfile="../${Logfile}"
     echo $Logfile
 
-    rm -rf tmp
-
     python3 $benchmark_eval $Logfile --collectl_used --mode='all'
 
     create_output_folder $Logfile 1
@@ -53,6 +51,8 @@ function create_output_folder() {
         rm -rf $plot_folder
 
         rm -rf $logfolder
+	
+	rm -rf tmp
 
 	create_folders
     fi

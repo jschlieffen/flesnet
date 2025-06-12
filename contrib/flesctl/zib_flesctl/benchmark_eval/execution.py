@@ -45,10 +45,10 @@ from datetime import datetime
 
 
 # ===============================================================================
-# TODOs: 1. implement cpu usage plots for allocated cpus
-#        2. implement deserialization/serialization for collectl data
-#        3. make folder structure for plots/data depending on run id and timestmp
-#        4. get more cpus in allocation, when timeslice-forwarding is used
+# TODOs: 1. implement cpu usage plots for allocated cpus                done
+#        2. implement deserialization/serialization for collectl data   make for cpu usage
+#        3. make folder structure for plots/data depending on run id and timestmp   done
+#        4. get more cpus in allocation, when timeslice-forwarding is used          done/make num cpus per node a param
 #        5. clean up code
 #        6. comment code 
 # ===============================================================================
@@ -133,7 +133,7 @@ class execution:
         for entry_node in self.entry_nodes:
             Logfile_name = f"../logs/collectl/entry_nodes/entry_node_{entry_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
-            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'entry_node',self.timeslice_forwarding_activated)
+            Logfile_reader_cls = CLR.collectl_reader(f'entry_node_{entry_node[0]}',Logfile_name, Logfile_name_cpu, 'entry_node',self.timeslice_forwarding_activated)
             Logfile_reader_cls.extract_infiniband_usage()
             Logfile_reader_cls.extract_cpu_usage()
             self.data_rates_collectl['entry_nodes'][f"entry_nodes_{entry_node[0]}"] = Logfile_reader_cls.data_rates
@@ -141,7 +141,7 @@ class execution:
         for build_node in self.build_nodes:
             Logfile_name = f"../logs/collectl/build_nodes/build_node_{build_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
-            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'build_node',self.timeslice_forwarding_activated)
+            Logfile_reader_cls = CLR.collectl_reader(f'build_node_{build_node[0]}',Logfile_name, Logfile_name_cpu, 'build_node',self.timeslice_forwarding_activated)
             Logfile_reader_cls.extract_infiniband_usage()
             Logfile_reader_cls.extract_cpu_usage()
             self.data_rates_collectl['build_nodes'][f"build_nodes_{build_node[0]}"] = Logfile_reader_cls.data_rates
@@ -150,7 +150,7 @@ class execution:
             #print(receiving_node)
             Logfile_name = f"../logs/collectl/tsclient/receiving_node_{receiving_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
-            Logfile_reader_cls = CLR.collectl_reader(Logfile_name, Logfile_name_cpu, 'tsclient', self.timeslice_forwarding_activated)
+            Logfile_reader_cls = CLR.collectl_reader(f'receiving_node_{receiving_node[0]}',Logfile_name, Logfile_name_cpu, 'tsclient', self.timeslice_forwarding_activated)
             Logfile_reader_cls.extract_infiniband_usage()
             Logfile_reader_cls.extract_cpu_usage()
             #print(Logfile_reader_cls.data_rates)
@@ -340,6 +340,7 @@ class execution:
         cp_cls.plot_data_rate_single()
         cp_cls.bar_plots_data_rates()
         cp_cls.plot_cpu_usage_avg()
+        cp_cls.plot_cpu_usage_single()
         logger.success('created plots from collectl data')
 
 def main():
