@@ -53,7 +53,6 @@ class create_plots_collectl:
     
     def plot_total_data_rate(self):
         for node_type in self.data_rates.keys():
-            #print(node_type)
             dir = os.path.dirname(__file__)
             path = os.path.join(dir,f'plots/collectl_plots/general/{node_type}')
             if not os.path.exists(path):
@@ -92,7 +91,6 @@ class create_plots_collectl:
             plt.xticks(rotation=45)
             plt.grid(True)
             plt.tight_layout()
-            #plt.show()
             if self.timeslice_forwarding_activated and node_type == 'build_nodes':
                 plt.legend()
             plt.savefig(path + 'collectl_total_data_rate.png')
@@ -140,8 +138,6 @@ class create_plots_collectl:
             plt.xticks(rotation=45)
             plt.grid(True)
             plt.tight_layout()
-            #plt.show()
-
             plt.savefig(path + 'avg_data_rate.png')
             plt.close()
 
@@ -208,7 +204,6 @@ class create_plots_collectl:
             plt.xticks(rotation=45)
             plt.grid(True)
             plt.tight_layout()
-            #plt.show()
             plt.savefig(path + 'avg_data_rate_max_min.png')
             plt.close()
             if self.timeslice_forwarding_activated and node_type == 'build_nodes':
@@ -223,7 +218,6 @@ class create_plots_collectl:
                 plt.xticks(rotation=45)
                 plt.grid(True)
                 plt.tight_layout()
-                #plt.show()
                 plt.legend()
                 plt.savefig(path + 'avg_data_rate_max_min_output.png')
                 plt.close()
@@ -258,7 +252,6 @@ class create_plots_collectl:
                         cnt += 1
                         
                 if cnt != 0:
-                    #print(node_type, ': ', cnt)
                     averages.append(avg/cnt)
                     if self.timeslice_forwarding_activated and node_type == 'build_nodes':
                         averages_out.append(avg_out/cnt)
@@ -287,10 +280,8 @@ class create_plots_collectl:
                 plt.bar(labels,averages,color=colors)
                 plt.title('Bar Plot of data rates')
                 plt.ylabel('Data Rate in GB')
-                #plt.grid(axis='y')
                 plt.xticks(rotation=45)
                 plt.tight_layout()
-                #plt.legend()
                 plt.savefig(path + f'bar_plot_data_rate_out_{node_type}.png')
                 plt.close()
             
@@ -301,16 +292,13 @@ class create_plots_collectl:
             if not os.path.exists(path):
                 os.makedirs(path)
             path = path + '/'
-            #+time_stamps = self.get_time_stmps()
             for key,val in self.data_rates[node_type].items():
                 total_data_rate = []
                 if self.timeslice_forwarding_activated and node_type == 'build_nodes':
                     total_data_rate_out = []
                 for time_stmp in self.time_stmps[node_type]:
                     if time_stmp in val:
-                        #total_data_rate.append(val[time_stmp])  
                         if node_type == 'entry_nodes':
-                            #print(val[time_stmp])
                             total_data_rate.append(val[time_stmp]['KBOut']/1000000)
                         elif node_type == 'build_nodes':
                             total_data_rate.append(val[time_stmp]['KBIn']/1000000)
@@ -335,7 +323,6 @@ class create_plots_collectl:
                 plt.xticks(rotation=45)
                 plt.grid(True)
                 plt.tight_layout()
-                #plt.show()
                 plt.savefig(path + f'data_rate_{key}.png')
                 plt.close()
                 
@@ -346,7 +333,6 @@ class create_plots_collectl:
             if not os.path.exists(path):
                 os.makedirs(path)
             path = path + '/'
-            #+time_stamps = self.get_time_stmps()
             for key,val in self.cpu_usage[node_type].items():
                 avg_cpu_usage = []
                 for time_stmp in self.time_stmps[node_type]:
@@ -363,7 +349,6 @@ class create_plots_collectl:
                 plt.xticks(rotation=45)
                 plt.grid(True)
                 plt.tight_layout()
-                #plt.show()
                 plt.savefig(path + f'overall_avg_cpu_usage_{key}.png')
                 plt.close()
                 
@@ -377,8 +362,6 @@ class create_plots_collectl:
             path = path + '/'
             for key, val in self.cpu_usage[node_type].items():
                 first_timestmp = next((item for item in self.time_stmps[node_type] if item in val), None)
-                #print(val)
-                print(first_timestmp)
                 alloc_cpus = [cpu for cpu in val[first_timestmp].keys() if cpu != 'overall_avg']
                 cpu_usage = {}
                 for timestmp in self.time_stmps[node_type]:
@@ -403,7 +386,6 @@ class create_plots_collectl:
                 plt.xticks(rotation=45)
                 plt.grid(True)
                 plt.tight_layout()
-                #plt.show()
                 plt.legend()
                 plt.savefig(path + f'cpu_usage_alloc_{key}.png')
                 plt.close()

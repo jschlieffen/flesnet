@@ -15,9 +15,7 @@ class Logfile_reader_entry_node:
         self.Logfile = self.read_file(Logfile_name)
         self.data_rate = {}
         self.data_shms = {}
-        #self.extract_data_rates()
-        #self.extract_data_shms_entry_nodes()
-        
+
     def read_file(self, Logfile_name):
         with open(Logfile_name, "r") as file:
             return file.readlines()
@@ -79,8 +77,7 @@ class Logfile_reader_build_node:
         self.Logfile = self.read_file(Logfile_name)
         self.data_rate = {}
         self.data_shms = {}
-        #self.extract_data_rates()
-        #self.extract_data_shms_entry_nodes()
+        
         
     def read_file(self, Logfile_name):
         with open(Logfile_name, "r") as file:
@@ -124,7 +121,6 @@ class Logfile_reader_build_node:
             elif get_index == True:
                 time_stmp = self.extract_timestamp(line)
                 entry_node_idx = self.get_entry_node_index(line)
-                #print(entry_node_idx)
                 if entry_node_idx not in self.data_shms:
                     self.data_shms[entry_node_idx] = {}
                 self.data_shms[entry_node_idx][time_stmp] = {
@@ -142,13 +138,10 @@ class Logfile_reader_build_node:
             return None     
         
     def get_entry_node_index(self,log_line):
-        #print(log_line)
         match = re.search(r"\[c\d+_(\d+)\]", log_line)
         if match:
-            #print(match)
             return int(match.group(1))
         else:
-            #print(log_line)
             return None
 
 def main():

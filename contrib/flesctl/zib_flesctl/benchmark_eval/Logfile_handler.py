@@ -11,9 +11,7 @@ import Logfile_reader as LR
 import os
 from datetime import datetime
 
-# =============================================================================
-# Write this for both entry and build nodes
-# =============================================================================
+
 class serialize_data:
     
     def __init__(self,node_type,data_rates,shm_usage,file_name):
@@ -25,7 +23,6 @@ class serialize_data:
         
         
     def get_time_stmps_v2(self,data_rates):
-        #print(data_rates)
         largest_key = max(data_rates, key=lambda k: len(data_rates[k]))
         largest_dict = data_rates[largest_key]
         timestamps = [key for key in largest_dict.keys()]
@@ -37,7 +34,6 @@ class serialize_data:
             all_timestamps.update(inner_dict.keys())
         return sorted(all_timestamps)
     
-    #TODO: Deal with timeslice-forwarding
     def get_csv_file_name_data_rates(self):
         dir = os.path.dirname(__file__)
         if self.node_type == "e":
@@ -90,7 +86,6 @@ class serialize_data:
     def serialize_shm_usage_entry_nodes(self):
         csv_file_name = self.get_csv_file_name_shm_usages()
         timestamps = self.get_time_stmps(self.shm_usage)
-        #print(timestamps)
         with open(csv_file_name, "w", newline='') as csvfile:
             writer = csv.writer(csvfile)
             first_header = ['timestamps'] 
@@ -117,9 +112,7 @@ class serialize_data:
     def get_time_stmps_build_nodes_v2(self,data_rates):
         max_len = 0
         timestamps = []
-        #print(data_rates)
         for outer_dict in data_rates.values():
-            #print(outer_dict)
             for inner_dict in outer_dict.values():
                 if len(inner_dict) > max_len:
                     max_len = len(inner_dict)
@@ -136,9 +129,7 @@ class serialize_data:
         return sorted(all_timestamps)
     
     
-    #TODO: extract time stamps from the shm usage.
     def serialize_shm_usage_build_nodes(self):
-        #print(self.shm_usage)
         csv_file_name = self.get_csv_file_name_shm_usages()
         timestamps = self.get_time_stmps_build_nodes(self.shm_usage)
         with open(csv_file_name, "w", newline='') as csvfile:
@@ -160,17 +151,13 @@ class serialize_data:
             for timestamp in timestamps:
                 row=[timestamp]
                 for shm_dict in self.shm_usage.values():
-                    #print('test')
-                    #print(shm_dict)
                     for entry_node_dict in shm_dict.values():
                         vals = entry_node_dict.get(timestamp,{})
                         row.extend([
                             vals.get('used',''),
-                            #vals.get('sending',''),
                             vals.get('freeing',''),
                             vals.get('free','')
                         ])
-                        #print(vals)
                 writer.writerow(row)
                 
     
@@ -233,8 +220,6 @@ class deserialize_data:
                         if key not in data_rate:
                             data_rate[key] = {}
                         data_rate[key][timestamp] = value
-    
-        #print(data_rate)
         self.data_rate = data_rate
 
 
@@ -292,7 +277,6 @@ class deserialize_data:
                     shm_usage[node][timestamp] = shm_dict
     
         self.shm_usage = shm_usage
-        #print(shm_usage['entry_node_htc-cmp506'])
     
     
     def deserialize_shm_usage_build_nodes(self):

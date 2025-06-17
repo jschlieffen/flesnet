@@ -68,7 +68,6 @@ class serialize_data:
                 for timestamp in timestamps:
                     row = [timestamp]
                     for data_dict in self.data_rate[node_type].values():
-                        #row.append(val.get(timestamp,''))
                         vals = data_dict.get(timestamp,{})
                         if node_type == 'entry_nodes':
                             row.extend([vals.get('KBOut','')])
@@ -105,39 +104,27 @@ class serialize_data:
             csv_file_name = f"{path}/cpu_usages_receiving_nodes_{Run_id}.csv"
         return csv_file_name
     
-    
-    #maybe extended when cpu usage will be depended on allocation
     def serialize_cpu_usage(self):
         for node_type in self.cpu_usage.keys():
             csv_file_name = self.get_csv_file_name_cpu_usages(node_type)
             timestamps = self.get_time_stmps(self.cpu_usage[node_type])
             with open(csv_file_name, "w", newline='') as csvfile:
                 writer = csv.writer(csvfile)
-                #header = ['timestamps'] + list(self.cpu_usage[node_type].keys())
-                #writer.writerow(header)
-                #second_header = ['timestamps']
                 header = ['timestamps']
                 second_header = ['timestamps']
                 for key,val in self.cpu_usage[node_type].items():
                     header.extend([key] + ['']*(len(val)-1))
                     first_timestmp = next((item for item in timestamps if item in val), None)
-                    #print(val)
-                    #print(first_timestmp)
                     alloc_cpus = [cpu for cpu in val[first_timestmp].keys()]
                     for cpu in alloc_cpus:
                         second_header.extend([cpu])
-                        
-                        #print(cpu)
                     writer.writerow(header)
                     writer.writerow(second_header)
                 for timestamp in timestamps:
                     row = [timestamp]
                     for cpu_dict in self.cpu_usage[node_type].values():
                         val = cpu_dict.get(timestamp, {})
-                        #row.append(100 - val.get('overall_avg', ''))
                         for cpu in val.keys():
-                            #print(val.get(cpu, ''))
-                            #print(cpu)
                             row.append(100 - val.get(cpu, ''))
                     writer.writerow(row)
                 
@@ -215,7 +202,6 @@ class deserialize_data:
                     elif node_type =='entry_nodes':
                         for i, node in enumerate(keys):
                             idx = 1 + i
-                            #print(row)
                             vals = row[idx]
                             data_dict_tmp = {
                                     'KBOut' : int(vals)
@@ -225,7 +211,6 @@ class deserialize_data:
                                 data_dict[node] = {}
                             data_dict[node][timestamp] = data_dict_tmp
                     elif node_type == 'tsclient' or node_type =='build_nodes':
-                        #print('test123')
                         for i, node in enumerate(keys):
                             idx = 1 + i
                             vals = row[idx]
@@ -260,8 +245,8 @@ class deserialize_data:
         elif node_type == "tsclient":
             csv_file_name = f"{path}/cpu_usages_receiving_nodes_{Run_id}.csv"
         return csv_file_name
-    
-    #NOTE: may be extended in the furture with cpu usage depending on allocation.
+
+
     def deserialize_cpu_usage(self):
         node_types = ['entry_nodes', 'build_nodes']
         if self.timeslice_forwarding_activated:
@@ -272,7 +257,6 @@ class deserialize_data:
             with open(csv_file_name, 'r', newline='') as csvfile:
                 reader = csv.reader(csvfile)
                 first_header = next(reader)
-                #keys = [key for key in first_header if key != '' and key != 'timestamps']
                 second_header = next(reader)
                 #for
                 node_indices = []
@@ -281,10 +265,7 @@ class deserialize_data:
                     if name not in ('','timestamps'):
                         node_indices.append(idx)
                         keys.append(name)
-                #print(node_indices)
-                #print('keys: ',keys)
                 for row in reader:
-                    #print(row)
                     timestamp_str = row[0]
                     try:
                         timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
@@ -301,9 +282,6 @@ class deserialize_data:
                             next_idx_node = node_indices[i+1]
                         else:
                             next_idx_node = len(second_header)
-                        #idx = 1 + i
-                        #print(idx)
-                        #print(next_idx_node)
                         while idx < next_idx_node:
                             
                             cpu = (second_header[idx])
@@ -315,7 +293,6 @@ class deserialize_data:
                             except (ValueError, IndexError):
                                 print('something')
                                 continue
-                            #print(val)
                             if node not in cpu_usage:
                                 cpu_usage[node] = {}
                             if timestamp not in cpu_usage[node]:

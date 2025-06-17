@@ -64,8 +64,6 @@ class collectl_reader:
         
 
     def get_alloc_cpus(self):
-        #print(self.Logfile_infiniband)
-        #node = os.path.splitext(os.path.basename(self.Logfile_infiniband))[0]
         filename = f"../tmp/{self.node_name}.txt"
         with open(filename, "r") as f:
             cpus = [int(line.strip()) for line in f if line.strip().isdigit()]
@@ -74,14 +72,11 @@ class collectl_reader:
     #TODO: make avg over allocated cpus from flesnet
     def extract_cpu_usage(self):
         header = (self.Logfile_cpu_usage[0])
-        #print(header)
         num_cpus = self.get_num_cpus(header)
         cpus_alloc = self.get_alloc_cpus()
-        
         for row in self.Logfile_cpu_usage:
             dt = row['#Date'] + ' ' + row['Time']
             timestamp = datetime.strptime(dt, "%Y%m%d %H:%M:%S")
-            #self.cpu_usage = {}
             avg_usage = 0 
             for i in range(0,num_cpus):
                 avg_usage += int(row[f'[CPU:{i}]Idle%'])
@@ -92,8 +87,6 @@ class collectl_reader:
             for i in cpus_alloc:
                 val = int(row[f'[CPU:{i}]Idle%'])
                 self.cpu_usage[timestamp][i] = val
-        #print(self.cpu_usage)
-        #idle_indices = [i for i,col in enumerate(header) if 'Idle%' in col]
         
                 
                 

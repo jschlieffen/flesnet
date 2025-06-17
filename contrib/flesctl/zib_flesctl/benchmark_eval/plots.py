@@ -48,7 +48,7 @@ class create_plots_entry_nodes:
             all_timestamps.update(inner_dict.keys())
         self.time_stmps_shm_usage = sorted(all_timestamps)
         
-    #def get_time_stmps_interval(self):
+        
     def get_time_stmps(self, start_time=None, end_time=None):
         def in_interval(ts):
             return (start_time is None or ts.time() >= start_time.time()) and (end_time is None or ts.time() <= end_time.time())
@@ -83,7 +83,6 @@ class create_plots_entry_nodes:
         plt.xticks(rotation=45)
         plt.grid(True)
         plt.tight_layout()
-        #plt.show()
         plt.savefig(path + 'total_data_rate.png')
         plt.close()
         
@@ -109,7 +108,6 @@ class create_plots_entry_nodes:
         plt.xticks(rotation=45)
         plt.grid(True)
         plt.tight_layout()
-        #plt.show()
         plt.savefig(path + 'avg_data_rate.png')
         plt.close()
     
@@ -150,7 +148,6 @@ class create_plots_entry_nodes:
         plt.xticks(rotation=45)
         plt.grid(True)
         plt.tight_layout()
-        #plt.show()
         plt.savefig(path + 'avg_data_rate_max_min.png')
         plt.close()
         
@@ -177,7 +174,6 @@ class create_plots_entry_nodes:
         labels = list(self.data_rates.keys())
         plt.figure(figsize=(12, 6))
         sns.boxplot(data=filtered_data)
-        #plt.yscale('log')
         plt.xticks(range(len(labels)), labels, rotation=45)
         plt.title("Boxplot of the data rate for entry nodes (Outliers Removed)")
         plt.xlabel("Entry Nodes")
@@ -216,7 +212,6 @@ class create_plots_entry_nodes:
         plt.bar(labels,averages,color=colors)
         plt.title('Bar Plot of data rates')
         plt.ylabel('Data Rate in GB')
-        #plt.grid(axis='y')
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.savefig(path + 'bar_plot_data_rate_entry_nodes.png')
@@ -233,7 +228,7 @@ class create_plots_entry_nodes:
         labels = list(self.data_rates.keys())
         plt.figure(figsize=(12, 6))
         sns.boxplot(data=data)
-        plt.xticks(range(len(labels)), labels, rotation=45)  # Set the x-axis labels to be the outer keys
+        plt.xticks(range(len(labels)), labels, rotation=45) 
         plt.title("Boxplot of the data rate for entry nodes")
         plt.xlabel("entry nodes")
         plt.ylabel("Data rate in GB")
@@ -247,7 +242,6 @@ class create_plots_entry_nodes:
         if not os.path.exists(path):
             os.makedirs(path)
         path = path + '/'
-        #+time_stamps = self.get_time_stmps()
         for key,val in self.data_rates.items():
             total_data_rate = []
             for time_stmp in self.time_stmps:
@@ -263,7 +257,6 @@ class create_plots_entry_nodes:
             plt.xticks(rotation=45)
             plt.grid(True)
             plt.tight_layout()
-            #plt.show()
             plt.savefig(path + f'data_rate_{key}.png')
             plt.close()
     
@@ -308,7 +301,6 @@ class create_plots_entry_nodes:
         plt.xticks(rotation=45)
         plt.grid(True)
         plt.tight_layout()
-        #plt.show()
         plt.legend()
         plt.savefig(path + 'shm_usage_avg.png')        
         plt.close()
@@ -349,7 +341,6 @@ class create_plots_entry_nodes:
             plt.xticks(rotation=45)
             plt.grid(True)
             plt.tight_layout()
-            #plt.show()
             plt.legend()
             plt.savefig(path + f'shm_usage_{key}.png') 
             plt.close()
@@ -429,7 +420,6 @@ class create_plots_build_nodes:
          plt.xticks(rotation=45)
          plt.grid(True)
          plt.tight_layout()
-         #plt.show()
          plt.savefig(path + 'total_data_rate.png')
          plt.close()
          
@@ -455,7 +445,6 @@ class create_plots_build_nodes:
          plt.xticks(rotation=45)
          plt.grid(True)
          plt.tight_layout()
-         #plt.show()
          plt.savefig(path + 'avg_data_rate.png')
          plt.close()
          
@@ -465,8 +454,6 @@ class create_plots_build_nodes:
         if not os.path.exists(path):
             os.makedirs(path)
         path = path + '/'
-    
-        # Remove outliers using IQR method
         filtered_data = []
         for entry_node_values in self.data_rates.values():
             values = np.array(list(entry_node_values.values()))
@@ -481,7 +468,6 @@ class create_plots_build_nodes:
         labels = list(self.data_rates.keys())
         plt.figure(figsize=(12, 6))
         sns.boxplot(data=filtered_data)
-        #plt.yscale('log')
         plt.xticks(range(len(labels)), labels, rotation=45)
         plt.title("Boxplot of the data rate for build nodes (Outliers Removed)")
         plt.xlabel("Build Nodes")
@@ -501,7 +487,7 @@ class create_plots_build_nodes:
         labels = list(self.data_rates.keys())
         plt.figure(figsize=(12, 6))
         sns.boxplot(data=data)
-        plt.xticks(range(len(labels)), labels, rotation=45)  # Set the x-axis labels to be the outer keys
+        plt.xticks(range(len(labels)), labels, rotation=45)
         plt.title("Boxplot of the data rate for build nodes")
         plt.xlabel("entry nodes")
         plt.ylabel("Data rate in GB")
@@ -546,7 +532,6 @@ class create_plots_build_nodes:
         plt.xticks(rotation=45)
         plt.grid(True)
         plt.tight_layout()
-        #plt.show()
         plt.savefig(path + 'avg_data_rate_max_min.png')
         plt.close()
         
@@ -567,7 +552,6 @@ class create_plots_build_nodes:
                 else:
                     avg_build_node += 0
                     cnt += 1
-            #averages.append(avg_build_node/cnt)
             if cnt != 0:
                 averages.append(avg_build_node/cnt)
             else:
@@ -579,7 +563,6 @@ class create_plots_build_nodes:
         plt.bar(labels,averages,color=colors)
         plt.title('Bar Plot of data rates')
         plt.ylabel('Data Rate in GB')
-        #plt.grid(axis='y')
         plt.xticks(rotation=45)
         plt.tight_layout()
         plt.savefig(path + 'bar_plot_data_rate_entry_nodes.png')
@@ -606,7 +589,6 @@ class create_plots_build_nodes:
              plt.xticks(rotation=45)
              plt.grid(True)
              plt.tight_layout()
-             #plt.show()
              plt.savefig(path + f'data_rate_{key}.png')
              plt.close()
 
@@ -646,7 +628,6 @@ class create_plots_build_nodes:
         plt.xticks(rotation=45)
         plt.grid(True)
         plt.tight_layout()
-        #plt.show()
         plt.legend()
         plt.savefig(path + 'shm_usage_avg.png')        
         plt.close()
@@ -688,7 +669,6 @@ class create_plots_build_nodes:
             plt.xticks(rotation=45)
             plt.grid(True)
             plt.tight_layout()
-            #plt.show()
             plt.legend()
             plt.savefig(path + f'shm_usage_{key}.png') 
             plt.close()
@@ -725,7 +705,6 @@ class create_plots_build_nodes:
                 plt.xticks(rotation=45)
                 plt.grid(True)
                 plt.tight_layout()
-                #plt.show()
                 plt.legend()
                 plt.savefig(path + f'shm_usage_{key_build_node}_{key_entry_node}.png')     
                 plt.close()

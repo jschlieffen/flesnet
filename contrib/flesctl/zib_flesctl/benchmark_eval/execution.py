@@ -49,6 +49,7 @@ from datetime import datetime
 #        2. implement deserialization/serialization for collectl data   make for cpu usage
 #        3. make folder structure for plots/data depending on run id and timestmp   done
 #        4. get more cpus in allocation, when timeslice-forwarding is used          done/make num cpus per node a param
+#        5. make it possible to give a input-folder and output folder into params.
 #        5. clean up code
 #        6. comment code 
 # ===============================================================================
@@ -118,15 +119,12 @@ class execution:
             self.data_rates_build_nodes[f"build_node_{build_node[0]}"] = Logfile_reader_cls.data_rate
             self.shm_usages_build_nodes[f"build_node_{build_node[0]}"] = Logfile_reader_cls.data_shms
 
-    #def get_data_from_deserialzation(self):
-
     def get_data_collectl(self):
         self.data_rates_collectl['entry_nodes'] = {}
         self.cpu_usage_collectl['entry_nodes'] = {}
         self.data_rates_collectl['build_nodes'] = {}
         self.cpu_usage_collectl['build_nodes'] = {}
         if self.receiving_nodes != []:
-            #print('test12344')
             self.timeslice_forwarding_activated = True
             self.data_rates_collectl['receiving_nodes'] = {}
             self.cpu_usage_collectl['receiving_nodes'] = {}
@@ -147,13 +145,11 @@ class execution:
             self.data_rates_collectl['build_nodes'][f"build_nodes_{build_node[0]}"] = Logfile_reader_cls.data_rates
             self.cpu_usage_collectl['build_nodes'][f"build_nodes_{build_node[0]}"] = Logfile_reader_cls.cpu_usage
         for receiving_node in self.receiving_nodes:
-            #print(receiving_node)
             Logfile_name = f"../logs/collectl/tsclient/receiving_node_{receiving_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
             Logfile_reader_cls = CLR.collectl_reader(f'receiving_node_{receiving_node[0]}',Logfile_name, Logfile_name_cpu, 'tsclient', self.timeslice_forwarding_activated)
             Logfile_reader_cls.extract_infiniband_usage()
             Logfile_reader_cls.extract_cpu_usage()
-            #print(Logfile_reader_cls.data_rates)
             self.data_rates_collectl['receiving_nodes'][f"receiving_nodes_{receiving_node[0]}"] = Logfile_reader_cls.data_rates
             self.cpu_usage_collectl['receiving_nodes'][f"receiving_nodes_{receiving_node[0]}"] = Logfile_reader_cls.cpu_usage
         
@@ -200,10 +196,8 @@ class execution:
             logger.success('serialization process succeeded')
         else:
             logger.error('serialization process not succeeded')
-            #print(self.data_rates_entry_nodes)
             diff = DeepDiff(self.data_rates_entry_nodes, data_rates)
             #print(diff)
-            #print(data_rates)
         deserializer_entry_nodes.deserialize_shm_usage_entry_nodes()
         shm_usage = deserializer_entry_nodes.shm_usage
         if shm_usage == self.shm_usages_entry_nodes:
@@ -211,10 +205,7 @@ class execution:
         else:
             logger.error('serialization process not succeeded')
             diff = DeepDiff(self.shm_usages_entry_nodes, shm_usage)
-            #print(self.shm_usages_entry_nodes)
             #print(diff)
-            #print(self.shm_usages_entry_nodes['entry_node_htc-cmp506'][datetime(2025, 4, 25, 15, 27, 59)])
-            #print(shm_usage['entry_node_htc-cmp506'][datetime(2025, 4, 25, 15, 27, 59)])
         deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
         deserialzer_build_nodes.deserialize_data_rates()
         data_rates_build_nodes = deserialzer_build_nodes.data_rate
@@ -232,13 +223,6 @@ class execution:
             logger.error('serialization process not succeeded')
             diff = DeepDiff(self.shm_usages_build_nodes, shm_usage_build_nodes)
             #print(diff)
-            #for key, vals in shm_usage_build_nodes.items():
-                #for key1,vals1 in vals.items():
-                    #print(f'dict: {key}, entry: {key1}')
-                    #print(vals)
-                    #print(self.shm_usages_build_nodes[key])
-                    #diff = DeepDiff(self.shm_usages_build_nodes[key][key1],vals1)
-                    #print(diff)
 
 
     def check_deserialization_collectl(self):
@@ -253,16 +237,12 @@ class execution:
         else:
             logger.error('serialization process not succeeded')
             diff = DeepDiff(self.data_rates_collectl, data_rates)
-            #print(data_rates)
-            #print(self.data_rates_collectl)
             print(diff)
         if cpu_usage == self.cpu_usage_collectl:
             logger.success('serialization process collectl succeeded')
         else:
             logger.error('serialization process not succeeded')
             diff = DeepDiff(self.cpu_usage_collectl, cpu_usage)
-            #print(cpu_usage)
-            #print(self.cpu_usage_collectl)
             print(diff)
             
             
@@ -344,10 +324,6 @@ class execution:
         logger.success('created plots from collectl data')
 
 def main():
-    
-    #exec_cls = execution("../logs/general/Run_13_2025-04-25-15-28-00.log")
-    #exec_cls.start_plots_entry_nodes()
-    #exec_cls.start_plots_build_nodes()
     args = docopt.docopt(__doc__)
     logfile = args['<flesctrl_logfile>']
     modes = args['--mode']
@@ -355,25 +331,18 @@ def main():
     verbose = bool(args['--verbose'])
     starttime = args['--starttime']
     endtime = args['--endtime']
-    #print(starttime)
-    #print(endtime)
     modes = validate_params(logfile,modes,verbose)
     exec_cls = execution(logfile)
-    #print(modes)
     if 'flesctrl_logfile' in modes:
-        #print('test1')
         exec_cls.get_data_from_logfile()
         if collectl_used:
             exec_cls.get_data_collectl()
-            #print(exec_cls.data_rates_collectl)
-            #print(exec_cls.cpu_usage_collectl)
-            
+
     else:
         exec_cls.deserialize_data()
         if collectl_used:
             exec_cls.deserialize_data_collectl()
     if 'create_plots' in modes:
-        #print('test')
         exec_cls.start_plots_entry_nodes(starttime,endtime)
         exec_cls.start_plots_build_nodes(starttime,endtime)
         if collectl_used:
@@ -383,7 +352,6 @@ def main():
         exec_cls.serialize_data_rates()
         if collectl_used:
             exec_cls.serialize_data_rates_collectl()
-        #exec_cls.deserialize_data() 
     if 'check_serialization' in modes:
         exec_cls.check_deserialization() 
         if collectl_used:
@@ -395,10 +363,8 @@ def validate_params(logfile,modes,verbose):
         logger.critical('logfile does not exist')
         sys.exit(1)
     valid_modes = ['flesctrl_logfile','serialization','check_serialization','create_plots']
-    #print(modes)
     if modes == []:
         logger.warning('It is quite pointless to not do anything')
-        #sys.exit(1)
     for mode in modes:
         if 'all' in modes:
             modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots']
@@ -406,8 +372,6 @@ def validate_params(logfile,modes,verbose):
         elif mode not in valid_modes:
             logger.critical('Unknown mode')
             sys.exit(1)
-    #print(modes)
-    
     return modes
 
 
