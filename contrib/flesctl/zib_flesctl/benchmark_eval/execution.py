@@ -261,8 +261,8 @@ class execution:
         else:
             logger.error('serialization process not succeeded')
             diff = DeepDiff(self.cpu_usage_collectl, cpu_usage)
-            print(cpu_usage)
-            print(self.cpu_usage_collectl)
+            #print(cpu_usage)
+            #print(self.cpu_usage_collectl)
             print(diff)
             
             

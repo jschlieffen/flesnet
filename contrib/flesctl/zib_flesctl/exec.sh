@@ -42,6 +42,6 @@ else
     p="big"
     TIME=$TIME_ALLOC
 
-    salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 -c 6 -p $p -x htc-cmp127 --constraint=Infiniband --time=$TIME 
+    salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 --cpus-per-task=6 -p $p -x htc-cmp127 --constraint=Infiniband --time=$TIME 
 
 fi
