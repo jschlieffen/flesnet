@@ -28,7 +28,7 @@ class serialize_data:
         return sorted(all_timestamps)
 
     def get_csv_file_name_data_rates(self,node_type):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         if node_type == "entry_nodes":
             path = os.path.join(dir,'collectl/data/data_rates/entry_nodes')
         elif node_type == "build_nodes":
@@ -84,7 +84,7 @@ class serialize_data:
                     writer.writerow(row)
         
     def get_csv_file_name_cpu_usages(self, node_type):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         if node_type == "entry_nodes":
             path = os.path.join(dir,'collectl/data/cpu_usages/entry_nodes')
         elif node_type == "build_nodes":
@@ -140,7 +140,7 @@ class deserialize_data:
     
     
     def get_csv_file_name_data_rates(self,node_type):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         if node_type == "entry_nodes":
             path = os.path.join(dir,'collectl/data/data_rates/entry_nodes')
         elif node_type == "build_nodes":
@@ -226,7 +226,7 @@ class deserialize_data:
                 
                 
     def get_csv_file_name_cpu_usages(self, node_type):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         if node_type == "entry_nodes":
             path = os.path.join(dir,'collectl/data/cpu_usages/entry_nodes')
         elif node_type == "build_nodes":

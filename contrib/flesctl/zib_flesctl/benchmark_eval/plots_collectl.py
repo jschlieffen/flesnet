@@ -53,7 +53,7 @@ class create_plots_collectl:
     
     def plot_total_data_rate(self):
         for node_type in self.data_rates.keys():
-            dir = os.path.dirname(__file__)
+            dir = os.getcwd()
             path = os.path.join(dir,f'plots/collectl_plots/general/{node_type}')
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -98,7 +98,7 @@ class create_plots_collectl:
 
     def plot_avg_data_rate(self):
         for node_type in self.data_rates.keys():
-            dir = os.path.dirname(__file__)
+            dir = os.getcwd()
             path = os.path.join(dir,f'plots/collectl_plots/general/{node_type}/')
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -143,7 +143,7 @@ class create_plots_collectl:
 
     def plot_data_rate_mean_max_min(self):
         for node_type in self.data_rates.keys():
-            dir = os.path.dirname(__file__)
+            dir = os.getcwd()
             path = os.path.join(dir,f'plots/collectl_plots/general/{node_type}')
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -224,7 +224,7 @@ class create_plots_collectl:
                 
     def bar_plots_data_rates(self):
         for node_type in self.data_rates.keys():
-            dir = os.path.dirname(__file__)
+            dir = os.getcwd()
             path = os.path.join(dir, f'plots/collectl_plots/general/{node_type}')
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -287,7 +287,7 @@ class create_plots_collectl:
             
     def plot_data_rate_single(self):
         for node_type in self.data_rates.keys():
-            dir = os.path.dirname(__file__)
+            dir = os.getcwd()
             path = os.path.join(dir,f'plots/collectl_plots/nodes/{node_type}')
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -328,7 +328,7 @@ class create_plots_collectl:
                 
     def plot_cpu_usage_avg(self):
         for node_type in self.cpu_usage.keys():
-            dir = os.path.dirname(__file__)
+            dir = os.getcwd()
             path = os.path.join(dir,f'plots/collectl_plots/cpu_usage/{node_type}')
             if not os.path.exists(path):
                 os.makedirs(path)
@@ -355,7 +355,7 @@ class create_plots_collectl:
                     
     def plot_cpu_usage_single(self):
         for node_type in self.cpu_usage.keys():
-            dir = os.path.dirname(__file__)
+            dir = os.getcwd()
             path = os.path.join(dir,f'plots/collectl_plots/cpu_usage/{node_type}')
             if not os.path.exists(path):
                 os.makedirs(path)

@@ -44,6 +44,36 @@ from deepdiff import DeepDiff
 from datetime import datetime
 
 
+
+def change_dir(flesctl_logfile):
+    directory = os.path.splitext(os.path.basename(flesctl_logfile))[0]
+    path = f"../Runs/{directory}"
+    if not os.path.exists(path):
+        logger.critical('Run does not exist')
+        sys.exit(1)
+    
+    os.chdir(path)
+    print(os.getcwd())
+    print('test')
+    eval_number = 0
+    eval_file = f"tmp/eval_num.txt"
+    if not os.path.isfile(eval_file):
+        #os.mkdir("tmp")
+        eval_number = 0
+    else:
+        with open(eval_file, "r") as file:
+            eval_number = int(file.read().strip())
+    with open(eval_file,"w") as file:
+         file.write(str(eval_number+1))   
+    
+    os.mkdir(f"eval_round_{eval_number}")
+    os.chdir(f"eval_round_{eval_number}")
+    if not (os.path.isfile(flesctl_logfile)):
+        logger.critical('file does not exist')
+        sys.exit(1)
+    
+    logger.success(f"Run found and proceeding as eval run {eval_number}")
+    #return eval_number
 # ===============================================================================
 # TODOs:
 #        1. make it possible to give a input-folder and output folder into params.
@@ -68,6 +98,11 @@ class execution:
         self.data_rates_collectl = {}
         self.cpu_usage_collectl = {}
         self.timeslice_forwarding_activated = False
+        self.prev_run = False
+        self.eval_number = 0
+        
+
+        
         
     def get_node_names(self,flesctl_logfile_path):
         with open(flesctl_logfile_path, "r") as file:
@@ -346,6 +381,11 @@ def main():
     starttime = args['--starttime']
     endtime = args['--endtime']
     modes = validate_params(logfile,modes,verbose)
+
+    if 'prev_run' in modes:
+        #exec_cls.prev_run = True
+        #print('test')
+        change_dir(logfile)
     exec_cls = execution(logfile)
     if 'flesctrl_logfile' in modes:
         exec_cls.get_data_from_logfile()
@@ -373,15 +413,18 @@ def main():
     
     
 def validate_params(logfile,modes,verbose):
-    if not os.path.isfile(logfile):
-        logger.critical('logfile does not exist')
-        sys.exit(1)
-    valid_modes = ['flesctrl_logfile','serialization','check_serialization','create_plots']
+    #if not os.path.isfile(logfile):
+        #logger.critical('logfile does not exist')
+        #sys.exit(1)
+    valid_modes = ['flesctrl_logfile','serialization','check_serialization','create_plots', 'prev_run']
     if modes == []:
         logger.warning('It is quite pointless to not do anything')
     for mode in modes:
         if 'all' in modes:
-            modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots']
+            if 'prev_run' in modes:
+                modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots', 'prev_run']
+            else:
+                modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots']
             break
         elif mode not in valid_modes:
             logger.critical('Unknown mode')

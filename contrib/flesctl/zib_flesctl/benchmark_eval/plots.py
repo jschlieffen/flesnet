@@ -63,7 +63,8 @@ class create_plots_entry_nodes:
             
     
     def plot_total_data_rate(self):
-        dir = os.path.dirname(__file__)
+        print(os.getcwd())
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/general/entry_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -87,7 +88,7 @@ class create_plots_entry_nodes:
         plt.close()
         
     def plot_avg_data_rate(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/general/entry_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -112,7 +113,7 @@ class create_plots_entry_nodes:
         plt.close()
     
     def plot_data_rate_mean_max_min(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/general/entry_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -153,7 +154,7 @@ class create_plots_entry_nodes:
         
 
     def box_plot_data_rates(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir, 'plots/general/entry_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -184,7 +185,7 @@ class create_plots_entry_nodes:
         plt.close()
         
     def bar_plots_data_rates(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir, 'plots/general/entry_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -219,7 +220,7 @@ class create_plots_entry_nodes:
 
     
     def box_plot_data_rates_v2(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/general/entry_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -237,7 +238,7 @@ class create_plots_entry_nodes:
         plt.close()
         
     def plot_data_rate_single(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/nodes/entry_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -263,7 +264,7 @@ class create_plots_entry_nodes:
 
     
     def plot_shm_usage(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/general/entry_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -307,7 +308,7 @@ class create_plots_entry_nodes:
 
 
     def plot_shm_usage_single(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/nodes/entry_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -400,7 +401,7 @@ class create_plots_build_nodes:
          self.time_stmps_shm_usage = sorted(all_timestamps)
         
      def plot_total_data_rate(self):
-         dir = os.path.dirname(__file__)
+         dir = os.getcwd()
          path = os.path.join(dir,'plots/general/build_nodes')
          if not os.path.exists(path):
              os.makedirs(path)
@@ -424,7 +425,7 @@ class create_plots_build_nodes:
          plt.close()
          
      def plot_avg_data_rate(self):
-         dir = os.path.dirname(__file__)
+         dir = os.getcwd()
          path = os.path.join(dir,'plots/general/build_nodes')
          if not os.path.exists(path):
              os.makedirs(path)
@@ -449,7 +450,7 @@ class create_plots_build_nodes:
          plt.close()
          
      def box_plot_data_rates(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir, 'plots/general/build_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -478,7 +479,7 @@ class create_plots_build_nodes:
         plt.close()
          
      def box_plot_data_rates_v2(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/general/build_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -496,7 +497,7 @@ class create_plots_build_nodes:
         plt.close()
         
      def plot_data_rate_mean_max_min(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/general/build_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -536,7 +537,7 @@ class create_plots_build_nodes:
         plt.close()
         
      def bar_plots_data_rates(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir, 'plots/general/build_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -569,7 +570,7 @@ class create_plots_build_nodes:
         plt.close()
         
      def plot_data_rate_single(self):
-         dir = os.path.dirname(__file__)
+         dir = os.getcwd()
          path = os.path.join(dir,'plots/nodes/build_nodes')
          if not os.path.exists(path):
              os.makedirs(path)
@@ -594,7 +595,7 @@ class create_plots_build_nodes:
 
        
      def plot_shm_usage_assemble(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/general/build_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -633,7 +634,7 @@ class create_plots_build_nodes:
         plt.close()
         
      def plot_shm_usage_single_node_avg(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/nodes/build_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
@@ -674,7 +675,7 @@ class create_plots_build_nodes:
             plt.close()
             
      def plot_shm_usage_single_node_single_entry_node(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         path = os.path.join(dir,'plots/nodes/build_nodes')
         if not os.path.exists(path):
             os.makedirs(path)

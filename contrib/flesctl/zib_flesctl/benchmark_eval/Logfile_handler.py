@@ -35,7 +35,7 @@ class serialize_data:
         return sorted(all_timestamps)
     
     def get_csv_file_name_data_rates(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         if self.node_type == "e":
             path = os.path.join(dir,'data/data_rates/entry_nodes')
         else:
@@ -66,7 +66,7 @@ class serialize_data:
     
     
     def get_csv_file_name_shm_usages(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         if self.node_type == "e":
             path = os.path.join(dir,'data/shm_usages/entry_nodes')
         else:
@@ -174,7 +174,7 @@ class deserialize_data:
 
 
     def get_csv_file_name_data_rates(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         if self.node_type == "e":
             path = os.path.join(dir,'data/data_rates/entry_nodes')
         else:
@@ -224,7 +224,7 @@ class deserialize_data:
 
 
     def get_csv_file_name_shm_usages(self):
-        dir = os.path.dirname(__file__)
+        dir = os.getcwd()
         if self.node_type == "e":
             path = os.path.join(dir,'data/shm_usages/entry_nodes')
         else:

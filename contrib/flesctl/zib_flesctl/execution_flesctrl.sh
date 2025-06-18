@@ -1,5 +1,5 @@
 flesctrl="execution.py"
-benchmark_eval="benchmark_eval/execution.py"
+benchmark_eval="execution.py"
 
 function execute_iteration() {
 
@@ -8,9 +8,9 @@ function execute_iteration() {
     local Logfile=$(cat tmp/file_name.txt)
     Logfile="../${Logfile}"
     echo $Logfile
-
+    cd "benchmark_eval"
     python3 $benchmark_eval $Logfile --collectl_used --mode='all'
-
+    cd ..
     create_output_folder $Logfile 1
 }
 
@@ -45,6 +45,8 @@ function create_output_folder() {
 
     cp -r $logfolder $foldername
 
+    cp -r tmp $foldername
+
     if [ $delete_folder_after_cp -eq 1 ]; then
         rm -rf $data_folder
 
@@ -73,6 +75,8 @@ function create_folders() {
     mkdir logs/collectl/build_nodes
 
     mkdir logs/collectl/tsclient
+
+    mkdir tmp
 }
 
 
