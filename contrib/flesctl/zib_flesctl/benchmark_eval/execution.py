@@ -45,13 +45,10 @@ from datetime import datetime
 
 
 # ===============================================================================
-# TODOs: 1. implement cpu usage plots for allocated cpus                done
-#        2. implement deserialization/serialization for collectl data   make for cpu usage
-#        3. make folder structure for plots/data depending on run id and timestmp   done
-#        4. get more cpus in allocation, when timeslice-forwarding is used          done/make num cpus per node a param
-#        5. make it possible to give a input-folder and output folder into params.
-#        5. clean up code
-#        6. comment code 
+# TODOs:
+#        1. make it possible to give a input-folder and output folder into params.
+#        2. clean up code
+#        3. comment code 
 # ===============================================================================
 class execution:
     
@@ -77,8 +74,11 @@ class execution:
             flesctl_logfile = file.read()
         pattern = re.compile(r"([a-zA-Z0-9-]+)\s+as\s+index\s+(\d+)")
         receiving_pattern = re.compile(r"([a-zA-Z0-9-]+)\s+was connected to\s+([a-zA-Z0-9-]+)")
+        super_node_pattern = re.compile(
+            r"([a-zA-Z0-9-]+)\s+with entry node index\s+(\d+)\s+and build node index\s+(\d+)"
+        )
         nodes_info = []
-        node_types = ['Entry', 'Build', 'receiving']
+        node_types = ['Entry', 'Build', 'receiving', 'Super']
         for node_type in node_types:
             matches = re.findall(f'{node_type} nodes:([\s\S]*?)(?=\n[A-Za-z]|$)', flesctl_logfile)
             if matches:
@@ -97,6 +97,18 @@ class execution:
                                 'node_type': node_type,
                                 'connected_to': recv_name
                             })
+                    elif node_type == 'Super':
+                        for name, entry_idx, build_idx in re.findall(super_node_pattern, match):
+                            nodes_info.append({
+                                'node_name': name,
+                                'node_type': 'Entry',
+                                'index': int(entry_idx)
+                            })
+                            nodes_info.append({
+                                'node_name': name,
+                                'node_type': 'Build',
+                                'index': int(build_idx)
+                            })
         for node in nodes_info:
             if node['node_type'] == 'Entry':
                 self.entry_nodes.append((node['node_name'], node['index']))
@@ -104,7 +116,9 @@ class execution:
                 self.build_nodes.append((node['node_name'], node['index']))
             elif node['node_type'] == 'receiving':
                 self.receiving_nodes.append((node['node_name'], node['connected_to']))
-
+        print(self.entry_nodes)
+        print(self.build_nodes)
+        
     def get_data_from_logfile(self):
         for entry_node in self.entry_nodes:
             Logfile_reader_cls = LR.Logfile_reader_entry_node(f"../logs/flesnet/entry_nodes/entry_node_{entry_node[0]}.log")

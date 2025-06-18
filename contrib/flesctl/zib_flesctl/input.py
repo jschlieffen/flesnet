@@ -32,6 +32,8 @@ import time
 import docopt
 import sys
 import os
+import threading
+import queue
 
 # =============================================================================
 # This file starts mstool and flesnet on an entry node. It is started with 
@@ -76,6 +78,19 @@ def start_collectl_cpu(csv_file_name):
     time.sleep(1)
     return result_collectl
 
+def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicater):
+    result_collectl = start_collectl(use_infiniband, logfile_collectl)
+    result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+    while True:
+        msg = collectl_communicater.get()
+        if msg == "exit":
+            print('test collectl')
+            result_collectl.terminate()
+            result_collectl.wait()
+            result_collectl_cpu.terminate()
+            result_collectl_cpu.wait()
+            break
+
 def get_alloc_cpus(filename):
     taskset_command = "taskset -cp $$"
     result_taskset = subprocess.Popen(taskset_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -93,6 +108,20 @@ def get_alloc_cpus(filename):
         for cpu in alloc_cpus:
             file.write(f"{cpu}\n")
 
+def start_mstool(path,dmsa_file, entry_node_idx, D_flag, mstool_communicater):
+    mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
+    result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    #result_mstool.wait()
+    while True:
+        msg = mstool_communicater.get()
+        if msg == 'exit':
+            print('test mstool')
+            result_mstool.terminate()
+            result_mstool.wait()
+            break
+    
+    
+
 def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
                 transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infininband, use_collectl, logfile_collectl):
     ip_string, shm_string = calc_str(ip, num_entry_nodes, use_pattern_gen)
@@ -100,8 +129,12 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
         basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
         get_alloc_cpus(filename_cpus)
-        result_collectl = start_collectl(use_infiniband, logfile_collectl)
-        result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+        #result_collectl = start_collectl(use_infiniband, logfile_collectl)
+        #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+        collectl_communicater = queue.Queue()
+        thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
+        thread_collectl.start()
+        time.sleep(1)
     grafana_string = ''
     if use_grafana == '1':
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
@@ -110,8 +143,11 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
     if use_dmsa_files == '1':
         D_flag = "-D 1"
     if use_pattern_gen == '0':
-        mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
-        result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        #mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
+        #result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        mstool_communicater = queue.Queue()
+        thread_mstool = threading.Thread(target=start_mstool, args=(path, dmsa_file, entry_node_idx, D_flag, mstool_communicater))
+        thread_mstool.start()
         time.sleep(1)
     customize_string = customize_string.replace("--processor-instances 1 -e", "--processor-instances 0 -e")
     flesnet_commands = (
@@ -124,14 +160,19 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
     input_data = ''
     while input_data == '':
         input_data = sys.stdin.read().strip()
+    #print('test')
     if use_collectl == '1':
-        result_collectl.terminate()
-        result_collectl.wait()
-        result_collectl_cpu.terminate()
-        result_collectl_cpu.wait()
+        #result_collectl.terminate()
+        #result_collectl.wait()
+        #result_collectl_cpu.terminate()
+        #result_collectl_cpu.wait()
+        collectl_communicater.put("exit")
+        thread_collectl.join()
     if use_pattern_gen == '0':
-        result_mstool.terminate()
-        result_mstool.wait()
+        #result_mstool.terminate()
+        #result_mstool.wait()
+        mstool_communicater.put("exit")
+        thread_mstool.join()
     result_flesnet.terminate()
     result_flesnet.wait()
     

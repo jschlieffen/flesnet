@@ -252,7 +252,7 @@ class Super_nodes:
             logfile_collectl_build_node = "logs/collectl/build_nodes/build_node_%s.csv" % node
             if self.use_infiniband:
                 command = (
-                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s'
+                    'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s %s'
                     % (node,file,input_file,logfile_entry_node, logfile_build_node,
                        self.build_nodes_ips, self.entry_node_ips, 
                        self.num_entry_nodes , self.num_build_nodes,
@@ -260,11 +260,11 @@ class Super_nodes:
                        influx_node_ip, influx_token, use_grafana, self.path,
                        self.transport_method, self.customize_string,
                        self.use_pattern_gen, self.use_dmsa_files,self.use_infiniband,
-                       self.use_collectl, logfile_collectl_entry_node)
+                       self.use_collectl, logfile_collectl_entry_node, logfile_collectl_build_node)
                 )
             else:
                 command = (
-                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s'
+                    'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s %s'
                     % (node,file,input_file,logfile_entry_node, logfile_build_node,
                        self.build_nodes_eth_ips, self.entry_node_eth_ips, 
                        self.num_entry_nodes , self.num_build_nodes,
@@ -272,7 +272,7 @@ class Super_nodes:
                        influx_node_ip, influx_token, use_grafana, self.path,
                        self.transport_method, self.customize_string,
                        self.use_pattern_gen, self.use_dmsa_files, self.use_infiniband,
-                       self.use_collectl, logfile_collectl_build_node)
+                       self.use_collectl, logfile_collectl_entry_node, logfile_collectl_build_node)
                 )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 

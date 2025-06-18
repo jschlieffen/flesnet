@@ -29,6 +29,8 @@ import time
 import docopt
 import sys
 import os
+import threading
+import queue
 
 
 # =============================================================================
@@ -67,6 +69,19 @@ def start_collectl_cpu(csv_file_name):
     time.sleep(1)
     return result_collectl
 
+def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicater):
+    result_collectl = start_collectl(use_infiniband, logfile_collectl)
+    result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+    while True:
+        msg = collectl_communicater.get()
+        if msg == "exit":
+            print('test collectl')
+            result_collectl.terminate()
+            result_collectl.wait()
+            result_collectl_cpu.terminate()
+            result_collectl_cpu.wait()
+            break
+
 def get_alloc_cpus(filename):
     taskset_command = "taskset -cp $$"
     result_taskset = subprocess.Popen(taskset_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -91,8 +106,12 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
         basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
         get_alloc_cpus(filename_cpus)
-        result_collectl = start_collectl(use_infiniband, logfile_collectl)
-        result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+        #result_collectl = start_collectl(use_infiniband, logfile_collectl)
+        #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+        collectl_communicater = queue.Queue()
+        thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
+        thread_collectl.start()
+        time.sleep(1)
     grafana_string = ''
     if use_grafana == '1':
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
@@ -102,17 +121,19 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
         % (path, transport_method, logfile, ip_string, build_node_idx, shm_string, 
            customize_string, grafana_string)
     )
-    print(flesnet_commands)
+    #print(flesnet_commands)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
     #print(flesnet_commands)
     while input_data == '':
         input_data = sys.stdin.read().strip()
     if use_collectl == '1':
-        result_collectl.terminate()
-        result_collectl.wait()
-        result_collectl_cpu.terminate()
-        result_collectl_cpu.wait()
+        #result_collectl.terminate()
+        #result_collectl.wait()
+        #result_collectl_cpu.terminate()
+        #result_collectl_cpu.wait()
+        collectl_communicater.put("exit")
+        thread_collectl.join()
     result_flesnet.terminate()
     result_flesnet.wait()
 

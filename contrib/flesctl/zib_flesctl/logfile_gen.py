@@ -46,11 +46,11 @@ class Logfile:
         with open(logfile_name, 'w') as file:
             file.write(f'The total number of nodes allocated: {self.num_nodes} \n')
             if self.overlap_nodes_list:
-                file.write('The nodes that was used as both: \n')
+                file.write('Super nodes: \n')
                 for key, val in self.overlap_nodes_list.items():
                     entry_node_idx = val['entry_node_idx']
                     build_node_idx = val['build_node_idx']
-                    file.write(f'   {key} with entry node index {entry_node_idx} and build node index {build_node_idx}')
+                    file.write(f'   {key} with entry node index {entry_node_idx} and build node index {build_node_idx} \n')
             if self.entry_nodes_list:
                 file.write('Entry nodes: \n')
                 for key,val in self.entry_nodes_list.items():

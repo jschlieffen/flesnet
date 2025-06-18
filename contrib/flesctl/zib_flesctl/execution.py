@@ -16,13 +16,12 @@ os.environ['write_logfile'] = '1'
 from log_msg import *
 import logfile_gen as Logfile
 
+#TODO: make timeslice-forwarding cpu ids 
 # =============================================================================
-# TODOs:1. finish timeslice-forwarding                      done
-#       2. restructure file and folder org.                 improvement needed
-#       3. make threads for mstool etc.
-#       3. collectl connection                              done
-#       4. make possibility to name the flesnet logfile     not gonna happen
-#       5. make implementation for libfrabric
+# TODOs:
+#       1. restructure file and folder org.                 improvement needed
+#       2. make threads for mstool etc.
+#       3. make implementation for libfrabric
 # =============================================================================
 
 # =============================================================================

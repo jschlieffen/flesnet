@@ -6,7 +6,7 @@
 #@author: jschlieffen
 
 """
-Usage: input.py <input_file> <logfile_entry_node> <logfile_build_node> <build_nodes_ip> <entry_nodes_ip> <num_entry_nodes> <num_build_nodes> <entry_node_idx> <build_node_idx> <influx_node_ip> <influx_token> <use_grafana> <path> <transport_method> <customize_string> <use_pattern_gen> <use_dmsa_files>  <use_infiniband> <use_collectl> <logfile_collectl>
+Usage: input.py <input_file> <logfile_entry_node> <logfile_build_node> <build_nodes_ip> <entry_nodes_ip> <num_entry_nodes> <num_build_nodes> <entry_node_idx> <build_node_idx> <influx_node_ip> <influx_token> <use_grafana> <path> <transport_method> <customize_string> <use_pattern_gen> <use_dmsa_files>  <use_infiniband> <use_collectl> <logfile_collectl> <logfile_collectl_build_nodes>
 
 Arguments: 
     <input_file> The input dmsa file for the mstool
@@ -29,6 +29,7 @@ Arguments:
     <use_infiniband> Decides whether infiniband shall be used or ethernet
     <use_collectl> Decides if collectl should be used for tracking the network usage
     <logfile_collectl> The csv-file which collectl should use
+    <logfile_collectl_build_nodes> The csv-file which collectl should use for the build nodes
 """
 
 import subprocess
@@ -36,6 +37,8 @@ import time
 import docopt
 import sys
 import os
+import threading 
+import queue
 
 # =============================================================================
 # This file starts mstool and flesnet on a super node. It is started with 
@@ -66,6 +69,19 @@ def start_collectl_cpu(csv_file_name):
     time.sleep(1)
     return result_collectl
 
+def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicater):
+    result_collectl = start_collectl(use_infiniband, logfile_collectl)
+    result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+    while True:
+        msg = collectl_communicater.get()
+        if msg == "exit":
+            #print('test collectl')
+            result_collectl.terminate()
+            result_collectl.wait()
+            result_collectl_cpu.terminate()
+            result_collectl_cpu.wait()
+            break
+
 def calc_str(ip,num_entry_nodes, use_pattern_gen):
     ip_string = ""
     parts = ip.split('sep')
@@ -83,7 +99,8 @@ def calc_str(ip,num_entry_nodes, use_pattern_gen):
 
 def get_alloc_cpus(filename):
     taskset_command = "taskset -cp $$"
-    result_taskset = subprocess.Popen(taskset_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result_taskset = subprocess.Popen(taskset_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)  
+    stdout, stderr = result_taskset.communicate()
     match = stdout.split(":")[-1].strip()
     entries = match.split(",")
     alloc_cpus = []
@@ -96,18 +113,36 @@ def get_alloc_cpus(filename):
     with open(filename, "w") as file:
         for cpu in alloc_cpus:
             file.write(f"{cpu}\n")
+            
 
+def start_mstool(path,dmsa_file, entry_node_idx, D_flag, mstool_communicater):
+    mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
+    result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    #result_mstool.wait()
+    while True:
+        msg = mstool_communicater.get()
+        if msg == 'exit':
+            #print('test mstool')
+            result_mstool.terminate()
+            result_mstool.wait()
+            break
 
 def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logfile_build_nodes, num_entry_nodes, num_build_nodes, entry_node_idx, build_node_idx,
-                influx_node_ip, influx_token, use_grafana ,path, transport_method, customize_string, use_pattern_gen, use_dmsa_files,use_infininband, use_collectl, logfile_collectl):
+                influx_node_ip, influx_token, use_grafana ,path, transport_method, customize_string, use_pattern_gen, use_dmsa_files,use_infininband, use_collectl, 
+                logfile_collectl, logfile_collectl_build_nodes):
 
     ip_string, shm_string = calc_str(build_nodes_ip, num_entry_nodes, use_pattern_gen)
     if use_collectl == '1':
-        basename = os.path.splitext(os.path.basename(logfile))[0]
+        basename = os.path.splitext(os.path.basename(logfile_entry_node))[0]
         filename_cpus = f"tmp/{basename}.txt"
         get_alloc_cpus(filename_cpus)
-        result_collectl = start_collectl(use_infiniband, logfile_collectl)
-        result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+        #result_collectl = start_collectl(use_infiniband, logfile_collectl)
+        #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+        collectl_communicater = queue.Queue()
+        thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
+        thread_collectl.start()
+        time.sleep(1)
+        
     grafana_string = ''
     if use_grafana:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
@@ -116,8 +151,11 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
     if use_dmsa_files == '1':
         D_flag = "-D 1"
     if use_pattern_gen == '0':
-        mstool_commands = '%s./mstool -L test.log -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
-        result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        #mstool_commands = '%s./mstool -L test.log -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
+        #result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        mstool_communicater = queue.Queue()
+        thread_mstool = threading.Thread(target=start_mstool, args=(path, dmsa_file, entry_node_idx, D_flag, mstool_communicater))
+        thread_mstool.start()
         time.sleep(1)
     flesnet_commands = (
         '%s./flesnet -t %s -L %s -l 1 -i %s -I %s -O %s %s %s > /dev/null 2>&1 &'
@@ -125,19 +163,32 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
            ip_string, customize_string, grafana_string)
     )
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    build_nodes(entry_nodes_ip,logfile_build_nodes, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-                    transport_method, customize_string)
+    time.sleep(1)
+    build_nodes_communicater = queue.Queue()
+    build_nodes_thread = threading.Thread(target=build_nodes, args=(entry_nodes_ip,logfile_build_nodes, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
+                                                                    transport_method, customize_string, logfile_collectl_build_nodes ,build_nodes_communicater))
 
+    build_nodes_thread.start()
+    input_data = ''
+    while input_data == '':
+        input_data = sys.stdin.read().strip()
     if use_collectl == '1':
-        result_collectl.terminate()
-        result_collectl.wait()
-        result_collectl_cpu.terminate()
-        result_collectl_cpu.wait()
+        #result_collectl.terminate()
+        #result_collectl.wait()
+        #result_collectl_cpu.terminate()
+        #result_collectl_cpu.wait()
+        collectl_communicater.put("exit")
+        thread_collectl.join()
     if use_pattern_gen == '0':
-        result_mstool.terminate()
-        result_mstool.wait()
+        #result_mstool.terminate()
+        #result_mstool.wait()
+        mstool_communicater.put("exit")
+        thread_mstool.join()
+    build_nodes_communicater.put("exit")
+    build_nodes_thread.join()
     result_flesnet.terminate()
     result_flesnet.wait()
+    
 
 def calc_str_output(ip,num_build_nodes):
     ip_string = ""
@@ -154,11 +205,18 @@ def calc_str_output(ip,num_build_nodes):
 
 
 def build_nodes(entry_nodes_ip,logfile_build_nodes, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana, path, 
-                transport_method, customize_string):
+                transport_method, customize_string, logfile_collectl, build_nodes_communicater):
     ip_string, shm_string = calc_str_output(entry_nodes_ip, num_build_nodes)
     if use_collectl == '1':
-        result_collectl = start_collectl(use_infiniband, logfile_collectl)
-        result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+        basename = os.path.splitext(os.path.basename(logfile_build_node))[0]
+        filename_cpus = f"tmp/{basename}.txt"
+        get_alloc_cpus(filename_cpus)
+        #result_collectl = start_collectl(use_infiniband, logfile_collectl)
+        #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+        collectl_communicater = queue.Queue()
+        thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
+        thread_collectl.start()
+        time.sleep(1)
     os.environ['CBM_INFLUX_TOKEN'] = influx_token
     grafana_string = ''
     if use_grafana:
@@ -170,13 +228,17 @@ def build_nodes(entry_nodes_ip,logfile_build_nodes, num_build_nodes, build_node_
     )
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
-    while input_data == '':
-        input_data = sys.stdin.read().strip()
+    while True:
+        msg = build_nodes_communicater.get()
+        if msg == "exit":
+            break
     if use_collectl == '1':
-        result_collectl.terminate()
-        result_collectl.wait()
-        result_collectl_cpu.terminate()
-        result_collectl_cpu.wait()
+        #result_collectl.terminate()
+        #result_collectl.wait()
+        #result_collectl_cpu.terminate()
+        #result_collectl_cpu.wait()
+        collectl_communicater.put("exit")
+        thread_collectl.join()
     result_flesnet.terminate()
     result_flesnet.wait()
 
@@ -201,7 +263,8 @@ use_dmsa_files = arg["<use_dmsa_files>"]
 use_infiniband = arg['<use_infiniband>']
 use_collectl = arg['<use_collectl>']
 logfile_collectl = arg['<logfile_collectl>']
+logfile_collectl_build_nodes = arg['<logfile_collectl_build_nodes>']
 
 entry_nodes(input_file,build_nodes_ip, entry_nodes_ip, logfile_entry_node, logfile_build_node, num_entry_nodes, num_build_nodes, entry_node_idx, build_node_idx,
             influx_node_ip, influx_token, use_grafana,path,transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl,
-            logfile_collectl)
+            logfile_collectl, logfile_collectl_build_nodes)
