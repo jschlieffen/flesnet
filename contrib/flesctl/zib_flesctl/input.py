@@ -84,7 +84,7 @@ def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicate
     while True:
         msg = collectl_communicater.get()
         if msg == "exit":
-            print('test collectl')
+            #print('test collectl')
             result_collectl.terminate()
             result_collectl.wait()
             result_collectl_cpu.terminate()
@@ -115,7 +115,7 @@ def start_mstool(path,dmsa_file, entry_node_idx, D_flag, mstool_communicater):
     while True:
         msg = mstool_communicater.get()
         if msg == 'exit':
-            print('test mstool')
+            #print('test mstool')
             result_mstool.terminate()
             result_mstool.wait()
             break

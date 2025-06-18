@@ -29,6 +29,8 @@ import time
 import docopt
 import sys
 import os
+import threading 
+import queue
 
 
 #may be extended
@@ -47,7 +49,7 @@ def calc_ip_str(ip,port,write_data_to_file,path,analyze_data):
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == '1':
         collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
-        print(collectl_command)
+        #print(collectl_command)
     else:
         collectl_command = f"collectl --plot --sep , -i 1 -sn > {csvfile_name}"
     result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -61,11 +63,50 @@ def start_collectl_cpu(csv_file_name):
     time.sleep(1)
     return result_collectl
 
+
+def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicater):
+    result_collectl = start_collectl(use_infiniband, logfile_collectl)
+    result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+    while True:
+        msg = collectl_communicater.get()
+        if msg == "exit":
+            #print('test collectl')
+            result_collectl.terminate()
+            result_collectl.wait()
+            result_collectl_cpu.terminate()
+            result_collectl_cpu.wait()
+            break
+
+
+def get_alloc_cpus(filename):
+    taskset_command = "taskset -cp $$"
+    result_taskset = subprocess.Popen(taskset_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = result_taskset.communicate()
+    match = stdout.split(":")[-1].strip()
+    entries = match.split(",")
+    alloc_cpus = []
+    for entry in entries:
+        if "-" in entry:
+            start, end = map(int, entry.split("-"))
+            alloc_cpus.extend(range(start,end + 1))
+        else:
+            alloc_cpus.append(int(entry))
+    with open(filename, "w") as file:
+        for cpu in alloc_cpus:
+            file.write(f"{cpu}\n")
+
 def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_data_to_file, analyze_data, use_infiniband, use_collectl, logfile_collectl):
     ip_string,output_file_string,analyze_data_string = calc_ip_str(ip, port, write_data_to_file, path, analyze_data)
     if use_collectl == '1':
-        result_collectl = start_collectl(use_infiniband, logfile_collectl)
-        result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+        basename = os.path.splitext(os.path.basename(logfile_collectl))[0]
+        filename_cpus = f"tmp/{basename}.txt"
+        get_alloc_cpus(filename_cpus)
+        #+result_collectl = start_collectl(use_infiniband, logfile_collectl)
+        #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
+        collectl_communicater = queue.Queue()
+        thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
+        thread_collectl.start()
+        time.sleep(1)
     grafana_string = ''
     if use_grafana == '1':
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
@@ -74,16 +115,18 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
             '%s./tsclient -l 1 -L %s -i %s %s %s %s > /dev/null 2>&1 &'
             % (path,logfile,ip_string, analyze_data_string, output_file_string, grafana_string)
         )
-    
+    print(tsclient_commands)
     result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
     while input_data == '':
         input_data = sys.stdin.read().strip()
     if use_collectl == '1':
-        result_collectl.terminate()
-        result_collectl.wait()
-        result_collectl_cpu.terminate()
-        result_collectl_cpu.wait()
+        #result_collectl.terminate()
+        #result_collectl.wait()
+        #result_collectl_cpu.terminate()
+        #result_collectl_cpu.wait()
+        collectl_communicater.put("exit")
+        thread_collectl.join()
     result_tsclient.terminate()
     result_tsclient.wait()
     

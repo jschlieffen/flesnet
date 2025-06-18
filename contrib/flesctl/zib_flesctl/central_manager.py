@@ -126,6 +126,7 @@ class Entry_nodes:
                      self.use_collectl, logfile_collectl)
                 )
             try:
+                #print(command)
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
                 logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
@@ -193,11 +194,13 @@ class Build_nodes:
                        self.use_collectl, logfile_collectl)
                 )
             try:
+               
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
                 logger.error('ERROR {e} occurried in build node: {node}. Shutdown flesnet')
                 return 'shutdown'            
             self.pids += [result]
+        #print(command)
         logger.success(f'start of build nodes successful')
         return None
     
@@ -325,7 +328,7 @@ class Timeslice_forwarding:
             logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.csv' % (receiving_node)
             build_node_ip = build_node['inf_ip']
             command = (
-                    'srun --nodelist=%s -N 1 %s %s %s %s %s %s %s %s %s %s %s %s %s'
+                    'srun --nodelist=%s -N 1 -c 5 %s %s %s %s %s %s %s %s %s %s %s %s %s'
                     % (receiving_node,file,logfile, build_node_ip, self.influx_token, self.influx_node_ip, self.use_grafana, self.path,
                        self.port, self.write_data_to_file, self.analyze_data,  self.use_infiniband, self.use_collectl, logfile_collectl
                         )
@@ -416,7 +419,8 @@ class execution:
             self.timeslice_forwarding_cls = Timeslice_forwarding(self.rec2build, self.influx_node_ip, self.influx_token, self.use_grafana,
                                                                  self.path , self.port, self.write_data_to_file, self.analyze_data, self.use_infiniband,
                                                                  self.use_collectl)
-        
+        print(self.overlap_nodes)
+        print(self.rec2build)
     # =============================================================================
     # gets the node list of the current allocations    
     # =============================================================================
@@ -646,14 +650,22 @@ class execution:
     
     def assemble_receiving_nodes2build_nodes(self):
         node_list = self.get_node_list()
-        unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes]
+        unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
+       
+            
+       
         if len(unused_nodes) < self.num_buildnodes:
             logger.critical(f"Number of nodes are not sufficient for the Timeslice-forwarding. Number of nodes remaining {len(unused_nodes)}, expected: {self.num_buildnodes} Shutting down")
             sys.exit(1)
         cnt = 0
-        for build_node_id,build_node in self.build_nodes.items():
-            self.rec2build.append((unused_nodes[cnt],build_node))
-            cnt += 1
+        if self.overlap_usage_of_nodes:
+            for build_node_id,build_node in self.overlap_nodes.items():
+                self.rec2build.append((unused_nodes[cnt],build_node))
+                cnt += 1
+        else:
+            for build_node_id,build_node in self.build_nodes.items():
+                self.rec2build.append((unused_nodes[cnt],build_node))
+                cnt += 1
         Logfile.logfile.receiving_node_list = self.rec2build
     # =============================================================================
     # This function starts flesnet and partly checks if the start was successful  

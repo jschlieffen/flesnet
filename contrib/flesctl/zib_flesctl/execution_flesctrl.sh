@@ -7,7 +7,7 @@ function execute_iteration() {
 
     local Logfile=$(cat tmp/file_name.txt)
     Logfile="../${Logfile}"
-    echo $Logfile
+    #echo $Logfile
     cd "benchmark_eval"
     python3 $benchmark_eval $Logfile --collectl_used --mode='all'
     cd ..
@@ -27,11 +27,11 @@ function create_output_folder() {
     
     filename="${flesctrl_Logfile##*/}"       
     foldername="Runs/${filename%.*}"    
-    echo "$foldername"             
+    #echo "$foldername"             
 
     #foldername="Runs/$(echo ${flesctrl_Logfile} | cut -d "/" -f 2 | cut -d "." -f 1)"
 
-    echo $foldername
+    #echo $foldername
 
     mkdir $foldername
 

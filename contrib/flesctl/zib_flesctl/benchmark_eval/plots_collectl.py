@@ -208,10 +208,10 @@ class create_plots_collectl:
             plt.close()
             if self.timeslice_forwarding_activated and node_type == 'build_nodes':
                 plt.figure(figsize=(10, 6))
-                plt.fill_between(self.time_stmps[node_type], min_rate, max_rate, color='lightgrey', label='Range (min data rate-max data rate)')
-                plt.plot(self.time_stmps[node_type], max_rate, color='black', linestyle='--', linewidth=1, label='Max rate')
-                plt.plot(self.time_stmps[node_type], min_rate, color='black', linestyle='--', linewidth=1, label='Min rate')
-                plt.plot(self.time_stmps[node_type], avg_data_rate, linestyle='-', color='k')
+                plt.fill_between(self.time_stmps[node_type], min_rate_out, max_rate_out, color='lightgrey', label='Range (min data rate-max data rate)')
+                plt.plot(self.time_stmps[node_type], max_rate_out, color='black', linestyle='--', linewidth=1, label='Max rate')
+                plt.plot(self.time_stmps[node_type], min_rate_out, color='black', linestyle='--', linewidth=1, label='Min rate')
+                plt.plot(self.time_stmps[node_type], avg_data_rate_out, linestyle='-', color='k')
                 plt.xlabel("Timestamp")
                 plt.ylabel("Data rate in GB")
                 plt.title("Average data rate with maximum and minium")
@@ -277,7 +277,7 @@ class create_plots_collectl:
                 cmap = plt.get_cmap('viridis')
                 colors = [cmap(i / len(labels)) for i in range(len(labels))]
                 plt.figure(figsize=(12, 6))
-                plt.bar(labels,averages,color=colors)
+                plt.bar(labels,averages_out,color=colors)
                 plt.title('Bar Plot of data rates')
                 plt.ylabel('Data Rate in GB')
                 plt.xticks(rotation=45)

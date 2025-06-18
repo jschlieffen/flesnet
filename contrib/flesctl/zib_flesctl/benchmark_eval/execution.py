@@ -53,8 +53,8 @@ def change_dir(flesctl_logfile):
         sys.exit(1)
     
     os.chdir(path)
-    print(os.getcwd())
-    print('test')
+    #print(os.getcwd())
+    #print('test')
     eval_number = 0
     eval_file = f"tmp/eval_num.txt"
     if not os.path.isfile(eval_file):
@@ -73,7 +73,7 @@ def change_dir(flesctl_logfile):
         sys.exit(1)
     
     logger.success(f"Run found and proceeding as eval run {eval_number}")
-    #return eval_number
+
 # ===============================================================================
 # TODOs:
 #        1. make it possible to give a input-folder and output folder into params.
@@ -151,8 +151,8 @@ class execution:
                 self.build_nodes.append((node['node_name'], node['index']))
             elif node['node_type'] == 'receiving':
                 self.receiving_nodes.append((node['node_name'], node['connected_to']))
-        print(self.entry_nodes)
-        print(self.build_nodes)
+        #print(self.entry_nodes)
+        #print(self.build_nodes)
         
     def get_data_from_logfile(self):
         for entry_node in self.entry_nodes:
