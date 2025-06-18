@@ -61,8 +61,9 @@ class serialize_data:
                     for key in self.data_rate[node_type].keys():
                         first_header.extend([key] + [''])
                         second_header.extend(['KBIn','KBOut'])
-                        writer.writerow(first_header)
-                        writer.writerow(second_header)
+                        
+                    writer.writerow(first_header)
+                    writer.writerow(second_header)
                 else:
                     header = ['timestamps'] + list(self.data_rate[node_type].keys())
                     writer.writerow(header)
@@ -119,8 +120,8 @@ class serialize_data:
                     alloc_cpus = [cpu for cpu in val[first_timestmp].keys()]
                     for cpu in alloc_cpus:
                         second_header.extend([cpu])
-                    writer.writerow(header)
-                    writer.writerow(second_header)
+                writer.writerow(header)
+                writer.writerow(second_header)
                 for timestamp in timestamps:
                     row = [timestamp]
                     for cpu_dict in self.cpu_usage[node_type].values():
@@ -177,6 +178,7 @@ class deserialize_data:
                     second_header = next(reader)
                 for row in reader:
                     timestamp_str = row[0]
+                    print(timestamp_str)
                     try:
                         timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
                     except ValueError:
@@ -204,10 +206,11 @@ class deserialize_data:
                         for i, node in enumerate(keys):
                             idx = 1 + i
                             vals = row[idx]
-                            data_dict_tmp = {
-                                    'KBOut' : int(vals)
-                                }
-                            
+                            if vals != '':
+                                data_dict_tmp = {
+                                        'KBOut' : int(vals)
+                                    }
+                                
                             if node not in data_dict:
                                 data_dict[node] = {}
                             data_dict[node][timestamp] = data_dict_tmp
@@ -215,9 +218,10 @@ class deserialize_data:
                         for i, node in enumerate(keys):
                             idx = 1 + i
                             vals = row[idx]
-                            data_dict_tmp = {
-                                    'KBIn' : int(vals)
-                                }
+                            if vals != '':
+                                data_dict_tmp = {
+                                        'KBIn' : int(vals)
+                                    }
                             if node not in data_dict:
                                 data_dict[node] = {}
                             data_dict[node][timestamp] = data_dict_tmp
@@ -248,6 +252,7 @@ class deserialize_data:
         return csv_file_name
 
 
+    #KeyErrors for more then one node. Debug that 
     def deserialize_cpu_usage(self):
         node_types = ['entry_nodes', 'build_nodes']
         if self.timeslice_forwarding_activated:
