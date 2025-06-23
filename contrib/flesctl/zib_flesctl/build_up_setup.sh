@@ -35,6 +35,8 @@ function create_folders() {
     mkdir logs/collectl/build_nodes
 
     mkdir logs/collectl/tsclient
+
+    mkdir tmp
 }
 
 create_venv
