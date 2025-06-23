@@ -37,6 +37,8 @@ function create_folders() {
     mkdir logs/collectl/tsclient
 
     mkdir tmp
+
+    mkdir Runs
 }
 
 create_venv
