@@ -115,7 +115,7 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
             '%s./tsclient -l 1 -L %s -i %s %s %s %s > /dev/null 2>&1 &'
             % (path,logfile,ip_string, analyze_data_string, output_file_string, grafana_string)
         )
-    print(tsclient_commands)
+    #print(tsclient_commands)
     result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
     while input_data == '':

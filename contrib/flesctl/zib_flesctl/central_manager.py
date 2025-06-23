@@ -419,8 +419,8 @@ class execution:
             self.timeslice_forwarding_cls = Timeslice_forwarding(self.rec2build, self.influx_node_ip, self.influx_token, self.use_grafana,
                                                                  self.path , self.port, self.write_data_to_file, self.analyze_data, self.use_infiniband,
                                                                  self.use_collectl)
-        print(self.overlap_nodes)
-        print(self.rec2build)
+        #print(self.overlap_nodes)
+        #print(self.rec2build)
     # =============================================================================
     # gets the node list of the current allocations    
     # =============================================================================

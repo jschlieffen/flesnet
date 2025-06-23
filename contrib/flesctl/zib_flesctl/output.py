@@ -121,7 +121,7 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
         % (path, transport_method, logfile, ip_string, build_node_idx, shm_string, 
            customize_string, grafana_string)
     )
-    print(flesnet_commands)
+    #print(flesnet_commands)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
     #print(flesnet_commands)

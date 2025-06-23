@@ -114,20 +114,28 @@ class serialize_data:
                 writer = csv.writer(csvfile)
                 header = ['timestamps']
                 second_header = ['timestamps']
+                alloc_cpus = {}
                 for key,val in self.cpu_usage[node_type].items():
-                    header.extend([key] + ['']*(len(val)-1))
+                    #header.extend([key] + ['']*(len(val)-1))
+                    cpu_cnt = 0
                     first_timestmp = next((item for item in timestamps if item in val), None)
-                    alloc_cpus = [cpu for cpu in val[first_timestmp].keys()]
-                    for cpu in alloc_cpus:
+                    alloc_cpus[key] = [cpu for cpu in val[first_timestmp].keys()]
+                    for cpu in alloc_cpus[key]:
                         second_header.extend([cpu])
+                        cpu_cnt += 1
+                    header.extend([key] + ['']*(cpu_cnt-1))
                 writer.writerow(header)
                 writer.writerow(second_header)
                 for timestamp in timestamps:
                     row = [timestamp]
-                    for cpu_dict in self.cpu_usage[node_type].values():
+                    for key,cpu_dict in self.cpu_usage[node_type].items():
                         val = cpu_dict.get(timestamp, {})
-                        for cpu in val.keys():
-                            row.append(100 - val.get(cpu, ''))
+                        for cpu in alloc_cpus[key]:
+                            cpu_val = val.get(cpu, '')
+                            if cpu_val != '':
+                                row.append(100 - cpu_val)
+                            else:
+                                row.append('')
                     writer.writerow(row)
                 
                 
@@ -177,8 +185,9 @@ class deserialize_data:
                 if node_type == 'build_nodes' and self.timeslice_forwarding_activated:
                     second_header = next(reader)
                 for row in reader:
+                    vals = ''
                     timestamp_str = row[0]
-                    print(timestamp_str)
+                    #print(timestamp_str)
                     try:
                         timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
                     except ValueError:
@@ -197,7 +206,7 @@ class deserialize_data:
                             data_dict_tmp = {}
                             for key, val in zip(['KBIn', 'KBOut'], vals):
                                 if val != '':
-                                    data_dict_tmp[key] = float(val)
+                                    data_dict_tmp[key] = self.auto_cast_number(val)
 
                             if node not in data_dict:
                                 data_dict[node] = {}
@@ -208,23 +217,23 @@ class deserialize_data:
                             vals = row[idx]
                             if vals != '':
                                 data_dict_tmp = {
-                                        'KBOut' : int(vals)
+                                        'KBOut' : self.auto_cast_number(vals)
                                     }
-                                
-                            if node not in data_dict:
-                                data_dict[node] = {}
-                            data_dict[node][timestamp] = data_dict_tmp
+                                if node not in data_dict:
+                                    data_dict[node] = {}
+                                data_dict[node][timestamp] = data_dict_tmp
                     elif node_type == 'receiving_nodes' or node_type =='build_nodes':
                         for i, node in enumerate(keys):
                             idx = 1 + i
                             vals = row[idx]
                             if vals != '':
                                 data_dict_tmp = {
-                                        'KBIn' : int(vals)
+                                        'KBIn' : self.auto_cast_number(vals)
                                     }
-                            if node not in data_dict:
-                                data_dict[node] = {}
-                            data_dict[node][timestamp] = data_dict_tmp
+                                if node not in data_dict:
+                                    data_dict[node] = {}
+                                data_dict[node][timestamp] = data_dict_tmp
+                    
                 
                 
                 self.data_rate[node_type] = data_dict
@@ -251,7 +260,14 @@ class deserialize_data:
             csv_file_name = f"{path}/cpu_usages_receiving_nodes_{Run_id}.csv"
         return csv_file_name
 
-
+    def auto_cast_number(self,s):
+        try:
+            number = float(s)
+            if number.is_integer():
+                return int(number)
+            return number
+        except ValueError:
+            raise ValueError(f"'{s}' is not a valid number")
     #KeyErrors for more then one node. Debug that 
     def deserialize_cpu_usage(self):
         node_types = ['entry_nodes', 'build_nodes']
@@ -294,17 +310,25 @@ class deserialize_data:
                             if cpu != 'overall_avg':
                                 cpu = int(cpu)
                             try:
-                                vals = float(row[idx])
-                                val = 100 - vals
+                                #vals = float(row[idx])
+                                row_val = row[idx]
+                                if row_val != '':
+                                    vals = self.auto_cast_number(row_val)
+                                    val = 100 - vals
+                                    if node not in cpu_usage:
+                                        cpu_usage[node] = {}
+                                    if timestamp not in cpu_usage[node]:
+                                        cpu_usage[node][timestamp] = {}
+                                    cpu_usage[node][timestamp][cpu] = val
+                                idx += 1
                             except (ValueError, IndexError):
-                                print('something')
+                                #print('something')
+                                #print(idx)
+                                #print(row)
+                                #print(node)
+                                idx+=1
                                 continue
-                            if node not in cpu_usage:
-                                cpu_usage[node] = {}
-                            if timestamp not in cpu_usage[node]:
-                                cpu_usage[node][timestamp] = {}
-                            cpu_usage[node][timestamp][cpu] = val
-                            idx += 1
+
                 self.cpu_usage[node_type] = cpu_usage
                 
                 

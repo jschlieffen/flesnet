@@ -42,6 +42,7 @@ os.chdir(script_dir)
 
 from deepdiff import DeepDiff
 from datetime import datetime
+import time
 
 
 
@@ -244,16 +245,27 @@ class execution:
         if data_rates == self.data_rates_entry_nodes:
             logger.success('serialization process succeeded')
         else:
-            logger.error('serialization process not succeeded')
-            diff = DeepDiff(self.data_rates_entry_nodes, data_rates)
-            #print(diff)
+            
+            
+            diff = DeepDiff(self.data_rates_entry_nodes, data_rates, ignore_type_in_groups=[(int,float)])
+            if not diff:
+                logger.success('serialization process succeeded')
+            else:
+                logger.error('serialization process not succeeded')
+                print(diff)
         deserializer_entry_nodes.deserialize_shm_usage_entry_nodes()
         shm_usage = deserializer_entry_nodes.shm_usage
         if shm_usage == self.shm_usages_entry_nodes:
             logger.success('serialization process succeeded')
         else:
             logger.error('serialization process not succeeded')
-            diff = DeepDiff(self.shm_usages_entry_nodes, shm_usage)
+            diff = DeepDiff(self.shm_usages_entry_nodes, shm_usage, ignore_type_in_groups=[(int,float)])
+            if not diff:
+                logger.success('serialization process succeeded')
+            else:
+                logger.error('serialization process not succeeded')
+                
+                print(diff)
             #print(diff)
         deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
         deserialzer_build_nodes.deserialize_data_rates()
@@ -262,7 +274,12 @@ class execution:
             logger.success('serialization process succeeded')
         else:
             logger.error('serialization process not succeeded')
-            diff = DeepDiff(self.data_rates_build_nodes, data_rates_build_nodes)
+            diff = DeepDiff(self.data_rates_build_nodes, data_rates_build_nodes, ignore_type_in_groups=[(int,float)])
+            if not diff:
+                logger.success('serialization process succeeded')
+            else:
+                logger.error('serialization process not succeeded')
+                print(diff)
             #print(diff)
         deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
         shm_usage_build_nodes = deserialzer_build_nodes.shm_usage
@@ -270,7 +287,12 @@ class execution:
             logger.success('serialization process succeeded')
         else:
             logger.error('serialization process not succeeded')
-            diff = DeepDiff(self.shm_usages_build_nodes, shm_usage_build_nodes)
+            diff = DeepDiff(self.shm_usages_build_nodes, shm_usage_build_nodes, ignore_type_in_groups=[(int,float)])
+            if not diff:
+                logger.success('serialization process succeeded')
+            else:
+                logger.error('serialization process not succeeded')
+                print(diff)
             #print(diff)
 
 
@@ -285,14 +307,26 @@ class execution:
             logger.success('serialization process for collectl succeeded')
         else:
             logger.error('serialization process not succeeded')
-            diff = DeepDiff(self.data_rates_collectl, data_rates)
-            print(diff)
+            diff = DeepDiff(self.data_rates_collectl, data_rates, ignore_type_in_groups=[(int,float)])
+            if not diff:
+                logger.success('serialization process succeeded')
+            else:
+                logger.error('serialization process not succeeded')
+                print(self.data_rates_collectl)
+                print(data_rates)
+                print(diff)
+            #print(diff)
         if cpu_usage == self.cpu_usage_collectl:
             logger.success('serialization process collectl succeeded')
         else:
             logger.error('serialization process not succeeded')
-            diff = DeepDiff(self.cpu_usage_collectl, cpu_usage)
-            print(diff)
+            diff = DeepDiff(self.cpu_usage_collectl, cpu_usage, ignore_type_in_groups=[(int,float)])
+            if not diff:
+                logger.success('serialization process succeeded')
+            else:
+                logger.error('serialization process not succeeded')
+                print(diff)
+            #print(diff)
             
             
     def start_plots_entry_nodes(self,starttime,endtime):
@@ -381,7 +415,8 @@ def main():
     starttime = args['--starttime']
     endtime = args['--endtime']
     modes = validate_params(logfile,modes,verbose)
-
+    time.sleep(10)
+    logger.info('starting with evaluation')
     if 'prev_run' in modes:
         #exec_cls.prev_run = True
         #print('test')
