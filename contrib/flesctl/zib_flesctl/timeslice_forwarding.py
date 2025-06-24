@@ -32,7 +32,15 @@ import os
 import threading 
 import queue
 
-
+# =============================================================================
+# This file starts the tsclient on a given node to a given build node 
+#   srun nodelist=node timeslice_forwarding.py -N 1 <params>  
+# After the tsclient is started the program waits for a signal from the 
+# central manager. If it receives a signal it will shut down the tsclient
+# NOTE: If the program does not terminate correctly, it completly suffices 
+#       to just kill the srun process. One does not have to kill mstool and 
+#       flesnet manually
+# =============================================================================
 #may be extended
 def calc_ip_str(ip,port,write_data_to_file,path,analyze_data):
     ip_string = f"tcp://{ip}:{port}"

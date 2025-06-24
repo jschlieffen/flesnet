@@ -25,6 +25,7 @@ class Logfile:
         self.avg_data_rate = 0
         self.exec_time = 0
         self.transport_method = ''
+        self.infiniband_used = False
         
     def write(self):
         config = configparser.ConfigParser()
@@ -71,5 +72,9 @@ class Logfile:
             file.write(f'The average data rate of this run was: {self.avg_data_rate}\n')
             file.write(f'The execution time of this run was: {self.exec_time}\n')
             file.write(f'The used transport method was: {self.transport_method}\n')
+            if self.infiniband_used:
+                file.write('Infiniband was used \n')
+            else: 
+                file.write('Ethernet was used \n')
 
 logfile = Logfile()

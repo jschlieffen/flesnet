@@ -11,6 +11,15 @@ import csv
 import os
 from datetime import datetime
 
+
+
+# =============================================================================
+# This program writes down the data extracted from the collectl-Logfile 
+# and writes it down to a csv-file. It can also read this specific csv-file
+# if the collectl-logfile was deleted. If you want to do that, 
+# you need to deactivate the mode flesctrl_logfile when starting the 
+# file execution.py 
+# =============================================================================
 class serialize_data:
     
     def __init__(self, data_rates, cpu_usage, file_name, timeslice_forwarding_activated):

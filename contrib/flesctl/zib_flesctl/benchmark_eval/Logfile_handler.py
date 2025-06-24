@@ -11,6 +11,14 @@ import Logfile_reader as LR
 import os
 from datetime import datetime
 
+# =============================================================================
+# This program writes down the data extracted from the flesnet-Logfile 
+# and writes it down to a csv-file. It can also read this specific csv-file
+# if the flesnet-logfile was deleted. If you want to do that, 
+# you need to deactivate the mode flesctrl_logfile when starting the 
+# file execution.py 
+# =============================================================================
+
 
 class serialize_data:
     

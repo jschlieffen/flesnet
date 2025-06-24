@@ -13,6 +13,14 @@ from datetime import datetime
 from dateutil import parser
 import numpy as np
 
+# =============================================================================
+# This file creates all plots for the evaluation of the flesnet run. One can 
+# only consider certain time intervals if wished to.
+# Due to the amount of plots it is not possible to only plot certain plots.
+# Due to technical reason it is necessary to distungish between the entry and 
+# build nodes 
+# =============================================================================
+
 class create_plots_entry_nodes:
     
     def __init__(self,data_rates,shm_usages, time_start = "00:00:00" , time_end = "00:00:00" ):

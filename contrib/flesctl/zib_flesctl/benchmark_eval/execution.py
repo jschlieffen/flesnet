@@ -45,7 +45,35 @@ from datetime import datetime
 import time
 
 
+# =============================================================================
+# This file is the main execution file for the evaluation. When starting this 
+# program one needs to give the flesctrl_logfile including path, that can be 
+# found under logs/general. It consists of five different modes 
+#   1. flesctrl_logfile: This mode shall be used, when the logfile from collectl
+#                        and flesnet should be used to extract the data.
+#                        If not set the program will use serialized data from 
+#                        the benchmarking tool.
+#                        Note: The program uses the names given by flesctrl.
+#                              DO NOT CHANGE THE FILE NAMES!!!!!
+#   2. serialization: This mode shall be used if one wants to serialize the 
+#                     data rates, shm usage, cpu usage. 
+#   3. check_serialization: Checks if the data serialized in a correct way.
+#                           Can only be used if mode serialization is also set
+#   4. create_plots: Decides whether plots should be created or not.
+#   5. prev_run: This decides if a Run that can be found under the folder Runs
+#                should be revaluated. This is specifically usefull, when 
+#                one wants to remove certain time-intervals in order to get 
+#                cleaner plots.
+#   6. all: This can be used if one wants to activate all modes
+# It also have the possibility to only consider certain time intervals,
+# via the flags --startime=..., --endtime=... Is deactivated by default 
+# =============================================================================
 
+
+# =============================================================================
+# Is used when --prev_run is activated. It changes the working directory from 
+# this folder to the folder ../Runs/{specific_run}
+# =============================================================================
 def change_dir(flesctl_logfile):
     directory = os.path.splitext(os.path.basename(flesctl_logfile))[0]
     path = f"../Runs/{directory}"
@@ -77,10 +105,15 @@ def change_dir(flesctl_logfile):
 
 # ===============================================================================
 # TODOs:
-#        1. make it possible to give a input-folder and output folder into params.
 #        2. clean up code
 #        3. comment code 
 # ===============================================================================
+
+# =============================================================================
+# main execution class. It reads at first the flesctrl_logfile and then
+# works together with the function main to work the different modes specified
+# by the user
+# =============================================================================
 class execution:
     
     def __init__(self,flesctl_logfile):
@@ -91,6 +124,8 @@ class execution:
         if not (os.path.isfile(flesctl_logfile)):
             logger.critical('file does not exist')
             sys.exit(1)
+        self.infiniband_used = False
+        self.zeromq_used = False
         self.get_node_names(flesctl_logfile)
         self.data_rates_entry_nodes = {}
         self.shm_usages_entry_nodes = {}
@@ -99,6 +134,7 @@ class execution:
         self.data_rates_collectl = {}
         self.cpu_usage_collectl = {}
         self.timeslice_forwarding_activated = False
+
         self.prev_run = False
         self.eval_number = 0
         
@@ -154,6 +190,17 @@ class execution:
                 self.receiving_nodes.append((node['node_name'], node['connected_to']))
         #print(self.entry_nodes)
         #print(self.build_nodes)
+        if "Infiniband" in flesctl_logfile:
+            self.infiniband_used = True
+        elif "Ethernet" in flesctl_logfile:
+            self.infiniband_used = False
+        else:
+            logger.error("Did not find the connection type")
+            sys.exit(1)
+        if "zeromq" in flesctl_logfile:
+            self.zeromq_used = True
+        else:
+            self.zeromq_used = False
         
     def get_data_from_logfile(self):
         for entry_node in self.entry_nodes:
@@ -182,7 +229,10 @@ class execution:
             Logfile_name = f"../logs/collectl/entry_nodes/entry_node_{entry_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
             Logfile_reader_cls = CLR.collectl_reader(f'entry_node_{entry_node[0]}',Logfile_name, Logfile_name_cpu, 'entry_node',self.timeslice_forwarding_activated)
-            Logfile_reader_cls.extract_infiniband_usage()
+            if self.infiniband_used:
+                Logfile_reader_cls.extract_infiniband_usage()
+            else:
+                Logfile_reader_cls.extract_ethernet_usage()
             Logfile_reader_cls.extract_cpu_usage()
             self.data_rates_collectl['entry_nodes'][f"entry_nodes_{entry_node[0]}"] = Logfile_reader_cls.data_rates
             self.cpu_usage_collectl['entry_nodes'][f"entry_nodes_{entry_node[0]}"] = Logfile_reader_cls.cpu_usage
@@ -190,7 +240,10 @@ class execution:
             Logfile_name = f"../logs/collectl/build_nodes/build_node_{build_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
             Logfile_reader_cls = CLR.collectl_reader(f'build_node_{build_node[0]}',Logfile_name, Logfile_name_cpu, 'build_node',self.timeslice_forwarding_activated)
-            Logfile_reader_cls.extract_infiniband_usage()
+            if self.infiniband_used:
+                Logfile_reader_cls.extract_infiniband_usage()
+            else:
+                Logfile_reader_cls.extract_ethernet_usage()
             Logfile_reader_cls.extract_cpu_usage()
             self.data_rates_collectl['build_nodes'][f"build_nodes_{build_node[0]}"] = Logfile_reader_cls.data_rates
             self.cpu_usage_collectl['build_nodes'][f"build_nodes_{build_node[0]}"] = Logfile_reader_cls.cpu_usage
@@ -198,7 +251,10 @@ class execution:
             Logfile_name = f"../logs/collectl/tsclient/receiving_node_{receiving_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
             Logfile_reader_cls = CLR.collectl_reader(f'receiving_node_{receiving_node[0]}',Logfile_name, Logfile_name_cpu, 'tsclient', self.timeslice_forwarding_activated)
-            Logfile_reader_cls.extract_infiniband_usage()
+            if self.infiniband_used:
+                Logfile_reader_cls.extract_infiniband_usage()
+            else:
+                Logfile_reader_cls.extract_ethernet_usage()
             Logfile_reader_cls.extract_cpu_usage()
             self.data_rates_collectl['receiving_nodes'][f"receiving_nodes_{receiving_node[0]}"] = Logfile_reader_cls.data_rates
             self.cpu_usage_collectl['receiving_nodes'][f"receiving_nodes_{receiving_node[0]}"] = Logfile_reader_cls.cpu_usage
@@ -208,8 +264,9 @@ class execution:
         Logfile_serializer_entry_nodes.serialize_data_rates()
         Logfile_serializer_entry_nodes.serialize_shm_usage_entry_nodes()
         Logfile_serializer_build_nodes = LH.serialize_data("b", self.data_rates_build_nodes, self.shm_usages_build_nodes, self.flesctl_logfile)
-        Logfile_serializer_build_nodes.serialize_data_rates()
-        Logfile_serializer_build_nodes.serialize_shm_usage_build_nodes()
+        if not self.zeromq_used:
+            Logfile_serializer_build_nodes.serialize_data_rates()
+            Logfile_serializer_build_nodes.serialize_shm_usage_build_nodes()
         logger.success('serialization process finished')
         
     def serialize_data_rates_collectl(self):
@@ -225,8 +282,9 @@ class execution:
         self.shm_usages_entry_nodes = deserializer_entry_nodes.shm_usage
         deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
         deserialzer_build_nodes.deserialize_data_rates()
-        self.data_rates_build_nodes = deserialzer_build_nodes.data_rate
-        deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
+        if not self.zeromq_used:
+            self.data_rates_build_nodes = deserialzer_build_nodes.data_rate
+            deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
         self.shm_usages_build_nodes = deserialzer_build_nodes.shm_usage
     
     def deserialize_data_collectl(self):
@@ -268,32 +326,32 @@ class execution:
                 print(diff)
             #print(diff)
         deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
-        deserialzer_build_nodes.deserialize_data_rates()
-        data_rates_build_nodes = deserialzer_build_nodes.data_rate
-        if data_rates_build_nodes == self.data_rates_build_nodes:
-            logger.success('serialization process succeeded')
-        else:
-            logger.error('serialization process not succeeded')
-            diff = DeepDiff(self.data_rates_build_nodes, data_rates_build_nodes, ignore_type_in_groups=[(int,float)])
-            if not diff:
+        if not self.zeromq_used:
+            deserialzer_build_nodes.deserialize_data_rates()
+            data_rates_build_nodes = deserialzer_build_nodes.data_rate
+            if data_rates_build_nodes == self.data_rates_build_nodes:
                 logger.success('serialization process succeeded')
             else:
                 logger.error('serialization process not succeeded')
-                print(diff)
-            #print(diff)
-        deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
-        shm_usage_build_nodes = deserialzer_build_nodes.shm_usage
-        if shm_usage_build_nodes == self.shm_usages_build_nodes:
-            logger.success('serialization process succeeded')
-        else:
-            logger.error('serialization process not succeeded')
-            diff = DeepDiff(self.shm_usages_build_nodes, shm_usage_build_nodes, ignore_type_in_groups=[(int,float)])
-            if not diff:
+                diff = DeepDiff(self.data_rates_build_nodes, data_rates_build_nodes, ignore_type_in_groups=[(int,float)])
+                if not diff:
+                    logger.success('serialization process succeeded')
+                else:
+                    logger.error('serialization process not succeeded')
+                    print(diff)
+            deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
+            shm_usage_build_nodes = deserialzer_build_nodes.shm_usage
+            if shm_usage_build_nodes == self.shm_usages_build_nodes:
                 logger.success('serialization process succeeded')
             else:
                 logger.error('serialization process not succeeded')
-                print(diff)
-            #print(diff)
+                diff = DeepDiff(self.shm_usages_build_nodes, shm_usage_build_nodes, ignore_type_in_groups=[(int,float)])
+                if not diff:
+                    logger.success('serialization process succeeded')
+                else:
+                    logger.error('serialization process not succeeded')
+                    print(diff)
+                #print(diff)
 
 
     def check_deserialization_collectl(self):
@@ -415,8 +473,9 @@ def main():
     starttime = args['--starttime']
     endtime = args['--endtime']
     modes = validate_params(logfile,modes,verbose)
-    time.sleep(10)
+
     logger.info('starting with evaluation')
+    time.sleep(10)
     if 'prev_run' in modes:
         #exec_cls.prev_run = True
         #print('test')
@@ -433,7 +492,8 @@ def main():
             exec_cls.deserialize_data_collectl()
     if 'create_plots' in modes:
         exec_cls.start_plots_entry_nodes(starttime,endtime)
-        exec_cls.start_plots_build_nodes(starttime,endtime)
+        if not exec_cls.zeromq_used:
+            exec_cls.start_plots_build_nodes(starttime,endtime)
         if collectl_used:
             exec_cls.start_plots_collectl(starttime, endtime)
     

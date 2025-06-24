@@ -12,7 +12,9 @@ import re
 import os
 
 
-
+# =============================================================================
+# This file reads the collectl-logfile obtained by flesctrl
+# =============================================================================
 class collectl_reader:
     
     def __init__(self, node_name,Logfile_name_infiniband,Logfile_name_cpu, node_type, timeslice_forwarding_activated):
@@ -54,6 +56,31 @@ class collectl_reader:
                     self.data_rates[timestamp] = {
                             'KBIn' : int(row['[IB]InKB'])
                         }
+                    
+    def extract_ethernet_usage(self):
+        for row in self.Logfile_infiniband:
+            #print(row)
+            dt = row['#Date'] + ' ' + row['Time']
+            timestamp = datetime.strptime(dt, "%Y%m%d %H:%M:%S")
+            if self.node_type == 'tsclient':
+                self.data_rates[timestamp] = {
+                        'KBIn' : int(row['[NET]RxKBTot'])
+                    }
+            elif self.node_type == 'entry_node':
+                self.data_rates[timestamp] = {
+                        'KBOut' : int(row['[NET]TxKBTot'])
+                    }
+            elif self.node_type == 'build_node':
+                if self.timeslice_forwarding_activated:
+                    self.data_rates[timestamp] = {
+                            'KBIn' : int(row['[NET]RxKBTot']),
+                            'KBOut' : int(row['[NET]TxKBTot'])
+                        }
+                else:
+                    self.data_rates[timestamp] = {
+                            'KBIn' : int(row['[NET]RxKBTot'])
+                        }
+                    
     def get_num_cpus(self,header):
         cpu_ids = set()
         for col in header:

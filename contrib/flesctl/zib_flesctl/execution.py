@@ -56,6 +56,7 @@ class exec_:
                                      self.Par_.write_data_to_file, self.Par_.analyze_data, self.Par_.port, self.Par_.use_infiniband, 
                                      self.Par_.use_collectl)
         Logfile.logfile.transport_method = self.Par_.transport_method
+        Logfile.logfile.infiniband_used = self.Par_.use_infiniband
         self.start_time = time.time()
         
         self.execution_cls.start_Flesnet()

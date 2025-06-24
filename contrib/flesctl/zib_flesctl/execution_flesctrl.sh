@@ -44,6 +44,8 @@ function create_output_folder() {
     cp -r $plot_folder $foldername
 
     cp -r $logfolder $foldername
+    
+    cp -r collectl $foldername
 
     cp -r tmp $foldername
 
@@ -53,7 +55,9 @@ function create_output_folder() {
         rm -rf $plot_folder
 
         rm -rf $logfolder
-	
+    	
+        	rm -rf collectl
+    	
 	rm -rf tmp
 
 	create_folders

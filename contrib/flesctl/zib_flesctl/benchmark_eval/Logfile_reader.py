@@ -9,6 +9,10 @@ Created on Fri Apr 25 12:39:46 2025
 import re
 from datetime import datetime
 
+
+# =============================================================================
+# This file reads the collectl-logfile obtained by flesctrl
+# =============================================================================
 class Logfile_reader_entry_node:
     
     def __init__(self,Logfile_name):

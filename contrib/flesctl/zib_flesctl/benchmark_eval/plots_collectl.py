@@ -14,6 +14,12 @@ from datetime import datetime
 from dateutil import parser
 import numpy as np
 
+# =============================================================================
+# This file creates all plots for the evaluation of the flesnet run. One can 
+# only consider certain time intervals if wished to.
+# Due to the amount of plots it is not possible to only plot certain plots.
+# =============================================================================
+
 
 class create_plots_collectl:
     
