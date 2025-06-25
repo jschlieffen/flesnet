@@ -118,25 +118,13 @@ void Application::run() {
       std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
       throw std::bad_alloc();
     }
-    std::cout<<"test1"<<std::endl;
     for (size_t i = 0; i < par_.malloc_size; ++i) {
       free_ptr[i] = static_cast<uint8_t>(rand());
     }
-    std::cout<<"test2"<<std::endl;
-    uint64_t msg_start =1;
-    uint64_t msg_end =2;
-   // uint8_t* content_ptr = free_ptr;
     while (auto microslicedescriptor = source_descriptors->get()) {
       std::shared_ptr<const fles::MicrosliceDescriptor> ms_desc(std::move(microslicedescriptor));
       current_index = ms_desc->idx;
       /*
-      last_index = current_index;
-      if (last_index == 0){
-          last_index = current_index;
-      }
-      */
-      /*
-      //TODO: default malloc size runterschrauben.
       //Florian oder Nico fragen, ob das noch so bestehen soll.
       const auto t2 = std::chrono::high_resolution_clock::now();
       const auto current_time_long = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1);
@@ -150,42 +138,16 @@ void Application::run() {
       for (auto& sink : sinks_) {
         fles::MicrosliceDescriptor desc_ = *ms_desc.get();
 
-	long data_size = desc_.size;
+	      long data_size = desc_.size;
         if (par_.malloc_size<=desc_.size){
           throw std::invalid_argument("malloc call is smaller than size of ms");
         }        
-        //acc_size += data_size;
         if (acc_size + data_size >= par_.malloc_size) {
           acc_size = 0;
-	  //content_ptr = free_ptr;
-	}
-          /*
-          free(free_pointer);
-          content_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
-          free_pointer=content_ptr;
-          
-          content_ptr = free_pointer;
+	      }
 
-    	}
-        content_ptr = content_ptr+data_size;
-        */
-	/*
-        content_ptr=msg_start;
-        (content_ptr+data_size)=msg_end;
-        msg_start = rand();
-        msg_end = rand();
-        memcpy((uint8_t*)(content_ptr), &msg_start, sizeof(uint64_t));
-        uint8_t* end_ptr = content_ptr + data_size -1;
-        memcpy((uint8_t*)(end_ptr), &msg_end, sizeof(uint64_t));
-        for (int i = 0; i < 50; ++i) {
-            uint64_t rnd_value = ((uint64_t)rand() << 32) | rand();
-            size_t max_offset = data_size - sizeof(uint64_t);
-            size_t offset = rand() % (max_offset + 1);  
-            memcpy(content_ptr + offset, &rnd_value, sizeof(uint64_t));
-        }
-        */
-	uint8_t* content_ptr = free_ptr + acc_size;
-	//uint8_t* content_ptr = free_ptr;
+	      uint8_t* content_ptr = free_ptr + acc_size;
+
 
         std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(desc_, content_ptr); 
         sink->put(ms);
@@ -195,16 +157,6 @@ void Application::run() {
         else{
           acc_size += par_.jump_val;
         }
-	      //acc_size += 100000;
-        //size_t offset = rand() % (par_.malloc_size/2);
-        //content_ptr = free_pointer + offset;
-        /*
-	if (content_ptr == nullptr){
-          std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
-          throw std::bad_alloc();
-        }
-	*/
-	//flush_cache();
       }
       
       ++count_;
