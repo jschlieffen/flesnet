@@ -68,7 +68,11 @@ void Parameters::parse_options(int argc, char* argv[]) {
         "set the approximated size of the call for malloc. Default value is 1GB.\n"
         "Caution: If the value is larger than the free memory, the program will fail. If the value is smaller "
         "then the biggest microslice the program will also fail. Thus this parameter has to be choosen carefully");
-
+  sink_add("jump_size,j" ,
+            po::value<long>( &jump_val)
+            ->default_value(jump_val),
+            "sets the value how much forward in the malloc call the program should go. \n"
+                        "To set the pointer after the data size, this param needs to be set to -1");
 
   po::options_description desc;
   desc.add(general).add(source).add(sink);

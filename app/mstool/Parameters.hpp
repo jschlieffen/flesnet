@@ -36,4 +36,5 @@ struct Parameters {
   std::string output_shm;
   std::string output_archive;
   long long malloc_size = 1000000000;
+  long jump_val = -1;
 };
