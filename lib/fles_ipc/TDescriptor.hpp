@@ -43,6 +43,8 @@ public:
       /// Retrieve the timeslice index.
   [[nodiscard]] uint64_t index() const { return timeslice_descriptor_.index; }
 
+  [[nodiscard]] uint64_t tpos() const { return timeslice_descriptor_.ts_pos; }
+
   /// Retrieve the number of core microslices.
   [[nodiscard]] uint64_t num_core_microslices() const {
     return timeslice_descriptor_.num_core_microslices;

@@ -4,6 +4,7 @@
 #include "ManagedTimesliceBuffer.hpp"
 #include "StorableTimeslice.hpp"
 #include "StorableTimesliceDescriptor.hpp"
+#include "TimesliceBuilder.hpp"
 #include "Timeslice.hpp"
 #include "TDescriptor.hpp"
 #include "TimesliceAnalyzer.hpp"
@@ -198,24 +199,39 @@ Schritt 4: Erweitere tsclient, sodass auch .dtsa Dateien eingelesen werden könn
 Schritt 5: Erweitere Tool aus Schritt 3, sodass .dtsa Dateien auch generiert werden können.
 Schritt 6: Erweitere Tool aus Schritt 3, sodass .dtsa Dateien auch in .dmsa Dateien umgewandelt werden können.
 */
-/*
-void Application::create_microslices(uint8_t content_ptr, std::shared_ptr<fles::Timeslice> ts){
+
+//Remains: InputArchive für TDescriptoren erstellen, main iteration anpassen. Malloc Größe anpassen.
+void Application::create_microslices(uint8_t* content_ptr,uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts){
   size_t data_size = 1;
   long long acc_size = 0;
+  uint64_t ts_index = ts->index();
+  uint64_t ts_pos = ts->tpos(); //noch hinzufügen
+  uint64_t ts_num_corems = ts->num_core_microslices();
+  fles::TimesliceBuilder TSBuild(ts_num_corems, ts_index,ts_pos);
   for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++) {
+    uint64_t num_ms = ts->num_microslices(tsc);
+    TSBuild.append_component(num_ms);
     for (uint64_t msc = 0; msc < (ts->num_core_microslices()) + 1; msc++){ //overlap berücksichtigen
-      std::unique_ptr<fles::MicrosliceView> ms_ptr =
-        std::make_unique<fles::MicrosliceView>(
-            ts->get_microslice(tsc, msc));  //berücksichtige das dtsa datein keine microslices, sonder microslice descriptoren besitzen
-      std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_ptr, content_ptr); 
+    /*
+      std::shared_ptr<fles::MicrosliceView> ms_ptr =
+        std::make_shared<fles::MicrosliceView>(
+            ts->descriptor(tsc, msc), content_ptr);  //berücksichtige das dtsa datein keine microslices, sonder microslice descriptoren besitzen
+    */
+      fles::MicrosliceDescriptor ms_desc = ts->descriptor(tsc, msc);  
+      std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_desc, content_ptr);
+      TSBuild.append_microslice(tsc,msc,*ms);
       acc_size += data_size;
       content_ptr += acc_size;
+      if (acc_size > 1000000){
+        content_ptr = original_ptr;
+        acc_size = 0;
+      }
       //microslice zu timeslice hinzufügen.
     } 
   }
 
 }
-*/
+
 fles::TDescriptor Application::create_descriptor_ts(std::shared_ptr<const fles::Timeslice> ts){
   //define TDescriptor
   //std::cout<<"test11"<<std::endl;
@@ -225,7 +241,7 @@ fles::TDescriptor Application::create_descriptor_ts(std::shared_ptr<const fles::
   uint64_t ts_num_corems = ts->num_core_microslices();
   //std::cout<<"test12"<<std::endl;
   //fles::TDescriptor TD(TSDesc); //muss noch irgendwie den descriptor übernehmen 
-  fles::TDescriptor TD(ts_index,ts_pos,ts_num_corems);
+  fles::TDescriptor TD(ts_num_corems, ts_index,ts_pos);
   //std::cout<<"test13"<<std::endl;
   for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++){
     //std::cout<<"test14"<<std::endl;
@@ -234,14 +250,14 @@ fles::TDescriptor Application::create_descriptor_ts(std::shared_ptr<const fles::
     TD.append_component(num_ms);
     //std::cout<<"test16"<<std::endl;
     //TD.addcomponent
-    std::cout<<"test2"<<std::endl;
-    std::cout<<(ts-> num_microslices(tsc))<<std::endl;
+    //std::cout<<"test2"<<std::endl;
+    //std::cout<<(ts-> num_microslices(tsc))<<std::endl;
     for (uint64_t msc = 0; msc < (ts-> num_microslices(tsc)); msc++){
       //Add microslice
       //do something
       //std::cout<<"test17"<<std::endl;
       fles::MicrosliceDescriptor ms_desc= ts->descriptor(tsc,msc);
-      std::cout<<"test1 "<<msc<<std::endl;
+      //std::cout<<"test1 "<<msc<<std::endl;
       //std::cout<<"test18"<<std::endl;
       TD.append_ms_desc(tsc, msc, ms_desc);
       //std::cout<<"test19"<<std::endl;

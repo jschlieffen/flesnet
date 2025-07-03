@@ -51,6 +51,6 @@ private:
 
   void rate_limit_delay() const;
   void native_speed_delay(uint64_t ts_start_time);
-  void create_microslices(uint8_t content_ptr, std::shared_ptr<fles::Timeslice> ts);
+  void create_microslices(uint8_t* content_ptr, uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts);
   fles::TDescriptor create_descriptor_ts(std::shared_ptr<const fles::Timeslice> ts);
 };
