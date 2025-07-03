@@ -51,6 +51,8 @@ public:
 
   [[nodiscard]] bool release_mode() const { return release_mode_; }
 
+  [[nodiscard]] bool create_descriptor_ts() const { return create_descriptor_ts_; }
+
 private:
   void parse_options(int argc, char* argv[]);
 
@@ -69,4 +71,5 @@ private:
   double rate_limit_ = 0.0;
   double native_speed_ = 0.0;
   bool release_mode_ = false;
+  bool create_descriptor_ts_ = false;
 };

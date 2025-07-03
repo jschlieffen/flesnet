@@ -37,6 +37,7 @@ private:
 
   std::unique_ptr<fles::TimesliceSource> source_;
   std::vector<std::unique_ptr<fles::TimesliceSink>> sinks_;
+  std::vector<std::unique_ptr<fles::TimesliceDescriptorSink>> sinks_descriptor;
   std::unique_ptr<Benchmark> benchmark_;
 
   uint64_t count_ = 0;
@@ -50,4 +51,6 @@ private:
 
   void rate_limit_delay() const;
   void native_speed_delay(uint64_t ts_start_time);
+  void create_microslices(uint8_t content_ptr, std::shared_ptr<fles::Timeslice> ts);
+  fles::TDescriptor create_descriptor_ts(std::shared_ptr<const fles::Timeslice> ts);
 };

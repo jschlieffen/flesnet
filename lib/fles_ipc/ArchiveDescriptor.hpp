@@ -14,7 +14,9 @@ namespace fles {
 /// The archive type enum (e.g., timeslice, microslice)
 enum class ArchiveType {
   TimesliceArchive,
+  TimesliceDescriptorArchive,
   MicrosliceArchive,
+  MicrosliceDescriptorArchive,
   RecoResultsArchive,
   QaDataArchive
 };

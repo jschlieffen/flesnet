@@ -3,13 +3,18 @@
 #include "Application.hpp"
 #include "ManagedTimesliceBuffer.hpp"
 #include "StorableTimeslice.hpp"
+#include "StorableTimesliceDescriptor.hpp"
 #include "Timeslice.hpp"
+#include "TDescriptor.hpp"
 #include "TimesliceAnalyzer.hpp"
 #include "TimesliceAutoSource.hpp"
 #include "TimesliceDebugger.hpp"
 #include "TimesliceOutputArchive.hpp"
+#include "TimesliceDescriptorOutputArchive.hpp"
 #include "TimeslicePublisher.hpp"
 #include "Utility.hpp"
+#include <cstdint>
+#include <memory>
 #include <thread>
 #include <utility>
 
@@ -73,15 +78,27 @@ Application::Application(Parameters const& par,
         }
       }
       const auto file_path = uri.authority + uri.path;
-      if (items == SIZE_MAX && bytes == SIZE_MAX) {
-        sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
-            new fles::TimesliceOutputArchive(file_path, compression)));
-      } else {
-        sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
-            new fles::TimesliceOutputArchiveSequence(file_path, items, bytes,
-                                                     compression)));
+      if (par_.create_descriptor_ts()){
+        std::cout<<"test"<<std::endl;
+        if (items == SIZE_MAX && bytes == SIZE_MAX) {
+          sinks_descriptor.push_back(std::unique_ptr<fles::TimesliceDescriptorSink>(
+              new fles::TimesliceDescriptorOutputArchive(file_path, compression)));
+        } else {
+          sinks_descriptor.push_back(std::unique_ptr<fles::TimesliceDescriptorSink>(
+              new fles::TimesliceDescriptorOutputArchiveSequence(file_path, items, bytes,
+                                                                    compression)));
+        }
       }
-
+      else{
+        if (items == SIZE_MAX && bytes == SIZE_MAX) {
+          sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
+              new fles::TimesliceOutputArchive(file_path, compression)));
+        } else {
+          sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
+              new fles::TimesliceOutputArchiveSequence(file_path, items, bytes,
+                                                      compression)));
+        }
+      }
     } else if (uri.scheme == "tcp") {
       uint32_t hwm = 1;
       for (auto& [key, value] : uri.query_components) {
@@ -172,6 +189,70 @@ void Application::native_speed_delay(uint64_t ts_start_time) {
   }
 }
 
+/*
+Anleitung zum Bauen dieses Tools.
+Schritt 1: Definiere neue Klasse für Timeslice-Descriptoren kombiniert mit Microslice-Descriptoren
+Schritt 2: Baue ein neues Archive .dtsa Dateien für Timeslice-Descriptoren
+Schritt 3: Baue ein Tool, was .tsa Dateien in .dtsa Dateien umwandelt
+Schritt 4: Erweitere tsclient, sodass auch .dtsa Dateien eingelesen werden können.
+Schritt 5: Erweitere Tool aus Schritt 3, sodass .dtsa Dateien auch generiert werden können.
+Schritt 6: Erweitere Tool aus Schritt 3, sodass .dtsa Dateien auch in .dmsa Dateien umgewandelt werden können.
+*/
+/*
+void Application::create_microslices(uint8_t content_ptr, std::shared_ptr<fles::Timeslice> ts){
+  size_t data_size = 1;
+  long long acc_size = 0;
+  for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++) {
+    for (uint64_t msc = 0; msc < (ts->num_core_microslices()) + 1; msc++){ //overlap berücksichtigen
+      std::unique_ptr<fles::MicrosliceView> ms_ptr =
+        std::make_unique<fles::MicrosliceView>(
+            ts->get_microslice(tsc, msc));  //berücksichtige das dtsa datein keine microslices, sonder microslice descriptoren besitzen
+      std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_ptr, content_ptr); 
+      acc_size += data_size;
+      content_ptr += acc_size;
+      //microslice zu timeslice hinzufügen.
+    } 
+  }
+
+}
+*/
+fles::TDescriptor Application::create_descriptor_ts(std::shared_ptr<const fles::Timeslice> ts){
+  //define TDescriptor
+  //std::cout<<"test11"<<std::endl;
+  //fles::TimesliceDescriptor TSDesc = ts->get_desc();
+  uint64_t ts_index = ts->index();
+  uint64_t ts_pos = ts->tpos();
+  uint64_t ts_num_corems = ts->num_core_microslices();
+  //std::cout<<"test12"<<std::endl;
+  //fles::TDescriptor TD(TSDesc); //muss noch irgendwie den descriptor übernehmen 
+  fles::TDescriptor TD(ts_index,ts_pos,ts_num_corems);
+  //std::cout<<"test13"<<std::endl;
+  for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++){
+    //std::cout<<"test14"<<std::endl;
+    uint64_t num_ms = ts->num_microslices(tsc);
+    //std::cout<<"test15"<<std::endl;
+    TD.append_component(num_ms);
+    //std::cout<<"test16"<<std::endl;
+    //TD.addcomponent
+    std::cout<<"test2"<<std::endl;
+    std::cout<<(ts-> num_microslices(tsc))<<std::endl;
+    for (uint64_t msc = 0; msc < (ts-> num_microslices(tsc)); msc++){
+      //Add microslice
+      //do something
+      //std::cout<<"test17"<<std::endl;
+      fles::MicrosliceDescriptor ms_desc= ts->descriptor(tsc,msc);
+      std::cout<<"test1 "<<msc<<std::endl;
+      //std::cout<<"test18"<<std::endl;
+      TD.append_ms_desc(tsc, msc, ms_desc);
+      //std::cout<<"test19"<<std::endl;
+    }
+  }
+  //std::cout<<"test20"<<std::endl;
+  //return TDescriptor
+  return TD;
+
+}
+
 void Application::run() {
   time_begin_ = std::chrono::high_resolution_clock::now();
 
@@ -183,38 +264,92 @@ void Application::run() {
   uint64_t limit = par_.maximum_number();
 
   uint64_t index = 0;
-  while (auto timeslice = source_->get()) {
-    if (index >= par_.offset() &&
-        (index - par_.offset()) % par_.stride() == 0) {
-      ++index;
-    } else {
-      ++index;
-      continue;
+  if (false){
+    uint8_t* free_ptr = nullptr;
+    free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*1000000));
+    if (free_ptr == nullptr){
+        std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
+        throw std::bad_alloc();
     }
-    std::shared_ptr<const fles::Timeslice> ts;
-    if (par_.release_mode()) {
-      ts = std::make_shared<const fles::StorableTimeslice>(*timeslice);
+    for (size_t i = 0; i < 1000000; ++i) {
+      free_ptr[i] = static_cast<uint8_t>(rand());
+    }
+    while (auto timeslice = source_->get()) {
+      if (index >= par_.offset() &&
+          (index - par_.offset()) % par_.stride() == 0) {
+        ++index;
+      } else {
+        ++index;
+        continue;
+      }
+      std::shared_ptr<const fles::Timeslice> ts;
+      if (par_.release_mode()) {
+        ts = std::make_shared<const fles::StorableTimeslice>(*timeslice);
+        timeslice.reset();
+      } else {
+        ts = std::shared_ptr<const fles::Timeslice>(std::move(timeslice));
+      }
+      if (par_.native_speed() != 0.0) {
+        native_speed_delay(ts->start_time());
+      }
+      if (par_.rate_limit() != 0.0) {
+        rate_limit_delay();
+      }
+      for (auto& sink : sinks_) {
+        sink->put(ts);
+      }
+      ++count_;
+      if (count_ == limit || *signal_status_ != 0) {
+        break;
+      }
+      // avoid unneccessary pipelining
       timeslice.reset();
-    } else {
-      ts = std::shared_ptr<const fles::Timeslice>(std::move(timeslice));
     }
-    if (par_.native_speed() != 0.0) {
-      native_speed_delay(ts->start_time());
-    }
-    if (par_.rate_limit() != 0.0) {
-      rate_limit_delay();
-    }
-    for (auto& sink : sinks_) {
-      sink->put(ts);
-    }
-    ++count_;
-    if (count_ == limit || *signal_status_ != 0) {
-      break;
-    }
-    // avoid unneccessary pipelining
-    timeslice.reset();
   }
-
+  else{    
+    while (auto timeslice = source_->get()) {
+      if (index >= par_.offset() &&
+          (index - par_.offset()) % par_.stride() == 0) {
+        ++index;
+      } else {
+        ++index;
+        continue;
+      }
+      std::shared_ptr<const fles::Timeslice> ts;
+      if (par_.release_mode()) {
+        ts = std::make_shared<const fles::StorableTimeslice>(*timeslice);
+        timeslice.reset();
+      } else {
+        ts = std::shared_ptr<const fles::Timeslice>(std::move(timeslice));
+      }
+      if (par_.native_speed() != 0.0) {
+        native_speed_delay(ts->start_time());
+      }
+      if (par_.rate_limit() != 0.0) {
+        rate_limit_delay();
+      }
+      if (par_.create_descriptor_ts()){
+        //std::cout<<"test"<<std::endl;
+        std::shared_ptr<fles::TDescriptor> TD = std::make_shared<fles::TDescriptor>(create_descriptor_ts(ts));
+        //std::cout<<"test1"<<std::endl;
+        for (auto& sink : sinks_descriptor) {
+          sink->put(TD);
+        }
+        //std::cout<<"test2"<<std::endl;
+      }
+      else{
+        for (auto& sink : sinks_) {
+          sink->put(ts);
+        }
+      }
+      ++count_;
+      if (count_ == limit || *signal_status_ != 0) {
+        break;
+      }
+      // avoid unneccessary pipelining
+      timeslice.reset();
+    }
+  }
   // Loop over sinks. For all sinks of type ManagedTimesliceBuffer, check if
   // they are empty. If at least one of them is not empty, wait for 100 ms.
   // Repeat until all sinks are empty.
