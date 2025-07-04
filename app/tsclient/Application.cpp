@@ -9,6 +9,7 @@
 #include "TDescriptor.hpp"
 #include "TimesliceAnalyzer.hpp"
 #include "TimesliceAutoSource.hpp"
+#include "TimesliceDescriptorAutoSource.hpp"
 #include "TimesliceDebugger.hpp"
 #include "TimesliceOutputArchive.hpp"
 #include "TimesliceDescriptorOutputArchive.hpp"
@@ -31,7 +32,13 @@ Application::Application(Parameters const& par,
     output_prefix_ = std::to_string(par_.client_index()) + ": ";
   }
 
-  source_ = std::make_unique<fles::TimesliceAutoSource>(par_.input_uri());
+  if (par_.descriptor_source()){
+    source_descriptors = std::make_unique<fles::TimesliceDescriptorAutoSource>(par_.input_uri());
+  }
+  else{
+    source_ = std::make_unique<fles::TimesliceAutoSource>(par_.input_uri());  
+  }
+  
 
   if (par_.analyze()) {
     if (par_.histograms()) {
@@ -201,7 +208,7 @@ Schritt 6: Erweitere Tool aus Schritt 3, sodass .dtsa Dateien auch in .dmsa Date
 */
 
 //Remains: InputArchive für TDescriptoren erstellen, main iteration anpassen. Malloc Größe anpassen.
-void Application::create_microslices(uint8_t* content_ptr,uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts){
+std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t* content_ptr,uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts){
   size_t data_size = 1;
   long long acc_size = 0;
   uint64_t ts_index = ts->index();
@@ -212,11 +219,11 @@ void Application::create_microslices(uint8_t* content_ptr,uint8_t* original_ptr,
     uint64_t num_ms = ts->num_microslices(tsc);
     TSBuild.append_component(num_ms);
     for (uint64_t msc = 0; msc < (ts->num_core_microslices()) + 1; msc++){ //overlap berücksichtigen
-    /*
-      std::shared_ptr<fles::MicrosliceView> ms_ptr =
-        std::make_shared<fles::MicrosliceView>(
-            ts->descriptor(tsc, msc), content_ptr);  //berücksichtige das dtsa datein keine microslices, sonder microslice descriptoren besitzen
-    */
+
+      //std::shared_ptr<fles::MicrosliceView> ms_ptr =
+        //std::make_shared<fles::MicrosliceView>(
+          //  ts->descriptor(tsc, msc), content_ptr);  //berücksichtige das dtsa datein keine microslices, sonder microslice descriptoren besitzen
+    
       fles::MicrosliceDescriptor ms_desc = ts->descriptor(tsc, msc);  
       std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_desc, content_ptr);
       TSBuild.append_microslice(tsc,msc,*ms);
@@ -226,9 +233,14 @@ void Application::create_microslices(uint8_t* content_ptr,uint8_t* original_ptr,
         content_ptr = original_ptr;
         acc_size = 0;
       }
+      //foobar
       //microslice zu timeslice hinzufügen.
     } 
+    //return std::make_shared<fles::TimesliceBuilder>(std::move(TSBuild));
+
   }
+  auto timeslice = std::shared_ptr<fles::Timeslice>(std::make_shared<fles::TimesliceBuilder>(std::move(TSBuild))); 
+  return std::static_pointer_cast<fles::Timeslice>(timeslice);
 
 }
 
@@ -280,7 +292,7 @@ void Application::run() {
   uint64_t limit = par_.maximum_number();
 
   uint64_t index = 0;
-  if (false){
+  if (par_.descriptor_source()){
     uint8_t* free_ptr = nullptr;
     free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*1000000));
     if (free_ptr == nullptr){
@@ -290,7 +302,8 @@ void Application::run() {
     for (size_t i = 0; i < 1000000; ++i) {
       free_ptr[i] = static_cast<uint8_t>(rand());
     }
-    while (auto timeslice = source_->get()) {
+    uint8_t* content_ptr = free_ptr;
+    while (auto TDesc = source_descriptors->get()) {
       if (index >= par_.offset() &&
           (index - par_.offset()) % par_.stride() == 0) {
         ++index;
@@ -298,6 +311,7 @@ void Application::run() {
         ++index;
         continue;
       }
+      std::shared_ptr<const fles::Timeslice> timeslice = (create_microslices(content_ptr, free_ptr, std::move(TDesc)));
       std::shared_ptr<const fles::Timeslice> ts;
       if (par_.release_mode()) {
         ts = std::make_shared<const fles::StorableTimeslice>(*timeslice);

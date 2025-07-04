@@ -91,6 +91,9 @@ void Parameters::parse_options(int argc, char* argv[]) {
            "copy and release each timeslice immediately after receiving it");
   desc_add("create-descriptor-ts,C",
           po::value<bool>(&create_descriptor_ts_)->implicit_value(false));
+        
+  desc_add("descriptor-source,D",
+            po::value<bool>(&descriptor_source_)->implicit_value(false));
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);

@@ -11,6 +11,8 @@
 #include<iostream>
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/vector.hpp>
+#include <cstdint>
+#include <memory>
 
 
 namespace fles{
@@ -20,6 +22,10 @@ class TDescriptor {
 public:
 
   TDescriptor() = default;
+  
+  //TDescriptor(const TDescriptor& ts);
+
+  //void operator=(const TDescriptor&) = delete;
 /*
   TDescriptor(TimesliceDescriptor TSDesc){
     std::cout<<"test21"<<std::endl;
@@ -29,6 +35,10 @@ public:
     std::cout<<"test23"<<std::endl;
   }
 */
+  //TDescriptor(TDescriptor&& ts) noexcept;
+  
+  //TDescriptor(std::unique_ptr<TDescriptor>&&);
+  
   TDescriptor(uint32_t num_core_microslices,
               uint64_t index = UINT64_MAX,
               uint64_t ts_pos = UINT64_MAX){
@@ -140,7 +150,7 @@ public:
 
 protected:
 
-
+  //TDescriptor() = default;
   //friend class StorableTimeslice;
   //friend class ::ManagedTimesliceBuffer;
 
