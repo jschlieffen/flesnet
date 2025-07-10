@@ -15,6 +15,7 @@
 #include "TimesliceDescriptorOutputArchive.hpp"
 #include "TimeslicePublisher.hpp"
 #include "Utility.hpp"
+#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <thread>
@@ -208,9 +209,17 @@ Schritt 6: Erweitere Tool aus Schritt 3, sodass .dtsa Dateien auch in .dmsa Date
 */
 
 //Remains: InputArchive für TDescriptoren erstellen, main iteration anpassen. Malloc Größe anpassen.
-std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t* content_ptr,uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts){
+/* TODO: Die Lauzeit von dieser Funktion ist recht schlecht. Das liegt daran,
+ dass Timeslices die Daten nochmal abspeichern. Ich muss also eine Klasse erzeugen,
+ welche lediglich den Pointer abspeichert und nicht die Daten selber und erst bei der 
+ put Funktion die Daten ausliest und abspeichert.
+
+*/
+
+std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t*& content_ptr,uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts,
+std::chrono::time_point<std::chrono::steady_clock>& lastTrigger, uint64_t& total_data, long long& acc_size){
   size_t data_size = 1;
-  long long acc_size = 0;
+
   uint64_t ts_index = ts->index();
   uint64_t ts_pos = ts->tpos(); //noch hinzufügen
   uint64_t ts_num_corems = ts->num_core_microslices();
@@ -223,16 +232,40 @@ std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t* conten
       //std::shared_ptr<fles::MicrosliceView> ms_ptr =
         //std::make_shared<fles::MicrosliceView>(
           //  ts->descriptor(tsc, msc), content_ptr);  //berücksichtige das dtsa datein keine microslices, sonder microslice descriptoren besitzen
-    
       fles::MicrosliceDescriptor ms_desc = ts->descriptor(tsc, msc);  
-      std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_desc, content_ptr);
-      TSBuild.append_microslice(tsc,msc,*ms);
-      acc_size += data_size;
-      content_ptr += acc_size;
-      if (acc_size > 1000000){
+      data_size = ms_desc.size;
+      //std::cout<<data_size<<std::endl;
+      //std::cout<<acc_size+data_size<<std::endl;
+      if (acc_size+data_size >= 1000000000){
+        //std::cout<<"test1233"<<std::endl;
         content_ptr = original_ptr;
         acc_size = 0;
       }
+
+      std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_desc, content_ptr);
+      TSBuild.append_microslice(tsc,msc,*ms);
+      acc_size += data_size;
+      //acc_size += 10000;
+      content_ptr += data_size;
+      //std::cout<<"test1"<<std::endl;
+      //std::cout<<acc_size<<std::endl;
+
+      auto now = std::chrono::steady_clock::now();
+      auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastTrigger);
+      if (elapsed.count() >= 1) {
+            // One second (or more) has passed
+            total_data += data_size;
+             double gb = static_cast<double>(total_data) / (1024 * 1024 * 1024);
+            std::cout << std::fixed << std::setprecision(2);
+            std::cout << "Data in GB/s: "<<gb <<std::endl;
+            // Update last trigger time
+            total_data = 0;
+            lastTrigger = now;
+        } 
+      else{
+        total_data += data_size;
+      }
+
       //foobar
       //microslice zu timeslice hinzufügen.
     } 
@@ -272,6 +305,7 @@ fles::TDescriptor Application::create_descriptor_ts(std::shared_ptr<const fles::
       //std::cout<<"test1 "<<msc<<std::endl;
       //std::cout<<"test18"<<std::endl;
       TD.append_ms_desc(tsc, msc, ms_desc);
+      
       //std::cout<<"test19"<<std::endl;
     }
   }
@@ -294,16 +328,21 @@ void Application::run() {
   uint64_t index = 0;
   if (par_.descriptor_source()){
     uint8_t* free_ptr = nullptr;
-    free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*1000000));
+    free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*1000000000));
     if (free_ptr == nullptr){
         std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
         throw std::bad_alloc();
     }
-    for (size_t i = 0; i < 1000000; ++i) {
+    for (size_t i = 0; i < 1000000000; ++i) {
       free_ptr[i] = static_cast<uint8_t>(rand());
     }
+    long long acc_size;
+    std::cout<<"test"<<std::endl;
     uint8_t* content_ptr = free_ptr;
+    auto lastTrigger = std::chrono::steady_clock::now();
+    uint64_t total_data = 0;
     while (auto TDesc = source_descriptors->get()) {
+      auto t1_big = std::chrono::steady_clock::now(); 
       if (index >= par_.offset() &&
           (index - par_.offset()) % par_.stride() == 0) {
         ++index;
@@ -311,7 +350,11 @@ void Application::run() {
         ++index;
         continue;
       }
-      std::shared_ptr<const fles::Timeslice> timeslice = (create_microslices(content_ptr, free_ptr, std::move(TDesc)));
+      auto t1 = std::chrono::steady_clock::now(); 
+      std::shared_ptr<const fles::Timeslice> timeslice = (create_microslices(content_ptr, free_ptr, std::move(TDesc), lastTrigger, total_data, acc_size));
+      auto t2 = std::chrono::steady_clock::now();
+      auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
+      //std::cout<<duration_us<<std::endl;
       std::shared_ptr<const fles::Timeslice> ts;
       if (par_.release_mode()) {
         ts = std::make_shared<const fles::StorableTimeslice>(*timeslice);
@@ -328,12 +371,16 @@ void Application::run() {
       for (auto& sink : sinks_) {
         sink->put(ts);
       }
+
       ++count_;
       if (count_ == limit || *signal_status_ != 0) {
         break;
       }
       // avoid unneccessary pipelining
       timeslice.reset();
+      auto t2_big = std::chrono::steady_clock::now(); 
+      auto duration_us_big = std::chrono::duration_cast<std::chrono::microseconds>(t2_big - t1_big).count();
+      //std::cout<<"whole loop "<<duration_us_big<<std::endl;
     }
   }
   else{    
