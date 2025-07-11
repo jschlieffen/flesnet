@@ -1,9 +1,11 @@
 
 #include "Application.hpp"
 #include "ManagedTimesliceBuffer.hpp"
+#include "MicrosliceDescriptor.hpp"
 #include "StorableTimeslice.hpp"
 #include "StorableTimesliceDescriptor.hpp"
 #include "TimesliceBuilder.hpp"
+#include "MicrosliceDescribtorOutputArchive.hpp"
 #include "Timeslice.hpp"
 #include "TDescriptor.hpp"
 #include "TimesliceAnalyzer.hpp"
@@ -35,7 +37,10 @@ Application::Application(Parameters const& par) : par_(par){
             throw std::ios_base::failure ("Folder do not exists. Use parameter create Folders to create them.");
         }
     }
-    if (!par_.input_archives().empty()){
+    if (par_.dtsa2dmsa()){
+            source_descriptors = std::make_unique<fles::TimesliceDescriptorAutoSource>(par_.input_archives());
+    }
+    else if (!par_.input_archives().empty()){
         for (auto input_archive : par_.input_archives()){
             sources_.push_back(std::make_shared<fles::TimesliceAutoSource>(input_archive));  
             output_string = std::filesystem::path(input_archive).filename().string();
@@ -132,8 +137,91 @@ fles::TDescriptor Application::create_new_descriptor_ts(uint64_t ts_index, uint6
   return TD;
 }
 
+
+std::string compute_common_prefix(const std::vector<std::string>& strings) {
+  std::string prefix; // default constructor initializes to empty string
+  if (strings.size() == 0) {
+    // If there are no strings, return an empty string
+    return prefix;
+  }
+
+  // Initialize the prefix to the first string
+  prefix = strings[0];
+
+  // Iterate through the strings and truncate the prefix as needed
+  for (const auto& input : strings) {
+
+    // If the prefix is empty, there is no common prefix and we can stop
+    if (prefix.size() == 0) {
+      break;
+    }
+
+    if (input.size() < prefix.size()) {
+      // If the input is shorter than the prefix, truncate the prefix
+      // to the length of the input
+      prefix = prefix.substr(0, input.size());
+    }
+
+    // Compare the prefix and the input, and truncate the prefix as
+    // needed
+    for (unsigned i = 0; i < prefix.size(); ++i) {
+      if (prefix[i] != input[i]) {
+        prefix = prefix.substr(0, i);
+        break;
+      }
+    }
+  }
+
+  return prefix;
+}
+
+std::string Application::constructArchiveName(const fles::Subsystem& sys_id,
+                                              const uint16_t& eq_id) {
+
+  // TODO: Do not construct the archive name for every microslice,
+  // but do some caching instead.
+  std::string prefix = compute_common_prefix(par_.input_archives());
+
+  if (prefix.size() == 0) {
+    std::cerr << "Error: Prefix is empty, should not happen."
+              << " Setting arbitrary prefix." << std::endl;
+    prefix = "empty_prefix";
+  }
+  std::string sys_id_string = fles::to_string(sys_id);
+  // eq_id is a uint16_t, and most likely typedefed to some
+  // primitive integer type, so likely implicit conversion to
+  // that integer type is safe. However, the fixed width
+  // integer types are implementation defined, so the correct
+  // way to do this likely involves using the PRIu16 format
+  // macro.
+  std::string eq_id_string = std::to_string(eq_id);
+  std::string msa_archive_name = prefix + "_" + sys_id_string + "_" +
+                                 eq_id_string + ".dmsa";
+  if (msaFiles.find(msa_archive_name) == msaFiles.end()) {
+    std::unique_ptr<fles::Sink<fles::MicrosliceDescriptor>> msaFile;
+    msaFile = std::make_unique<fles::MicrosliceDescriptorOutputArchive>(msa_archive_name);
+    msaFiles[msa_archive_name] = std::move(msaFile);
+  }
+  return msa_archive_name;
+}
+
+void Application::dtsa2dmsa_writer(std::shared_ptr<fles::TDescriptor> TD){
+
+    for (uint64_t tsc = 0; tsc < TD->num_components(); tsc++){
+        for (uint64_t msc = 0; msc < TD->num_core_microslices(); msc++){
+            fles::MicrosliceDescriptor msd= TD->descriptor(tsc,msc);
+            const uint16_t& eq_id = msd.eq_id;
+            const fles::Subsystem& sys_id = static_cast<fles::Subsystem>(msd.sys_id);
+            std::string msa_archive_name = constructArchiveName(sys_id, eq_id);
+            msaFiles[msa_archive_name]->put(std::make_shared<fles::MicrosliceDescriptor>(msd));
+        }
+    }
+
+}
+
 void Application::run() {
     uint64_t limit = par_.maximum_number();
+
 
     if (par_.create_dtsa()){
         int i = 0;
@@ -147,7 +235,16 @@ void Application::run() {
         };
         std::cout<<"test12"<<std::endl;
 
-    }else{
+    }
+    if (par_.dtsa2dmsa()){
+        std::cout<<"test123"<<std::endl;
+        while(auto TD = source_descriptors->get()){
+            std::shared_ptr<fles::TDescriptor> TD_S = (std::move(TD));
+            dtsa2dmsa_writer(TD_S);
+            ++count_;
+        }
+    }
+    else{
         uint64_t index = 0;   
         for (auto source : sources_){
             auto sink = sinks_[index];

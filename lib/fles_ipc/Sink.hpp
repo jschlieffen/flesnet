@@ -24,6 +24,7 @@ public:
 };
 
 class Microslice;
+class MicrosliceDescriptor;
 class Timeslice;
 class TDescriptor;
 /**
@@ -32,6 +33,8 @@ class TDescriptor;
  */
 using MicrosliceSink = Sink<Microslice>;
 
+
+using MicrosliceDescriptorSink = Sink<MicrosliceDescriptor>;
 /**
  * \brief The TimesliceSink base class implements the generic
  * timeslice-based output interface.
