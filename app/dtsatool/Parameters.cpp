@@ -18,11 +18,14 @@ void Parameters::parse_options(int argc, char* argv[]){
     //TODO: desc string anpassen
     desc_sstr << std::endl
         << "Usage:"<<std::endl
-        << "\t msa2dmsa -i input1.msa [input2.msa] -o output_folder"<<std::endl <<std::endl
-        << "This program reads the given msa files and write the descriptors into a seperat file" <<std::endl
-        << "It can also create dmsa files without an input ms-Archive. For this execute:"<<std::endl<<std::endl
-        << "\t msa2dmsa -d 1 -O output.dmsa"<<std::endl<<std::endl
-        << "This line will create an dmsa file for 10000 ms with size 1 MB";
+        << "\t dtsatool -i input1.tsa [input2.tsa] -o output_folder"<<std::endl <<std::endl
+        << "This program reads the given tsa files and write the descriptors timeslices, timeslicecomponents and microslices"
+        << " into a seperat file" <<std::endl
+        << "It can also create dtsa files without an input ms-Archive. For this execute:"<<std::endl<<std::endl
+        << "\t dtsatool -d 1 -O output.dtsa"<<std::endl<<std::endl
+        << "This line will create an dtsa file for 10000 ts and timeslice-size 100 where each microslice has the size of 1MB"<<std::endl
+        << "Furthermore the program can transform .dtsa files in .dmsa files. For this execute:"<<std::endl<<std::endl
+        << "\t dtsatool -D 1 -i input.dtsa";
     po::options_description general("General options");
     auto general_add = general.add_options();
     general_add("version,V","print version string");
@@ -53,7 +56,7 @@ void Parameters::parse_options(int argc, char* argv[]){
             "enable/ disable if a dtsa should be transformed into a a dmsa");
     sink_add("components,C", po::value<uint64_t>(&components_)
                                                 ->implicit_value(components_),
-            "vector for the components of a timeslice. Microslices are distrubted randomly");
+            "vector for the components of a timeslice. Microslices are distributed randomly");
     sink_add("timeslice-size,N", po::value<int>(&timeslice_size_)
                                                 ->implicit_value(timeslice_size_),
             "Size of the timeslices");

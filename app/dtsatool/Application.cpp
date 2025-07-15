@@ -28,7 +28,6 @@ Application::Application(Parameters const& par) : par_(par){
 
     std::vector<std::string> output_archives;
     std::string output_string;
-    std::cout<<"test"<<std::endl;
     if (!dirExists(par_.output_folder().c_str()) && par_.output_folder() != ""){
         if(par_.create_folder()){
             std::filesystem::create_directories(par_.output_folder());
@@ -63,10 +62,6 @@ Application::Application(Parameters const& par) : par_(par){
         
         }
     }
-    //TODO: PatternGen einbinden. Leider nicht so leicht da timeslices groß werden können.
-  
-
-
     if (!output_archives.empty()){
         for (auto output_archive : output_archives){
             sinks_.push_back(std::shared_ptr<fles::TimesliceDescriptorSink>(
@@ -115,7 +110,6 @@ fles::TDescriptor Application::create_descriptor_ts(std::shared_ptr<const fles::
 
 fles::TDescriptor Application::create_new_descriptor_ts(uint64_t ts_index, uint64_t ts_pos, 
                                                         uint64_t ts_num_corems, int i){
-  //std::cout<<"et"<<std::endl;
   fles::TDescriptor TD(ts_num_corems, ts_index,ts_pos);
   std::vector component_sizes(par_.components(), par_.timeslice_size()/par_.components());
   uint64_t remainder = par_.timeslice_size() % par_.components();
@@ -177,9 +171,6 @@ std::string compute_common_prefix(const std::vector<std::string>& strings) {
 
 std::string Application::constructArchiveName(const fles::Subsystem& sys_id,
                                               const uint16_t& eq_id) {
-
-  // TODO: Do not construct the archive name for every microslice,
-  // but do some caching instead.
   std::string prefix = compute_common_prefix(par_.input_archives());
 
   if (prefix.size() == 0) {

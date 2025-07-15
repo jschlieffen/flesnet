@@ -52,7 +52,7 @@ private:
     std::string output_archive_;
     bool create_folder_ = 0;
     bool create_dtsa_ = 0;
-    bool dtsa2dmsa_ = 0; //weiss nicht ob ich das so drinne lasse 
+    bool dtsa2dmsa_ = 0; 
     uint64_t components_ = 1;
     int timeslice_size_ = 100;
     unsigned long num_ts_ = 10000;
