@@ -111,8 +111,10 @@ void Application::run() {
   uint64_t last_index = 0;
   uint8_t* free_ptr = nullptr;
   long long acc_size = 0; 
+  std::vector<std::shared_ptr<const fles::Microslice>> test_vec;
   if (par_.descriptor_source){
     free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size));
+
 
     if (free_ptr == nullptr){
       std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
@@ -121,6 +123,7 @@ void Application::run() {
     for (size_t i = 0; i < par_.malloc_size; ++i) {
       free_ptr[i] = static_cast<uint8_t>(rand());
     }
+      std::cout<<free_ptr <<std::endl;
     while (auto microslicedescriptor = source_descriptors->get()) {
       std::shared_ptr<const fles::MicrosliceDescriptor> ms_desc(std::move(microslicedescriptor));
       current_index = ms_desc->idx;
@@ -135,28 +138,27 @@ void Application::run() {
         current_time = to_uint64_t(current_time_long.count());
       }
       */
-      for (auto& sink : sinks_) {
-        fles::MicrosliceDescriptor desc_ = *ms_desc.get();
+      fles::MicrosliceDescriptor desc_ = *ms_desc.get();
 
-	      long data_size = desc_.size;
-        if (par_.malloc_size<=desc_.size){
-          throw std::invalid_argument("malloc call is smaller than size of ms");
-        }        
-        if (acc_size + data_size >= par_.malloc_size) {
-          acc_size = 0;
-	      }
+      long data_size = desc_.size;
+      if (par_.malloc_size<=desc_.size){
+        throw std::invalid_argument("malloc call is smaller than size of ms");
+      }        
+      if (acc_size + data_size >= par_.malloc_size) {
+        acc_size = 0;
+      }
 
-	      uint8_t* content_ptr = free_ptr + acc_size;
+      uint8_t* content_ptr = free_ptr + acc_size;
 
 
-        std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(desc_, content_ptr); 
-        sink->put(ms);
-        if (par_.jump_val == -1){
-          acc_size += data_size;
-        }
-        else{
-          acc_size += par_.jump_val;
-        }
+      std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(desc_, content_ptr); 
+
+      test_vec.push_back(ms);
+      if (par_.jump_val == -1){
+        acc_size += data_size;
+      }
+      else{
+        acc_size += par_.jump_val;
       }
       
       ++count_;
@@ -164,6 +166,11 @@ void Application::run() {
         break;
       }
       
+    }
+    for (std::shared_ptr<const fles::Microslice> ms : test_vec){
+      for (auto& sink : sinks_) {
+        sink->put(ms);
+      }
     }
     for (auto& sink : sinks_) {
       sink->end_stream();
