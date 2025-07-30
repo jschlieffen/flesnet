@@ -4,10 +4,7 @@
 #pragma once
 
 #include "ArchiveDescriptor.hpp"
-#include "MicrosliceDescriptor.hpp"
-#include "Microslice.hpp"
 #include "Source.hpp"
-#include "StorableMicrosliceDescriptor.hpp"
 #include <boost/archive/binary_iarchive.hpp>
 #include <type_traits>
 #ifdef BOOST_IOS_HAS_ZSTD
@@ -17,7 +14,6 @@
 #include <fstream>
 #include <memory>
 #include <string>
-#include <iostream>
 
 namespace fles {
 
