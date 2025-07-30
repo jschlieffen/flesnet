@@ -224,11 +224,8 @@ void Application::run() {
             sink->put(std::make_shared<fles::TDescriptor> (TD));
             ++count_;
         };
-        std::cout<<"test12"<<std::endl;
-
     }
     if (par_.dtsa2dmsa()){
-        std::cout<<"test123"<<std::endl;
         while(auto TD = source_descriptors->get()){
             std::shared_ptr<fles::TDescriptor> TD_S = (std::move(TD));
             dtsa2dmsa_writer(TD_S);
@@ -242,10 +239,7 @@ void Application::run() {
             L_(info) << "current file: "<<par_.input_archives()[index];
             while (auto ts = source->get()) {
                 std::shared_ptr<fles::TDescriptor> TD = std::make_shared<fles::TDescriptor>(create_descriptor_ts(std::move(ts)));
-
                 sink->put(TD);
-
-                //std::cout<<"test2"<<std::endl;
                 ++count_;
                 
                 if (count_ == limit) {

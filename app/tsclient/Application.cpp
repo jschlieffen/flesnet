@@ -213,7 +213,9 @@ Schritt 6: Erweitere Tool aus Schritt 3, sodass .dtsa Dateien auch in .dmsa Date
  dass Timeslices die Daten nochmal abspeichern. Ich muss also eine Klasse erzeugen,
  welche lediglich den Pointer abspeichert und nicht die Daten selber und erst bei der 
  put Funktion die Daten ausliest und abspeichert.
-
+ Die TDescriptoren dürfen nicht in einen Timeslice umgewandelt werden, da ansonsten es zu kompliziert
+ den Pointer auszulesen. Stattdessen lieber eine neue Klasse definieren, welche shared_ptr von Microslices 
+ einliest. Darüber kann man dann die Microslices leichter einzelnen behandeln.
 */
 
 std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t*& content_ptr,uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts,
@@ -326,7 +328,9 @@ void Application::run() {
   uint64_t limit = par_.maximum_number();
 
   uint64_t index = 0;
+  
   if (par_.descriptor_source()){
+    std::vector<std::shared_ptr<const fles::Timeslice>> test_vec;
     uint8_t* free_ptr = nullptr;
     free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*1000000000));
     if (free_ptr == nullptr){
@@ -368,10 +372,10 @@ void Application::run() {
       if (par_.rate_limit() != 0.0) {
         rate_limit_delay();
       }
-      for (auto& sink : sinks_) {
-        sink->put(ts);
-      }
-
+      //for (auto& sink : sinks_) {
+        //sink->put(ts);
+      //}
+      test_vec.push_back(ts);
       ++count_;
       if (count_ == limit || *signal_status_ != 0) {
         break;
@@ -381,6 +385,12 @@ void Application::run() {
       auto t2_big = std::chrono::steady_clock::now(); 
       auto duration_us_big = std::chrono::duration_cast<std::chrono::microseconds>(t2_big - t1_big).count();
       //std::cout<<"whole loop "<<duration_us_big<<std::endl;
+    }
+    for (std::shared_ptr<const fles::Timeslice> ts : test_vec){
+      for (auto& sink : sinks_){
+        sink->put(ts);
+      }
+      ts.reset();
     }
   }
   else{    

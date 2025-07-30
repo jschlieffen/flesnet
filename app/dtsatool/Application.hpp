@@ -20,7 +20,7 @@ private:
 
   std::vector<std::shared_ptr<fles::TimesliceSource>> sources_;
   std::vector<std::shared_ptr<fles::MicrosliceDescriptor>>generated_descriptors;
-    std::unique_ptr<fles::TimesliceDescriptorSource> source_descriptors;
+  std::unique_ptr<fles::TimesliceDescriptorSource> source_descriptors;
   std::vector<std::shared_ptr<fles::TimesliceDescriptorSink>> sinks_;
   std::shared_ptr<fles::TimesliceDescriptorSink> sink;
 

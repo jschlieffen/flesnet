@@ -57,5 +57,5 @@ private:
   void native_speed_delay(uint64_t ts_start_time);
   std::shared_ptr<fles::Timeslice> create_microslices(uint8_t*& content_ptr, uint8_t* original_ptr,std::shared_ptr<fles::TDescriptor> ts,std::chrono::time_point<std::chrono::steady_clock>& lastTrigger, uint64_t& total_data, long long& acc_size);
   fles::TDescriptor create_descriptor_ts(std::shared_ptr<const fles::Timeslice> ts);
-  fles::TDescriptor create_new_descriptor_ts(uint64_t ts_index, uint64_t ts_pos,uint64_t ts_num_corems, int i);
+
 };
