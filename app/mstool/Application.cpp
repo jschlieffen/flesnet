@@ -5,7 +5,6 @@
 #include "MicrosliceAnalyzer.hpp"
 #include "MicrosliceInputArchive.hpp"
 #include "MicrosliceOutputArchive.hpp"
-#include "MicrosliceDescriptorInputArchive.hpp"
 #include "MicrosliceReceiver.hpp"
 #include "MicrosliceTransmitter.hpp"
 #include "TimesliceDebugger.hpp"
