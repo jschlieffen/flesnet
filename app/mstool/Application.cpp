@@ -7,6 +7,7 @@
 #include "MicrosliceAnalyzer.hpp"
 #include "MicrosliceInputArchive.hpp"
 #include "MicrosliceOutputArchive.hpp"
+#include "MicrosliceDescriptorInputArchive.hpp"
 #include "MicrosliceReceiver.hpp"
 #include "Sink.hpp"                    // MicrosliceSink
 #include "MicrosliceTransmitter.hpp"
@@ -23,6 +24,7 @@
 #include <stdexcept>
 #include <thread>
 #include <utility>
+#include <stdint.h
 
 
 Application::Application(Parameters const& par) : par_(par) {
