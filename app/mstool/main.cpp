@@ -4,14 +4,7 @@
 #include "ChildProcessManager.hpp"
 #include "Parameters.hpp"
 #include "log.hpp"
-#include <boost/algorithm/string/classification.hpp>
-#include <boost/algorithm/string/constants.hpp>
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/algorithm/string/split.hpp>
-#include <cassert>
-#include <cstdlib>
-#include <exception>
-#include <string>
+#include <boost/algorithm/string.hpp>
 
 void start_exec(const std::string& executable,
                 const std::string& shared_memory_identifier) {

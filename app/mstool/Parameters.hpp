@@ -24,17 +24,13 @@ struct Parameters {
   // source selection
   uint32_t pattern_generator = 0;
   bool use_pattern_generator = false;
-  uint32_t content_size = 10000;
   size_t channel_idx = 0;
   std::string input_shm;
   std::string input_archive;
-  bool descriptor_source = 0;
 
   // sink selection
   bool analyze = false;
   size_t dump_verbosity = 0;
   std::string output_shm;
   std::string output_archive;
-  long long malloc_size = 1000000000;
-  long jump_val = -1;
 };
