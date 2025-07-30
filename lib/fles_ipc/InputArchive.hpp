@@ -6,7 +6,6 @@
 #include "ArchiveDescriptor.hpp"
 #include "Source.hpp"
 #include <boost/archive/binary_iarchive.hpp>
-#include <type_traits>
 #ifdef BOOST_IOS_HAS_ZSTD
   #include <boost/iostreams/filter/zstd.hpp>
 #endif
@@ -39,6 +38,7 @@ public:
     iarchive_ = std::make_unique<boost::archive::binary_iarchive>(*ifstream_);
 
     *iarchive_ >> descriptor_;
+
     if (descriptor_.archive_type() != archive_type) {
       throw std::runtime_error("File \"" + filename +
                                "\" is not of correct archive type");
@@ -89,6 +89,7 @@ private:
     if (eos_) {
       return nullptr;
     }
+
     Storable* sts = nullptr;
     try {
       sts = new Storable(); // NOLINT
