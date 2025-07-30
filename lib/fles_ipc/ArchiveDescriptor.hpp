@@ -26,7 +26,7 @@ constexpr const char* ArchiveTypeToString(ArchiveType e) noexcept
     switch (e) {
     case ArchiveType::TimesliceArchive: return "TimesliceArchive";
     case ArchiveType::MicrosliceArchive: return "MicrosliceArchive";
-    case ArchiveType::MicrosliceDescriptorArchive return "MicrosliceDescriptorArchive";
+    case ArchiveType::MicrosliceDescriptorArchive: return "MicrosliceDescriptorArchive";
     case ArchiveType::RecoResultsArchive: return "RecoResultsArchive";
     case ArchiveType::QaDataArchive: return "QaDataArchive";
     default: return "unknown archive type";
