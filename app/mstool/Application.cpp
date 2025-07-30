@@ -24,7 +24,7 @@
 #include <stdexcept>
 #include <thread>
 #include <utility>
-#include <stdint.h
+#include <stdint.h>
 
 
 Application::Application(Parameters const& par) : par_(par) {
