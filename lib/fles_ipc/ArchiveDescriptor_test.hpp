@@ -8,6 +8,8 @@
 #include <boost/serialization/version.hpp>
 #include <chrono>
 #include <string>
+#include <iostream>
+#include <type_traits>
 
 namespace fles {
 
@@ -15,6 +17,7 @@ namespace fles {
 enum class ArchiveType {
   TimesliceArchive,
   MicrosliceArchive,
+  MicrosliceDescriptorArchive,
   RecoResultsArchive,
   QaDataArchive
 };
@@ -24,6 +27,7 @@ enum class ArchiveCompression { None, Zstd };
 
 template <class Base, class Derived, ArchiveType archive_type>
 class InputArchive;
+
 
 /**
  * \brief The ArchiveDescriptor class contains metadata on an archive.
@@ -82,6 +86,7 @@ private:
   void serialize(Archive& ar, const unsigned int version) {
     if (version > 0) {
       ar& archive_type_;
+
     } else {
       archive_type_ = ArchiveType::TimesliceArchive;
     };
