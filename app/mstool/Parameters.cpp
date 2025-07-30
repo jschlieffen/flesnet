@@ -48,12 +48,17 @@ void Parameters::parse_options(int argc, char* argv[]) {
   auto source_add = source.add_options();
   source_add("pattern-generator,p", po::value<uint32_t>(&pattern_generator),
              "use pattern generator to produce timeslices");
+  source_add("conten-size,s",po::value<uint32_t>(&content_size),
+            "defines the average content size.\n"
+            "Usage only if you want to create a ms-Archive.");
   source_add("channel,c", po::value<size_t>(&channel_idx),
              "use given channel/component index for source/sink");
   source_add("input-shm,I", po::value<std::string>(&input_shm),
              "name of a shared memory to use as data source");
   source_add("input-archive,i", po::value<std::string>(&input_archive),
              "name of an input file archive to read");
+  source_add("descriptor_source,D",po::value<bool>(&descriptor_source),
+            "defines if an .dmsa file is used as an input or not");
 
   po::options_description sink("Sink options");
   auto sink_add = sink.add_options();
@@ -65,6 +70,17 @@ void Parameters::parse_options(int argc, char* argv[]) {
            "name of a shared memory to write to");
   sink_add("output-archive,o", po::value<std::string>(&output_archive),
            "name of an output file archive to write");
+  sink_add("malloc_size,m" , 
+        po::value<long long>(&malloc_size)
+          ->default_value(malloc_size),
+        "set the approximated size of the call for malloc. Default value is 1GB.\n"
+        "Caution: If the value is larger than the free memory, the program will fail. If the value is smaller "
+        "then the biggest microslice the program will also fail. Thus this parameter has to be choosen carefully");
+  sink_add("jump_size,j" ,
+            po::value<long>( &jump_val)
+            ->default_value(jump_val),
+            "sets the value how much forward in the malloc call the program should go. \n"
+                        "To set the pointer after the data size, this param needs to be set to -1");
 
   po::options_description desc;
   desc.add(general).add(source).add(sink);

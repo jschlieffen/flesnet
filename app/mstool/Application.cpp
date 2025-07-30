@@ -8,6 +8,7 @@
 #include "MicrosliceInputArchive.hpp"
 #include "MicrosliceOutputArchive.hpp"
 #include "MicrosliceDescriptorInputArchive.hpp"
+#include "MicrosliceDescribtorOutputArchive.hpp"
 #include "MicrosliceReceiver.hpp"
 #include "Sink.hpp"                    // MicrosliceSink
 #include "MicrosliceTransmitter.hpp"
