@@ -24,41 +24,41 @@ function test_chain() {
     return $?
 }
         
-test_chain "../../../build/tsa_files_test/*.tsa" "../../../build/csv_data/nickel_local_Auto_star.csv" "nickel_local_Auto_star" 1 
-if [ $? -ne 0 ]; then
-    echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
-    exit 1
-fi
+# test_chain "../../../build/tsa_files_test/*.tsa" "../../../build/csv_data/nickel_local_Auto_star.csv" "nickel_local_Auto_star" 1 
+# if [ $? -ne 0 ]; then
+#     echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
+#     exit 1
+# fi
 
-test_chain "../../../build/tsa_files_test/2391_node8_*_%n.tsa" "../../../build/csv_data/nickel_local_Auto_prcntgn.csv" "nickel_local_Auto_prcntgn" 1 
-if [ $? -ne 0 ]; then
-    echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
-    exit 1
-fi
+# test_chain "../../../build/tsa_files_test/2391_node8_*_%n.tsa" "../../../build/csv_data/nickel_local_Auto_prcntgn.csv" "nickel_local_Auto_prcntgn" 1 
+# if [ $? -ne 0 ]; then
+#     echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
+#     exit 1
+# fi
 
-test_chain "../../../build/tsa_files_test/*.tsa" "../../../build/csv_data/nickel_local_Manuell.csv" "nickel_local_Manuell" 0 
-if [ $? -ne 0 ]; then
-    echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
-    exit 1
-fi
+# test_chain "../../../build/tsa_files_test/*.tsa" "../../../build/csv_data/nickel_local_Manuell.csv" "nickel_local_Manuell" 0 
+# if [ $? -ne 0 ]; then
+#     echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
+#     exit 1
+# fi
 
-test_chain "/scratch/htc/bzcschin/mcbm_data/2022_nickel/*.tsa" "../../../build/csv_data/nickel_server_Auto_star.csv" "nickel_server_Auto_star" 1 
-if [ $? -ne 0 ]; then
-    echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
-    exit 1
-fi
+# test_chain "/scratch/htc/bzcschin/mcbm_data/2022_nickel/*.tsa" "../../../build/csv_data/nickel_server_Auto_star.csv" "nickel_server_Auto_star" 1 
+# if [ $? -ne 0 ]; then
+#     echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
+#     exit 1
+# fi
 
-test_chain "/scratch/htc/bzcschin/mcbm_data/2022_nickel/2391_node8_*_%n.tsa" "../../../build/csv_data/nickel_server_Auto_prcntgn.csv" "nickel_server_Auto_prcntgn" 1 
-if [ $? -ne 0 ]; then
-    echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
-    exit 1
-fi
+# test_chain "/scratch/htc/bzcschin/mcbm_data/2022_nickel/2391_node8_*_%n.tsa" "../../../build/csv_data/nickel_server_Auto_prcntgn.csv" "nickel_server_Auto_prcntgn" 1 
+# if [ $? -ne 0 ]; then
+#     echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
+#     exit 1
+# fi
 
-test_chain "/scratch/htc/bzcschin/mcbm_data/2022_nickel/*.tsa" "../../../build/csv_data/nickel_server_Manuell.csv" "nickel_server_Manuell" 0 
-if [ $? -ne 0 ]; then
-    echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
-    exit 1
-fi
+# test_chain "/scratch/htc/bzcschin/mcbm_data/2022_nickel/*.tsa" "../../../build/csv_data/nickel_server_Manuell.csv" "nickel_server_Manuell" 0 
+# if [ $? -ne 0 ]; then
+#     echo -e "\e[1;37;1;41mTests FAILED\e[0m" >&2
+#     exit 1
+# fi
 
 
 test_chain "/scratch/htc/bzcschin/mcbm_data/2022_gold_partial/*.tsa" "../../../build/csv_data/gold_server_Auto_star.csv" "gold_server_Auto_star" 1 

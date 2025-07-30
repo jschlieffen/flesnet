@@ -8,6 +8,7 @@
 #include "TimesliceAutoSource.hpp"
 #include <boost/program_options/options_description.hpp>
 #include <chrono>
+#include <memory>
 #include <ratio>
 #include<thread>
 #include <tuple>
@@ -21,7 +22,7 @@
 #include "string.h"
 #include <ratio>
 #include "GitRevision.hpp"
-
+#include <malloc.h>
 #include <iostream>
 
 
@@ -114,34 +115,42 @@ std::vector<std::tuple<int,int>> memory_test_class::initAutoSource(const std::ve
   const auto t1 = std::chrono::high_resolution_clock::now();
 
   // reading of the timeslices with Timesliceautosource
-  fles::TimesliceAutoSource ts_source(inputs);
-  std::shared_ptr<fles::Timeslice> current_ts = ts_source.get();
+  std::unique_ptr<fles::TimesliceSource> ts_source = std::make_unique<fles::TimesliceAutoSource> (inputs);
+   //std::shared_ptr<const fles::Timeslice> current_ts = ts_source.get();
   std::shared_ptr<fles::Timeslice> next_ts = nullptr;
   
   // just a small check if the input has failed
-  if (current_ts == nullptr){
-    std::cout << "incorrect input" <<std::endl;
-  } 
+  //if (current_ts == nullptr){
+    //std::cout << "incorrect input" <<std::endl;
+  //} 
 
   // this array consist the processing time and the RAM-usage
   std::vector<std::tuple<int,int>> res;
-
+  std::cout<<"test2.1"<<std::endl;
+  std::unique_ptr<const fles::Timeslice> test_ts = ts_source->get();
+  std::cout<<"test2.2"<<std::endl;
   int memory_usage;
   // in this while-loop, the programm looks at every timeslice. After that the RAM-usage and the time is checked
   // and stored in the array res
-
-  while(next_ts != current_ts){
-
-    current_ts = next_ts;
-    next_ts = ts_source.get(); 
+  std::cout<<"test"<<std::endl;
+  while(auto next_ts = ts_source->get()){
+    std::cout<<"test1.1"<<std::endl;
+    std::shared_ptr<const fles::Timeslice> current_ts;
+    std::cout<<"test1.2"<<std::endl;
+    current_ts = (std::move(next_ts));
+    std::cout<<"test1.3"<<std::endl;
+    next_ts.reset();
+    std::cout<<"test1.4"<<std::endl;
     const auto t2 = std::chrono::high_resolution_clock::now();
     const auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
-    std::cout<<typeid(current_time).name() <<std::endl;
+    //std::cout<<typeid(current_time).name() <<std::endl;
     memory_usage = get_mem_usage()/1000;
+    std::cout << "current_ts.use_count() = " << current_ts.use_count() << std::endl;
 
     res.push_back(std::make_tuple(current_time.count(),memory_usage));
-
-  }
+    current_ts.reset();
+    malloc_trim(0);
+    }
 
   return res;
 };
@@ -175,8 +184,9 @@ std::vector<std::tuple<int,int>>  memory_test_class::initManuellSource(const std
   // in this while-loop, the programm looks at every timeslice. After that the RAM-usage and the time is checked
   // and stored in the array res
   while(next_ts != current_ts){
-
+    //current_ts.reset();
     current_ts = next_ts;
+    next_ts.reset();
     next_ts = ts_source.get(); 
     const auto t2 = std::chrono::high_resolution_clock::now();
     const auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1);
