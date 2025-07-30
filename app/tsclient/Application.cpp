@@ -3,21 +3,14 @@
 #include "Application.hpp"
 #include "ManagedTimesliceBuffer.hpp"
 #include "StorableTimeslice.hpp"
-#include "StorableTimesliceDescriptor.hpp"
 #include "TimesliceBuilder.hpp"
 #include "Timeslice.hpp"
-#include "TDescriptor.hpp"
 #include "TimesliceAnalyzer.hpp"
 #include "TimesliceAutoSource.hpp"
-#include "TimesliceDescriptorAutoSource.hpp"
 #include "TimesliceDebugger.hpp"
 #include "TimesliceOutputArchive.hpp"
-#include "TimesliceDescriptorOutputArchive.hpp"
 #include "TimeslicePublisher.hpp"
 #include "Utility.hpp"
-#include <chrono>
-#include <cstdint>
-#include <memory>
 #include <thread>
 #include <utility>
 
