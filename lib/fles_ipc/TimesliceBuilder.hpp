@@ -58,7 +58,9 @@ public:
     init_pointers();
     return component;
   }
-
+//TODO: Anstelle einen Vector mit uint8t abspeichern, unserialisierte Microslices abspeichern und dann im
+//      ManagedTimesliceBuffer vernünftig serialisieren. Brauche dafür aber ne neu Klasse, da diese zum Wiederherstellen 
+//      von Timeslices benutzt werden.
   /// Append a single microslice using given descriptor and content.
   uint64_t append_microslice(uint32_t component,
                              uint64_t microslice,

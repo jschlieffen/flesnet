@@ -1,0 +1,132 @@
+// Copyright 2023 Jan de Cuveland <cmail@cuveland.de>
+
+#include "ManagedTDescriptorBuffer.hpp"
+#include "Timeslice.hpp"
+#include "TimesliceCompletion.hpp"
+#include "TDescriptor.hpp"
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <functional> // ref
+#include <memory>
+#include <string>
+#include <stdexcept>
+#include <thread>
+#include <zmq.hpp>
+
+
+ManagedTDescriptorBuffer::ManagedTDescriptorBuffer(
+    zmq::context_t& context,
+    const std::string& shm_identifier,
+    uint32_t data_buffer_size_exp,
+    uint32_t desc_buffer_size_exp,
+    uint32_t num_input_nodes)
+    : producer_address_("inproc://" + shm_identifier),
+      worker_address_("ipc://@" + shm_identifier),
+      item_distributor_(context, producer_address_, worker_address_),
+      timeslice_buffer_(context,
+                        producer_address_,
+                        shm_identifier,
+                        data_buffer_size_exp,
+                        desc_buffer_size_exp,
+                        num_input_nodes),
+      ack_(desc_buffer_size_exp),
+      distributor_thread_(std::ref(item_distributor_)) {
+  for (uint32_t i = 0; i < num_input_nodes; ++i) {
+    desc_.emplace_back(timeslice_buffer_.get_desc_ptr(i),
+                       timeslice_buffer_.get_desc_size_exp());
+    data_.emplace_back(timeslice_buffer_.get_data_ptr(i),
+                       timeslice_buffer_.get_data_size_exp());
+  }
+}
+
+ManagedTDescriptorBuffer::~ManagedTDescriptorBuffer() {
+  item_distributor_.stop();
+  distributor_thread_.join();
+}
+
+void ManagedTDescriptorBuffer::handle_timeslice_completions() {
+  fles::TimesliceCompletion c{};
+  while (timeslice_buffer_.try_receive_completion(c)) {
+    if (c.ts_pos == acked_) {
+      do {
+        ++acked_;
+      } while (ack_.at(acked_) > c.ts_pos);
+      for (std::size_t i = 0; i < desc_.size(); ++i) {
+        desc_.at(i).set_read_index(acked_);
+        data_.at(i).set_read_index(desc_.at(i).at(acked_ - 1).offset +
+                                   desc_.at(i).at(acked_ - 1).size);
+      }
+    } else {
+      ack_.at(c.ts_pos) = c.ts_pos;
+    }
+  }
+}
+
+bool ManagedTDescriptorBuffer::timeslice_fits_in_buffer(
+    const fles::TDescriptor& timeslice) {
+  for (uint64_t i = 0; i < timeslice.num_components(); ++i) {
+    if (data_.at(i).size_available_contiguous() < timeslice.size_component(i) ||
+        desc_.at(i).size_available() < 1) {
+      return false;
+    }
+  }
+  return true;
+}
+
+void ManagedTDescriptorBuffer::put(
+    std::shared_ptr<const fles::TDescriptor> TDesc) {
+
+  // The existing shared memory TimesliceBuffer has to support the correct
+  // number of input nodes.
+  if (TDesc->num_components() != timeslice_buffer_.get_num_input_nodes()) {
+    throw std::runtime_error("Timeslice has wrong number of components");
+  }
+  // Poll for timeslice completions until enough space is available.
+  handle_timeslice_completions();
+  while (!timeslice_fits_in_buffer(*TDesc)) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    handle_timeslice_completions();
+  }
+
+  // Copy each component to the shared memory buffer.
+  for (uint64_t i = 0; i < TDesc->num_components(); ++i) {
+
+    // Skip remaining bytes in the data buffer to avoid a fragmented entry.
+    data_.at(i).skip_buffer_wrap(TDesc->size_component(i));
+
+    // Rewrite the offset in the timeslice component descriptor.
+    auto* tscd = TDesc->desc_ptr_[i];
+    tscd->offset = data_.at(i).write_index();
+
+    // Copy the data into the shared memory.
+    //std::cout<<"test_MTS_1"<<std::endl;
+    for (uint64_t j = 0; j < (TDesc->num_microslices(i)); j++){
+      //std::cout<<"test_MTS_3"<<std::endl;
+      data_.at(i).append(TDesc->data_ptr_[i], sizeof(fles::MicrosliceDescriptor));
+      //std::cout<<"test_MTS_4"<<std::endl;
+      std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(TDesc->get_microslice(i,j));
+      //std::cout<<"test_MTS_5"<<std::endl;
+      /*
+      if (ms->content() == nullptr){
+        std::cout<<"Ich habs gewusst"<<std::endl;
+      }
+      */
+      //std::cout<<"test_MTS_6"<<std::endl;
+      //std::cout<<static_cast<const void*>(ms->content())<<std::endl;
+      //std::cout<<ms->desc().size<<std::endl;
+      data_.at(i).append(ms->content(),ms->desc().size);
+    }
+    //std::cout<<"test_MTS_2"<<std::endl;
+    //data_.at(i).append(timeslice->data_ptr_[i], timeslice->size_component(i));
+    desc_.at(i).append(tscd, 1);
+  }
+
+  // Rewrite the timeslice index in the descriptor
+  auto tsd = TDesc->timeslice_descriptor_;
+  tsd.ts_pos = ts_pos_++;
+
+  // Send the work item.
+  timeslice_buffer_.send_work_item({tsd, timeslice_buffer_.get_data_size_exp(),
+                                    timeslice_buffer_.get_desc_size_exp()});
+}

@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <memory>
 
+class ManagedTDescriptorBuffer;
 
 namespace fles{
 
@@ -111,7 +112,8 @@ public:
 //Nochmal genau anschauen, wie ich mir desc_ und data_ definiere.
  void append_ms_desc(uint32_t component,
                     uint64_t microslice,
-                    MicrosliceDescriptor descriptor)
+                    MicrosliceDescriptor descriptor, 
+                    const uint8_t* content)
     {
     assert(component < timeslice_descriptor_.num_components);
     std::vector<uint8_t>& this_data = data_[component];
@@ -128,16 +130,109 @@ public:
           reinterpret_cast<MicrosliceDescriptor*>(this_data.data())->offset;
       descriptor.offset = offset + first_offset;
     }
-
+    uintptr_t content_ptr_val = reinterpret_cast<uintptr_t>(content);
     std::copy(desc_bytes, desc_bytes + sizeof(MicrosliceDescriptor),
               &this_data[microslice * sizeof(MicrosliceDescriptor)]);
     //std::cout<<desc_bytes<<std::endl;
     //this_data.insert(this_data.end(), content, content + descriptor.size);
+    this_data.insert(
+      this_data.end(),
+      reinterpret_cast<const uint8_t*>(&content_ptr_val),
+      reinterpret_cast<const uint8_t*>(&content_ptr_val) + sizeof(content_ptr_val)
+    );
     this_desc.size = this_data.size();
-
+    /*/
+    std::cout << "Data bytes after insert:\n";
+    for (size_t i = 0; i < this_data.size(); ++i){
+          std::printf("%02x ", this_data[i]);
+    }
+    std::cout << "\n";
+    */
     init_pointers();
   }
 
+  void append_microslice(uint32_t component,
+                             uint64_t microslice,
+                             Microslice& m) {
+    //std::cout<<static_cast<const void*>(m.content())<<std::endl;
+    append_ms_desc(component, microslice, m.desc(), m.content());
+    }
+  //TODO: Ist eventuell ein Bottleneck
+  /// Retrieve a pointer to the data content of a given microslice
+  [[nodiscard]] const uint8_t* content(uint64_t component,
+                                       uint64_t microslice) const {
+    std::cout<<"test123445"<<std::endl;
+    uint8_t* component_data_ptr = data_ptr_[component];
+
+    MicrosliceDescriptor& dd = reinterpret_cast<MicrosliceDescriptor*>(
+        component_data_ptr)[microslice];
+    /*
+
+    uint8_t** cc_location = reinterpret_cast<uint8_t**>(    
+      reinterpret_cast<uint8_t*>(&dd) + sizeof(MicrosliceDescriptor)*num_microslices(component) 
+      + microslice*sizeof(uintptr_t));
+
+    uint8_t* cc = *cc_location;
+    */
+
+    MicrosliceDescriptor& dd0 =
+        reinterpret_cast<MicrosliceDescriptor*>(component_data_ptr)[0];
+
+    uint8_t** cc_location = reinterpret_cast<uint8_t**>(
+        component_data_ptr +
+        desc_ptr_[component]->num_microslices * sizeof(MicrosliceDescriptor) +
+        dd.offset - dd0.offset
+    );
+    std::cout<<"length:"<< desc_ptr_[component]->num_microslices * sizeof(MicrosliceDescriptor) +
+        dd.offset - dd0.offset<<std::endl;
+    uint8_t* cc = *cc_location;
+    
+    return cc;
+  }
+
+[[nodiscard]] const uint8_t* content_v2(uint64_t component,
+                                      uint64_t microslice) const {
+  uint8_t* component_data_ptr = data_ptr_[component];
+
+  MicrosliceDescriptor& dd = reinterpret_cast<MicrosliceDescriptor*>(
+      component_data_ptr)[microslice];
+
+  uint8_t* ptr_to_ptr_bytes = reinterpret_cast<uint8_t*>(&dd) + sizeof(MicrosliceDescriptor);
+
+  // Safely reconstruct pointer value
+  uintptr_t ptr_val;
+  std::memcpy(&ptr_val, ptr_to_ptr_bytes, sizeof(ptr_val));
+
+  // Reinterpret back into pointer
+  uint8_t* cc = reinterpret_cast<uint8_t*>(ptr_val);
+  return cc;
+  }
+
+
+  /// Retrieve the descriptor and pointer to the data of a given microslice
+  [[nodiscard]] MicrosliceView get_microslice(uint64_t component,
+                                              uint64_t microslice_index) const {
+    uint8_t* component_data_ptr = data_ptr_[component];
+
+    MicrosliceDescriptor& dd = reinterpret_cast<MicrosliceDescriptor*>(
+        component_data_ptr)[microslice_index];
+    /*
+    uint8_t** cc_location = reinterpret_cast<uint8_t**>(    
+      reinterpret_cast<uint8_t*>(&dd) + sizeof(MicrosliceDescriptor));
+    uint8_t* cc = *cc_location;
+    */
+        MicrosliceDescriptor& dd0 =
+        reinterpret_cast<MicrosliceDescriptor*>(component_data_ptr)[0];
+
+    uint8_t** cc_location = reinterpret_cast<uint8_t**>(
+        component_data_ptr +
+        desc_ptr_[component]->num_microslices * sizeof(MicrosliceDescriptor) +
+        dd.offset - dd0.offset
+    );
+    uint8_t* cc = *cc_location;
+    //std::cout<<static_cast<const void*>(cc)<<std::endl;
+    return {dd, cc};
+  }
 
 
   /// Retrieve the offical start time of the timeslice
@@ -155,6 +250,7 @@ protected:
   //friend class ::ManagedTimesliceBuffer;
 
   friend class StorableTimesliceDescriptor;
+  friend class ::ManagedTDescriptorBuffer;
 
   /// The timeslice descriptor.
   TimesliceDescriptor timeslice_descriptor_{};
