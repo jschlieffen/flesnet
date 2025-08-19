@@ -102,7 +102,9 @@ fles::TDescriptor Application::create_descriptor_ts(std::shared_ptr<const fles::
     TD.append_component(num_ms);
     for (uint64_t msc = 0; msc < (ts-> num_microslices(tsc)); msc++){
       fles::MicrosliceDescriptor ms_desc= ts->descriptor(tsc,msc);
-      TD.append_ms_desc(tsc, msc, ms_desc);
+      //std::cout<<"test12"<<std::endl;
+      TD.append_ms_desc(tsc, msc, ms_desc,nullptr);
+      //std::cout<<"test13"<<std::endl;
     }
   }
   return TD;
@@ -124,7 +126,7 @@ fles::TDescriptor Application::create_new_descriptor_ts(uint64_t ts_index, uint6
     TD.append_component(num_ms);
     for (uint64_t msc = 0; msc < num_ms; msc++){
       fles::MicrosliceDescriptor ms_desc= *generated_descriptors[i];
-      TD.append_ms_desc(tsc, msc, ms_desc);
+      TD.append_ms_desc(tsc, msc, ms_desc, nullptr);
       i += 1;
     }
   }
@@ -238,8 +240,11 @@ void Application::run() {
             auto sink = sinks_[index];
             L_(info) << "current file: "<<par_.input_archives()[index];
             while (auto ts = source->get()) {
+                //std::cout<<"test1"<<std::endl;
                 std::shared_ptr<fles::TDescriptor> TD = std::make_shared<fles::TDescriptor>(create_descriptor_ts(std::move(ts)));
+                //std::cout<<"test"<<std::endl;
                 sink->put(TD);
+                //std::cout<<"test123"<<std::endl;
                 ++count_;
                 
                 if (count_ == limit) {

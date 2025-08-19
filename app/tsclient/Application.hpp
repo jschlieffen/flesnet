@@ -52,10 +52,12 @@ private:
 
   std::chrono::high_resolution_clock::time_point time_begin_;
   uint64_t first_ts_start_time_{};
+  bool only_shm_outputschemes = true;
 
   void rate_limit_delay() const;
   void native_speed_delay(uint64_t ts_start_time);
   std::shared_ptr<fles::Timeslice> create_microslices(uint8_t*& content_ptr, uint8_t* original_ptr,std::shared_ptr<fles::TDescriptor> ts,std::chrono::time_point<std::chrono::steady_clock>& lastTrigger, uint64_t& total_data, long long& acc_size);
+  std::shared_ptr<fles::TDescriptor> create_ms_cpointer(uint8_t*& content_ptr, uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts,std::chrono::time_point<std::chrono::steady_clock>& lastTrigger, uint64_t& total_data, long long& acc_size);
   fles::TDescriptor create_descriptor_ts(std::shared_ptr<const fles::Timeslice> ts);
 
 };
