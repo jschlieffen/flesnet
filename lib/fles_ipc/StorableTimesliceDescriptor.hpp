@@ -79,10 +79,11 @@ public:
     return component;
   }
 
-  /// Append a single microslice using given descriptor and content.
-  uint64_t append_microslice(uint32_t component,
-                             uint64_t microslice,
-                             MicrosliceDescriptor descriptor) {
+ void append_ms_desc(uint32_t component,
+                    uint64_t microslice,
+                    MicrosliceDescriptor descriptor, 
+                    const uint8_t* content)
+    {
     assert(component < timeslice_descriptor_.num_components);
     std::vector<uint8_t>& this_data = data_[component];
     TimesliceComponentDescriptor& this_desc = desc_[component];
@@ -98,15 +99,16 @@ public:
           reinterpret_cast<MicrosliceDescriptor*>(this_data.data())->offset;
       descriptor.offset = offset + first_offset;
     }
-
+    uintptr_t content_ptr_val = reinterpret_cast<uintptr_t>(content);
     std::copy(desc_bytes, desc_bytes + sizeof(MicrosliceDescriptor),
               &this_data[microslice * sizeof(MicrosliceDescriptor)]);
-
-    //this_data.insert(this_data.end(), content, content + descriptor.size);
+    this_data.insert(
+      this_data.end(),
+      reinterpret_cast<const uint8_t*>(&content_ptr_val),
+      reinterpret_cast<const uint8_t*>(&content_ptr_val) + sizeof(content_ptr_val)
+    );
     this_desc.size = this_data.size();
-
     init_pointers();
-    return microslice;
   }
 
   /// Append a single microslice object.

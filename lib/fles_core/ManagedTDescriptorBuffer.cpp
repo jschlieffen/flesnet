@@ -100,25 +100,11 @@ void ManagedTDescriptorBuffer::put(
     tscd->offset = data_.at(i).write_index();
 
     // Copy the data into the shared memory.
-    //std::cout<<"test_MTS_1"<<std::endl;
     for (uint64_t j = 0; j < (TDesc->num_microslices(i)); j++){
-      //std::cout<<"test_MTS_3"<<std::endl;
       data_.at(i).append(TDesc->data_ptr_[i], sizeof(fles::MicrosliceDescriptor));
-      //std::cout<<"test_MTS_4"<<std::endl;
       std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(TDesc->get_microslice(i,j));
-      //std::cout<<"test_MTS_5"<<std::endl;
-      /*
-      if (ms->content() == nullptr){
-        std::cout<<"Ich habs gewusst"<<std::endl;
-      }
-      */
-      //std::cout<<"test_MTS_6"<<std::endl;
-      //std::cout<<static_cast<const void*>(ms->content())<<std::endl;
-      //std::cout<<ms->desc().size<<std::endl;
       data_.at(i).append(ms->content(),ms->desc().size);
     }
-    //std::cout<<"test_MTS_2"<<std::endl;
-    //data_.at(i).append(timeslice->data_ptr_[i], timeslice->size_component(i));
     desc_.at(i).append(tscd, 1);
   }
 
