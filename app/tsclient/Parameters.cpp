@@ -108,7 +108,20 @@ void Parameters::parse_options(int argc, char* argv[]) {
           po::value<bool>(&create_descriptor_ts_)->implicit_value(false));
         
   desc_add("descriptor-source,D",
-            po::value<bool>(&descriptor_source_)->implicit_value(false));
+            po::value<bool>(&descriptor_source_)->implicit_value(false),
+                        "defines if an .dtsa file is used as an input or not");
+
+  desc_add("malloc_size,m" , 
+        po::value<long long>(&malloc_size_)
+          ->default_value(malloc_size_),
+        "set the approximated size of the call for malloc. Default value is 1GB.\n"
+        "Caution: If the value is larger than the free memory, the program will fail. If the value is smaller "
+        "then the biggest microslice the program will also fail. Thus this parameter has to be choosen carefully");
+  desc_add("jump_size,j" ,
+            po::value<long>( &jump_val_)
+            ->default_value(jump_val_),
+            "sets the value how much forward in the malloc call the program should go. \n"
+                        "To set the pointer after the data size, this param needs to be set to -1");
 
   po::variables_map vm;
   po::store(po::parse_command_line(argc, argv, desc), vm);

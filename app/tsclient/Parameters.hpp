@@ -55,6 +55,10 @@ public:
 
   [[nodiscard]] bool descriptor_source() const { return descriptor_source_ ;}
 
+  [[nodiscard]] long long malloc_size() const { return malloc_size_; }
+
+  [[nodiscard]] long jump_val() const {return jump_val_; }
+
 private:
   void parse_options(int argc, char* argv[]);
 
@@ -75,4 +79,6 @@ private:
   bool release_mode_ = false;
   bool create_descriptor_ts_ = false;
   bool descriptor_source_ = false;
+  long long malloc_size_ = 1000000000;
+  long jump_val_ = -1;
 };

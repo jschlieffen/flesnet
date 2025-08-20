@@ -32,6 +32,7 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
 Application::Application(Parameters const& par,
                          volatile sig_atomic_t* signal_status)
@@ -301,13 +302,14 @@ std::chrono::time_point<std::chrono::steady_clock>& lastTrigger, uint64_t& total
 
 std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& content_ptr, uint8_t* original_ptr, 
     std::shared_ptr<fles::TDescriptor> ts,std::chrono::time_point<std::chrono::steady_clock>& lastTrigger, 
-    uint64_t& total_data, long long& acc_size){
+    uint64_t& total_data, long long& acc_size, std::vector<uint64_t>& timeslice_sizes){
         size_t data_size = 1;
 
   uint64_t ts_index = ts->index();
   uint64_t ts_pos = ts->tpos(); //noch hinzufügen
   uint64_t ts_num_corems = ts->num_core_microslices();
   fles::TDescriptor TSDescBuild(ts_num_corems, ts_index,ts_pos);
+  uint64_t timeslice_size = 0;
   for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++) {
     uint64_t num_ms = ts->num_microslices(tsc);
     TSDescBuild.append_component(num_ms);
@@ -320,7 +322,7 @@ std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& con
       data_size = ms_desc.size;
       //std::cout<<data_size<<std::endl;
       //std::cout<<acc_size+data_size<<std::endl;
-      if (acc_size+data_size >= 1000000000){
+      if (acc_size+data_size >= par_.malloc_size()){
         //std::cout<<"test1233"<<std::endl;
         content_ptr = original_ptr;
         acc_size = 0;
@@ -329,9 +331,14 @@ std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& con
       std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_desc, content_ptr);
       //std::cout<<static_cast<const void*>(ms->content());
       TSDescBuild.append_microslice(tsc,msc,*ms);
+      timeslice_size += data_size;
       acc_size += data_size;
       //acc_size += 10000;
-      content_ptr += data_size;
+      if (par_.jump_val() == -1){
+        content_ptr += data_size;
+      } else {
+        content_ptr += par_.jump_val();
+      }
       //std::cout<<"test1"<<std::endl;
       //std::cout<<acc_size<<std::endl;
 
@@ -341,8 +348,8 @@ std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& con
             // One second (or more) has passed
             total_data += data_size;
              double gb = static_cast<double>(total_data) / (1024 * 1024 * 1024);
-            std::cout << std::fixed << std::setprecision(2);
-            std::cout << "Data in GB/s: "<<gb <<std::endl;
+            //std::cout << std::fixed << std::setprecision(2);
+            //std::cout << "Data in GB/s: "<<gb <<std::endl;
             // Update last trigger time
             total_data = 0;
             lastTrigger = now;
@@ -357,6 +364,7 @@ std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& con
     //return std::make_shared<fles::TimesliceBuilder>(std::move(TSBuild));
 
   }
+  timeslice_sizes.push_back(timeslice_size);
   auto TSDesc = std::make_shared<fles::TDescriptor>(std::move(TSDescBuild)); 
   return std::static_pointer_cast<fles::TDescriptor>(TSDesc);
 
@@ -415,9 +423,10 @@ void Application::run() {
   if (par_.descriptor_source()){
     if (only_shm_outputschemes){
       std::cout<<"test"<<std::endl;
-            std::vector<std::shared_ptr<const fles::Timeslice>> test_vec;
+      std::vector<std::shared_ptr<const fles::TDescriptor>> test_vec;
+      std::vector<uint64_t> timeslice_sizes;
       uint8_t* free_ptr = nullptr;
-      free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*1000000000));
+      free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size()));
       if (free_ptr == nullptr){
           std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
           throw std::bad_alloc();
@@ -441,7 +450,7 @@ void Application::run() {
         }
         auto t1 = std::chrono::steady_clock::now(); 
         //std::shared_ptr<const fles::Timeslice> timeslice = (create_microslices(content_ptr, free_ptr, std::move(TDesc), lastTrigger, total_data, acc_size));
-        std::shared_ptr<fles::TDescriptor> timeslice = create_ms_cpointer(content_ptr, free_ptr, std::move(TDesc), lastTrigger, total_data, acc_size);
+        std::shared_ptr<fles::TDescriptor> timeslice = create_ms_cpointer(content_ptr, free_ptr, std::move(TDesc), lastTrigger, total_data, acc_size, timeslice_sizes);
         auto t2 = std::chrono::steady_clock::now();
         auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
         //std::cout<<duration_us<<std::endl;
@@ -472,17 +481,49 @@ void Application::run() {
         auto duration_us_big = std::chrono::duration_cast<std::chrono::microseconds>(t2_big - t1_big).count();
         //std::cout<<"whole loop "<<duration_us_big<<std::endl;
         //std::cout<<static_cast<const void*>(free_ptr)<<std::endl;
+        test_vec.push_back(ts);
+      }
+      auto total_exec_start = std::chrono::steady_clock::now();
+      uint64_t total_size = 0;
+      auto lastTrigger_v2 = std::chrono::steady_clock::now();
+      int iterator = 0;
+      for (std::shared_ptr<const fles::TDescriptor> ts : test_vec){
         for (auto& sink : sinks_descriptor){
           sink->put(ts);
+        /*
+        for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++){
+          //std::cout<<ts->size_component(tsc) <<std::endl;
+          total_size += ts->size_component(tsc);
+        }
+        */
+        total_size += timeslice_sizes[iterator];
+        iterator++;
+        //std::cout<<std::endl;
+        //std::cout<<ts->num_components()<<std::endl;
+        auto now = std::chrono::steady_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - lastTrigger_v2);
+        if (elapsed.count() >= 1) {
+            // One second (or more) has passed
+             double gb = static_cast<double>(total_size) / (1024 * 1024 * 1024);
+            std::cout << std::fixed << std::setprecision(2);
+            std::cout << "Data in GB/s: "<<gb <<std::endl;
+            std::cout<<total_size<<std::endl;
+            // Update last trigger time
+            total_size = 0;
+            lastTrigger_v2 = now;
+        } 
         ts.reset();
         }
       }
+      auto total_exec_end = std::chrono::steady_clock::now();
+      auto total_exec_time = std::chrono::duration_cast<std::chrono::seconds>(total_exec_end - total_exec_start);
+      std::cout<<"total execution time: "<< total_exec_time.count()<<std::endl;
       free(free_ptr);
 
     } else {
       std::vector<std::shared_ptr<const fles::Timeslice>> test_vec;
       uint8_t* free_ptr = nullptr;
-      free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*1000000000));
+      free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size()));
       if (free_ptr == nullptr){
           std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
           throw std::bad_alloc();
