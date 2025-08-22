@@ -98,10 +98,10 @@ void ManagedTDescriptorBuffer::put(
     // Rewrite the offset in the timeslice component descriptor.
     auto* tscd = TDesc->desc_ptr_[i];
     tscd->offset = data_.at(i).write_index();
-
+    data_.at(i).append(TDesc->data_ptr_[i], sizeof(fles::MicrosliceDescriptor)*TDesc->num_microslices(i));
     // Copy the data into the shared memory.
+    
     for (uint64_t j = 0; j < (TDesc->num_microslices(i)); j++){
-      data_.at(i).append(TDesc->data_ptr_[i], sizeof(fles::MicrosliceDescriptor));
       std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(TDesc->get_microslice(i,j));
       data_.at(i).append(ms->content(),ms->desc().size);
     }

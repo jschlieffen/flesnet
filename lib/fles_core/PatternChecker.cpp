@@ -19,7 +19,6 @@ std::unique_ptr<PatternChecker> PatternChecker::create(uint8_t arg_sys_id,
   using sfmtfles = fles::SubsystemFormatFLES;
 
   PatternChecker* pc = nullptr;
-
   if (sys_id != fles::Subsystem::FLES) {
     pc = new GenericPatternChecker();
   } else {

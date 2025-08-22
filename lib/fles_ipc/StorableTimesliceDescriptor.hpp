@@ -93,8 +93,18 @@ public:
 
     // set offset relative to first microslice
     if (microslice > 0) {
-      uint64_t offset = this_data.size() - this_desc.num_microslices *
-                                               sizeof(MicrosliceDescriptor);
+      uint64_t offset = 0;
+      std::cout<<"test1.1.1"<<std::endl;
+      for (uint64_t tsc = 0; tsc < num_components(); tsc++){
+        for (uint64_t msc = 0; msc < num_microslices(tsc); msc++){
+          
+          MicrosliceDescriptor ms_desc = this->descriptor(tsc,msc);
+          offset += ms_desc.size;
+        }
+      }
+      std::cout<<"test1.1.2"<<std::endl;
+      //uint64_t offset = this_data.size() - this_desc.num_microslices *
+      //                                         sizeof(MicrosliceDescriptor);
       uint64_t first_offset =
           reinterpret_cast<MicrosliceDescriptor*>(this_data.data())->offset;
       descriptor.offset = offset + first_offset;
@@ -107,16 +117,15 @@ public:
       reinterpret_cast<const uint8_t*>(&content_ptr_val),
       reinterpret_cast<const uint8_t*>(&content_ptr_val) + sizeof(content_ptr_val)
     );
-    this_desc.size = this_data.size();
+    this_desc.size +=  descriptor.size;
     init_pointers();
   }
 
-  /// Append a single microslice object.
-  uint64_t append_microslice(uint32_t component,
+  void append_microslice(uint32_t component,
                              uint64_t microslice,
-                             StorableMicrosliceDescriptor& m) {
-    return append_microslice(component, microslice, m);
-  }
+                             Microslice& m) {
+    append_ms_desc(component, microslice, m.desc(), m.content());
+    }
 
 private:
   friend class boost::serialization::access;
