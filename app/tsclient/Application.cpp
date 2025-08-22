@@ -219,25 +219,7 @@ void Application::native_speed_delay(uint64_t ts_start_time) {
   }
 }
 
-/*
-Anleitung zum Bauen dieses Tools.
-Schritt 1: Definiere neue Klasse für Timeslice-Descriptoren kombiniert mit Microslice-Descriptoren
-Schritt 2: Baue ein neues Archive .dtsa Dateien für Timeslice-Descriptoren
-Schritt 3: Baue ein Tool, was .tsa Dateien in .dtsa Dateien umwandelt
-Schritt 4: Erweitere tsclient, sodass auch .dtsa Dateien eingelesen werden können.
-Schritt 5: Erweitere Tool aus Schritt 3, sodass .dtsa Dateien auch generiert werden können.
-Schritt 6: Erweitere Tool aus Schritt 3, sodass .dtsa Dateien auch in .dmsa Dateien umgewandelt werden können.
-*/
 
-//Remains: InputArchive für TDescriptoren erstellen, main iteration anpassen. Malloc Größe anpassen.
-/* TODO: Die Lauzeit von dieser Funktion ist recht schlecht. Das liegt daran,
- dass Timeslices die Daten nochmal abspeichern. Ich muss also eine Klasse erzeugen,
- welche lediglich den Pointer abspeichert und nicht die Daten selber und erst bei der 
- put Funktion die Daten ausliest und abspeichert.
- Die TDescriptoren dürfen nicht in einen Timeslice umgewandelt werden, da ansonsten es zu kompliziert
- den Pointer auszulesen. Stattdessen lieber eine neue Klasse definieren, welche shared_ptr von Microslices 
- einliest. Darüber kann man dann die Microslices leichter einzelnen behandeln.
-*/
 
 std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t*& content_ptr,uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts,
                                                                 long long& acc_size){
