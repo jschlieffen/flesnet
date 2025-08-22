@@ -274,10 +274,11 @@ std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& con
   uint64_t ts_pos = ts->tpos(); //noch hinzufügen
   uint64_t ts_num_corems = ts->num_core_microslices();
   fles::TDescriptor TSDescBuild(ts_num_corems, ts_index,ts_pos);
-  uint64_t timeslice_size = 0;
+  //int64_t timeslice_size = 0;
   for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++) {
     uint64_t num_ms = ts->num_microslices(tsc);
     TSDescBuild.append_component(num_ms);
+    uint64_t size_component = (ts->num_microslices(tsc)*sizeof(fles::MicrosliceDescriptor));
     for (uint64_t msc = 0; msc < (ts->num_core_microslices()) + 1; msc++){ //overlap berücksichtigen
       fles::MicrosliceDescriptor ms_desc = ts->descriptor(tsc, msc);  
       data_size = ms_desc.size;
@@ -287,13 +288,14 @@ std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& con
       }
       std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_desc, content_ptr);
       TSDescBuild.append_microslice(tsc,msc,*ms);
-      timeslice_size += data_size;
+      size_component += data_size;
       acc_size += data_size;
       if (par_.jump_val() == -1){
         content_ptr += data_size;
       } else {
         content_ptr += par_.jump_val();
       }
+    TSDescBuild.set_size_component(tsc, size_component);
     } 
   }
   auto TSDesc = std::make_shared<fles::TDescriptor>(std::move(TSDescBuild)); 
@@ -319,11 +321,14 @@ void Application::run() {
         std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
         throw std::bad_alloc();
     }
+    
     for (size_t i = 0; i < 1000000000; ++i) {
       free_ptr[i] = static_cast<uint8_t>(rand());
     }
+    
     long long acc_size;
-    std::cout<<"test"<<std::endl;
+    //std::cout<<"test"<<std::endl;
+    L_(info)<<"start";
     uint8_t* content_ptr = free_ptr;
     if (only_shm_outputschemes){
       std::vector<std::shared_ptr<const fles::TDescriptor>> test_vec;
@@ -351,7 +356,7 @@ void Application::run() {
         if (par_.rate_limit() != 0.0) {
           rate_limit_delay();
         }
-        ++count_;
+        
         if (count_ == limit || *signal_status_ != 0) {
           break;
         }
@@ -359,12 +364,18 @@ void Application::run() {
         timeslice.reset();
         test_vec.push_back(ts);
       }
+      std::cout<<"test123"<<std::endl;
+      auto t1 = std::chrono::high_resolution_clock::now();
       for (std::shared_ptr<const fles::TDescriptor> ts : test_vec){
         for (auto& sink : sinks_descriptor){
           sink->put(ts);
         ts.reset();
+        ++count_;
         }
       }
+      auto t2 = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count();
+      L_(info) << "Time needed: "<< duration;
 
       
 

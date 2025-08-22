@@ -102,9 +102,7 @@ fles::TDescriptor Application::create_descriptor_ts(std::shared_ptr<const fles::
     TD.append_component(num_ms);
     for (uint64_t msc = 0; msc < (ts-> num_microslices(tsc)); msc++){
       fles::MicrosliceDescriptor ms_desc= ts->descriptor(tsc,msc);
-      //std::cout<<"test12"<<std::endl;
       TD.append_ms_desc(tsc, msc, ms_desc,nullptr);
-      //std::cout<<"test13"<<std::endl;
     }
   }
   return TD;
@@ -223,6 +221,7 @@ void Application::run() {
         for (unsigned long j = 0; j < par_.num_ts(); j++){
             fles::TDescriptor TD = create_new_descriptor_ts(ts_index, ts_pos, par_.timeslice_size() - 1, i);
             i += par_.timeslice_size() - 1;
+            std::shared_ptr<fles::TDescriptor> test = std::make_shared<fles::TDescriptor> (TD);
             sink->put(std::make_shared<fles::TDescriptor> (TD));
             ++count_;
         };
