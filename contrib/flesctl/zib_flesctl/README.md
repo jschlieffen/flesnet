@@ -38,6 +38,20 @@ To start flesctrl one needs to firstly allocate the nodes required. This can be 
 
   `./exec.sh`
 
+
+Monitoring
+----------
+
+This flesctrl has a monitoring tool, where the data rates and progress is printed inside the terminal. To activate this one needs to set the specific parameters in the config file. The monitoring itself is executed in a seperate tmux session. In order to see the output, one needs to open a new terminal and make an ssh jump on the login node. Then execute the following command 
+
+`tmux attach-session -t monitoring`
+
+This will connect your terminal to the tmux session created by flesctrl. If a bug occurs one can kill the session manually via 
+
+`tmux kill-session -t monitoring`
+
+
+
 After this is done, one can start with flesctrl by using the command
 
   `./execution.py`
