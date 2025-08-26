@@ -10,3 +10,8 @@ xcuserdata/
 /.cache
 contrib/flesctl/zib_flesctl/__pycache__/
 __pycache__/
+contrib/flesctl/zib_flesctl/config.cfg
+contrib/flesctl/zib_flesctl/flesctrl_venv/
+contrib/flesctl/zib_flesctl/benchmark_eval/plots
+contrib/flesctl/zib_flesctl/Runs/
+contrib/flesctl/zib_flesctl/tmp/
