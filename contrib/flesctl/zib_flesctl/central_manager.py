@@ -21,6 +21,7 @@ import docopt
 import re
 import monitoring as mon
 import curses
+import signal
 from log_msg import *
 import logfile_gen as Logfile
 
@@ -711,14 +712,11 @@ class execution:
         logger.success('flesnet launched successfully')
         if self.show_total_data:
             try: 
-                total_data, avg_data_rate = self.monitoring()
+                self.monitoring()
             except Exception as e:
                 logger.critical(f'Error {e} occured during monotoring. Terminating')
-        else:
-            while True:
-                time.sleep(1)
-        self.stop_program()
-        return total_data, avg_data_rate
+        while True:
+            time.sleep(1)
     
     # =============================================================================
     # Stops the experiment and kills every process connected    
@@ -726,6 +724,7 @@ class execution:
     def stop_program(self):
         time.sleep(2)
         logger.info('stopping flesnet')
+        total_data, avg_data_rate = 0,0
         if self.overlap_nodes:
             self.super_nodes_cls.stop_flesnet()
         else:
@@ -735,11 +734,16 @@ class execution:
         if self.activate_timesliceforwarding:
             #print('test')
             self.timeslice_forwarding_cls.stop_timeslice_forwarding()
+        if self.show_total_data:
+            total_data, avg_data_rate = self.stop_monitoring()
+        return total_data, avg_data_rate
+            
 
     # =============================================================================
     # Starts the monotoring. 
+    # not used. outdated code snipped. For new one see monitoing function.
     # =============================================================================
-    def monitoring(self):
+    def monitoring_v2(self):
         file_names = []
         if self.overlap_nodes:
             entry_nodes_cnt = 0
@@ -785,32 +789,113 @@ class execution:
                                                    self.enable_graph, self.enable_progess_bar)
         return total_data, avg_data_rate
 
-# =============================================================================
-# only for dev purpose
-# TODO: clean up this mess
-# =============================================================================
-def main():
-    arg = docopt.docopt(__doc__, version='0.2')
-    
-    allocating_nodes = arg["<allocating_nodes>"]
-    
-    s = slurm_commands()
 
-    if allocating_nodes != '0':
-        s.alloc_nodes(4)
-    else:
-
-        exec_ = execution(3, 2)
-        print('Entry nodes: ', exec_.entry_nodes)
-        print('Build nodes: ', exec_.build_nodes)
-        print('Build nodes ips: ' + exec_.entry_nodes_ips)
-        print('Entry Nodes ips: ' + exec_.build_nodes_ips)
-        exec_.start_Flesnet()
-        exec_.stop_via_ctrl_c()
+    # =============================================================================
+    # Starts the monotoring. The monitoring is started inside a tmux session.
+    # If one wants to access it, open a new terminal and go into the login node.
+    # Then execute
+    #   tmux attach-session -t monitoring
+    # If the session is no longer needed, execute 
+    #   tmux kill-session -t monitoring
+    # =============================================================================
+    def monitoring(self):
+        file_names = []
+        if self.overlap_nodes:
+            entry_nodes_cnt = 0
+            total_file_data = 0
+            for super_node in self.overlap_nodes.keys():
+                logfile = '../logs/flesnet/entry_nodes/entry_node_%s.log' % (super_node)
+                #total_data = 1000
+                file_data = 0
+                file_data = next((tup[2] for tup in self.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
+                if file_data is None:
+                    file_data = next((tup[2] for tup in self.input_files if tup[0] == 'e_remaining'), None)
+                file_names.append((logfile,file_data))
+                entry_nodes_cnt += 1
+                total_file_data += file_data
+            for super_node in self.overlap_nodes.keys():
+                if not self.show_only_entry_nodes:
+                    logfile_build = '../logs/flesnet/build_nodes/build_node_%s.log' % (super_node)
+                    total_data = total_file_data
+                    file_names.append((logfile_build,total_data))
+        entry_nodes_cnt = 0
+        total_file_data = 0
+        for entry_node in self.entry_nodes.keys():
+            logfile = '../logs/flesnet/entry_nodes/entry_node_%s.log' % (entry_node)
+            file_data = 0
+            file_data = next((tup[2] for tup in self.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
+            if file_data is None:
+                file_data = next((tup[2] for tup in self.input_files if tup[0] == 'e_remaining'), None)
+            
+            file_names.append((logfile,file_data))
+            entry_nodes_cnt += 1
+            total_file_data += file_data
+        if not self.show_only_entry_nodes:
+            for build_node in self.build_nodes.keys():
+                logfile = '../logs/flesnet/build_nodes/build_node_%s.log' % (build_node)
+                file_data = total_file_data
+                file_names.append((logfile,file_data))
+        with open('monitoring/mon_parameters.txt', 'w') as f:
+            for logfile, file_data in file_names:
+                f.write(f"file_name: {logfile}, {file_data}\n")
+            f.write(f"num_buildnodes: {self.num_buildnodes}\n")
+            f.write(f"num_entrynodes: {self.num_entrynodes}\n")
+            f.write(f"enable_graph: {self.enable_graph}\n")
+            f.write(f"enable_progess_bar: {self.enable_progess_bar}\n")
+        logger.info('starting monitoring')
+        session_name = 'monitoring'
+        session_exists = subprocess.run(
+            ['tmux', 'has-session', '-t', session_name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        if session_exists.returncode != 0:
+            subprocess.run(['tmux', 'new-session', '-d', '-s', session_name])
+        cmd = "monitoring/monitoring_launcher.sh"
+        subprocess.run(['tmux', 'send-keys', '-t', session_name, cmd,'Enter'])
         
+
+        
+    # =============================================================================
+    # currently not used 
+    # =============================================================================
+    def stop_monitoring_v2(self):
+        try:
+            with open("monitoring/pids_monitoring.txt", "r") as f:
+                pid = int(f.read().strip())
+            
+            logger.info(f"killing process with Pid: {pid}")
+            os.kill(pid, signal.SIGKILL)
+            logger.success("Process killed")
+            
+            os.remove("monitoring/pids_monitoring.txt")
+        except Exception as e:
+            logger.error(f"Could not kill process: {e}")
     
-if __name__ == '__main__':
-    main()
+    
+    # =============================================================================
+    # stops the monitoring inside the tmux session. The session itself is not 
+    # killed. So one can stay inside the session for future test runs.
+    # =============================================================================
+    def stop_monitoring(self):
+        print('test')
+        try:
+            logger.info(f"killing monitoring process")
+            session_name = 'monitoring'
+            cmd = 'C-c'
+            subprocess.run(['tmux', 'send-keys', '-t', session_name, cmd,'Enter'])
+            logger.success("Process killed")
+        except Exception as e:
+            logger.error(f"Could not kill process: {e}")
+        time.sleep(1)
+        with open('monitoring/monitoring.log', 'r') as log_file:
+            contents = log_file.read()
+        #print(contents)
+        total_data = float(re.search(r'total_data: \s*([0-9.]+)', contents).group(1))
+        avg_data_rate = float(re.search(r'avg_data_rate: \s*([0-9.]+)', contents).group(1))
+        return total_data, avg_data_rate
+            
+
         
     
     

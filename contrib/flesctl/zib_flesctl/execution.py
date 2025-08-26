@@ -20,8 +20,7 @@ import logfile_gen as Logfile
 # =============================================================================
 # TODOs:
 #       1. restructure file and folder org.                 improvement needed
-#       2. make threads for mstool etc.
-#       3. make implementation for libfrabric
+#       2. make implementation for libfrabric
 # =============================================================================
 
 # =============================================================================
@@ -60,7 +59,12 @@ class exec_:
         self.start_time = time.time()
         
         self.execution_cls.start_Flesnet()
-        total_data, avg_data_rate = self.execution_cls.stop_via_ctrl_c()
+
+        self.execution_cls.stop_via_ctrl_c()
+        if self.Par_.show_total_data:
+            total_data, avg_data_rate = self.execution_cls.stop_monitoring()
+        else:
+            total_data, avg_data_rate = 0,0
         self.end_time = time.time()
         Logfile.logfile.exec_time = self.end_time - self.start_time
         Logfile.logfile.avg_data_rate = avg_data_rate
@@ -85,16 +89,16 @@ class exec_:
             self.cleanup()
     
     def cleanup(self):
-        if self.Par_.overlap_usage_of_nodes:
-            self.execution_cls.super_nodes_cls.stop_flesnet()
-        else:
-            self.execution_cls.entry_nodes_cls.stop_flesnet()
-            self.execution_cls.build_nodes_cls.stop_flesnet()
-        if self.Par_.activate_timesliceforwarding:
-            #print('test123')
-            self.execution_cls.timeslice_forwarding_cls.stop_timeslice_forwarding()
+        total_data, avg_data_rate = self.execution_cls.stop_program()
         self.running = False
-        self.create_logfile()
+        self.end_time = time.time()
+        Logfile.logfile.exec_time = self.end_time - self.start_time
+        Logfile.logfile.avg_data_rate = avg_data_rate
+        self.create_end_message(total_data,avg_data_rate)
+        Logfile.logfile.write()
+        for handler in logger.handlers[:]:
+            logger.removeHandler(handler)
+
         sys.exit(1)
         
     
@@ -105,14 +109,13 @@ class exec_:
             
             
     def create_end_message(self,total_data, avg_data_rate):
-        if self.running:
-            elapsed_seconds = self.end_time - self.start_time
-            hours, remainder = divmod(elapsed_seconds, 3600)
-            minutes, seconds = divmod(remainder, 60)
-            formatted_time = f"The simulation ran for {int(hours):02d}H:{int(minutes):02d}M:{int(seconds):02d}S"
-            logger.info(formatted_time)
-            data_rate_str = f"Total data send: {total_data} GB, with average data rate: {avg_data_rate} GB/s"
-            logger.info(data_rate_str)
+        elapsed_seconds = self.end_time - self.start_time
+        hours, remainder = divmod(elapsed_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        formatted_time = f"The simulation ran for {int(hours):02d}H:{int(minutes):02d}M:{int(seconds):02d}S"
+        logger.info(formatted_time)
+        data_rate_str = f"Total data send: {total_data} GB, with average data rate: {avg_data_rate} GB/s"
+        logger.info(data_rate_str)
         
 def main():
     exe = exec_()
