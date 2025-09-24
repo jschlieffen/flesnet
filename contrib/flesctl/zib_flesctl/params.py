@@ -21,9 +21,10 @@ class Params:
     # Here are the default values of the params that are not necessarily required   
     # =============================================================================
     def __init__(self,config_file):
-        self.entry_nodes = 0
-        self.build_nodes = 0
+        self.num_entrynodes = 0
+        self.num_buildnodes = 0
         self.use_collectl = 0
+        self.num_cpus = 2
         self.set_node_list=0
         self.entry_nodes_list=[]
         self.build_nodes_list=[]
@@ -33,14 +34,14 @@ class Params:
         self.customize_string = "" 
         self.use_pattern_gen = 0
         self.use_dmsa_files = 0
-        self.input_file_list = []
+        self.input_files = []
         self.activate_timesliceforwarding = 0
         self.write_data_to_file = ""
         self.analyze_data = 0
         self.port = 0
         self.show_total_data = 0
-        self.show_graph = 0
-        self.show_progress_bar = 0
+        self.enable_graph = 0
+        self.enable_progress_bar = 0
         self.show_only_entry_nodes = 0
         self.use_grafana = 0
         self.influx_node_ip = ""
@@ -63,26 +64,27 @@ class Params:
     # or not 
     # =============================================================================
     def get_params(self, config_file):        
-        self.entry_nodes = self.get_value('Number_of_Nodes', 'entry_nodes', 'int', True)
-        self.build_nodes = self.get_value('Number_of_Nodes', 'build_nodes', 'int', True)
-        self.use_collectl = self.get_value('general', 'use_collectl','int',True)
+        self.num_entrynodes = self.get_value('Number_of_Nodes', 'entry_nodes', 'int', required=True)
+        self.num_buildnodes = self.get_value('Number_of_Nodes', 'build_nodes', 'int', required=True)
+        self.use_collectl = self.get_value('general', 'use_collectl','int',required=True)
+        self.num_cpus = self.get_value('general', 'num_cpus', 'int', required=False)
         self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
         self.entry_nodes_list = self.get_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)
         self.build_nodes_list = self.get_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)
-        self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', True)
-        self.transport_method = self.get_value('flesnet_commands', 'transport_method', 'str', True)
+        self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', required=True)
+        self.transport_method = self.get_value('flesnet_commands', 'transport_method', 'str', required=True)
         self.use_infiniband = self.get_value('flesnet_commands','use_infiniband','int', self.use_infiniband, False)
         self.customize_string = self.get_value('flesnet_commands', 'customize_string', 'str', True)
         self.use_pattern_gen = self.get_value('mstool_commands', 'use_pattern_gen', 'int', self.use_pattern_gen, False)
         self.use_dmsa_files = self.get_value('mstool_commands', 'use_dmsa_files', 'int', self.use_dmsa_files, False)
-        self.input_file_list = self.get_input_file_list('input_file')
+        self.input_files = self.get_input_file_list('input_file')
         self.activate_timesliceforwarding = self.get_value('tsclient_commands', 'activate_timesliceforwarding','int', True)
         self.write_data_to_file = self.get_value('tsclient_commands', 'write_data_to_file', 'str', self.write_data_to_file, False)
         self.analyze_data = self.get_value('tsclient_commands', 'analyze_data', 'str', self.analyze_data, False)
         self.port = self.get_value('tsclient_commands', 'port', 'str', self.port, False)
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)
-        self.show_graph = self.get_value('Monotoring', 'show_graph', 'int', False)
-        self.show_progress_bar = self.get_value('Monotoring', 'show_progress_bar', 'int', self.show_progress_bar, False)
+        self.enable_graph = self.get_value('Monotoring', 'show_graph', 'int', False)
+        self.enable_progress_bar = self.get_value('Monotoring', 'show_progress_bar', 'int', self.enable_progress_bar, False)
         self.show_only_entry_nodes = self.get_value('Monotoring', 'show_only_entry_nodes', 'int', self.show_only_entry_nodes, False)
         self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', self.overlap_usage_of_nodes, False)
         self.use_grafana = self.get_value('influxdb', 'use_grafana', 'int', True)
@@ -146,12 +148,12 @@ class Params:
     # =============================================================================
     def validation_params(self):
         if self.use_pattern_gen != 1:
-            if not self.input_file_list:
+            if not self.input_files:
                 if self.use_pattern_gen == 0:
                     logger.critical('no input files and no usage of the pattern generator')
                     sys.exit(1)
             else:
-                for elem in self.input_file_list:
+                for elem in self.input_files:
                     if not os.path.isfile(elem[1]):
                         logger.critical(f'File {elem[1]} does not exist')
                         sys.exit(1)
@@ -164,11 +166,11 @@ class Params:
             logger.warning(f'transport method zeromq only shows data rate for the entry nodes. Therefore param show_only_entry_nodes is set to 1')
             self.show_only_entry_nodes = 1
         
-        if self.show_progress_bar:
+        if self.enable_progress_bar:
             if self.use_pattern_gen == 1:
                 logger.warning('Pattern Generator is used, thus there is no limit for the total data. Therefore progress bar is disabled')
                 self.show_progress_bar = 0
-            for tup in self.input_file_list:
+            for tup in self.input_files:
                 if len(tup) == 1:
                     logger.warning(f'File for entry node {tup[0]} is not set. Requested for the progress bar. Therefore progress bar is disabled')
                     self.show_progress_bar = 0

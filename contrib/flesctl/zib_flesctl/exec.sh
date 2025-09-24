@@ -4,7 +4,7 @@ ENTRY_NODES_CNT=$(grep -E '^entry_nodes=' config.cfg | cut -d'=' -f2)
 PROCESSING_NODES_CNT=$(grep -E '^build_nodes=' config.cfg | cut -d'=' -f2)
 TIME_ALLOC=$(grep -E '^time=' config.cfg | cut -d'=' -f2)
 SET_NODE_LIST=$(grep -E '^set_node_list=' config.cfg | cut -d'=' -f2)
-
+NUM_CPUS=$(grep -E '^num_cpus=' config.cfg | cut -d'=' -f2)
 
 if [ "$SET_NODE_LIST" -eq 1 ]; then
     ENTRY_NODES_LIST=$(grep "^entry_nodes_list" config.cfg | cut -d'=' -f2)
@@ -24,7 +24,7 @@ if [ "$SET_NODE_LIST" -eq 1 ]; then
     TIME=$TIME_ALLOC
     NODELIST="$ENTRY_NODES_LIST,$BUILD_NODES_LIST"
 
-    salloc --mem=$MEM --ntasks-per-node=6 -c 6 -p $p --nodes=$NODES --nodelist=$NODELIST --constraint=Infiniband --time=$TIME 
+    salloc --mem=$MEM --ntasks-per-node=1 -c $NUM_CPUS -p $p --nodes=$NODES --nodelist=$NODELIST --constraint=Infiniband --time=$TIME 
 else
     source flesctrl_venv/bin/activate
 
@@ -42,6 +42,6 @@ else
     p="big"
     TIME=$TIME_ALLOC
 
-    salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 --cpus-per-task=6 -p $p -x htc-cmp127 --constraint=Infiniband --time=$TIME 
+    salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 --cpus-per-task=$NUM_CPUS -p $p -x htc-cmp127 --constraint=Infiniband --time=$TIME 
 
 fi

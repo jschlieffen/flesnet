@@ -45,6 +45,7 @@ class exec_:
     def start_sim(self):
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
+        '''
         self.execution_cls = cm.execution(self.Par_.input_file_list, self.Par_.entry_nodes, self.Par_.build_nodes, 
                                      self.Par_.show_total_data, self.Par_.influx_node_ip, self.Par_.influx_token,
                                      self.Par_.use_grafana, self.Par_.overlap_usage_of_nodes, self.Par_.path, 
@@ -54,6 +55,8 @@ class exec_:
                                      self.Par_.build_nodes_list, self.Par_.activate_timesliceforwarding, 
                                      self.Par_.write_data_to_file, self.Par_.analyze_data, self.Par_.port, self.Par_.use_infiniband, 
                                      self.Par_.use_collectl)
+        '''
+        self.execution_cls = cm.execution(self.Par_)
         Logfile.logfile.transport_method = self.Par_.transport_method
         Logfile.logfile.infiniband_used = self.Par_.use_infiniband
         self.start_time = time.time()
