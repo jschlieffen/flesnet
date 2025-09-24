@@ -1,0 +1,12 @@
+build node ips: 10.253.31.126sep 
+num_entrynodes: 1 
+influx_node_ip: local_host 
+influx_token: inster_token 
+use_grafana: 0 
+path: ../../../build/ 
+transport_method: rdma 
+customize_string: --timeslice-size 1 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\" 
+use_pattern_gen: 0 
+use_dmsa_files: 1 
+use_infiniband: 1 
+use_collectl: 1 
