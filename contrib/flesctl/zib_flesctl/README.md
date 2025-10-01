@@ -34,6 +34,12 @@ NOTE: It is recommended to create the folders like that, due to the fact that so
 Getting started
 ---------------
 
+In order to check if flesctrl is ready for a start, one can execute:
+
+  `python3 setup_checker.py`
+
+This Program checks if every libary is installed, every file exists and have the right permissions and validate the parameter defined in the configfile.
+
 To start flesctrl one needs to firstly allocate the nodes required. This can be done by using the command
 
   `./exec.sh`
