@@ -6,24 +6,12 @@
 #@author: jschlieffen
 
 """
-Usage: input.py <input_file> <logfile> <ip> <num_entry_nodes> <entry_node_idx> <influx_node_ip> <influx_token> <use_grafana> <path> <transport_method> <customize_string> <use_pattern_gen> <use_dmsa_files> <use_infiniband> <use_collectl> <logfile_collectl>
+Usage: input.py <input_file> <logfile> <entry_node_idx> <logfile_collectl>
 
 Arguments: 
     <input_file> The input dmsa file for the mstool
-    <ip> The ip address to use
     <logfile> The Logfile to use
-    <num_entry_nodes> The number of entry nodes
     <entry_node_idx> The index of the current entry node
-    <influx_node_ip> The ip of the where the influx container is runnning
-    <influx_token> The token to the influx-db
-    <use_grafana> enables/disables grafana
-    <path> The path to flesnet/mstool
-    <transport_method> The transport method (rdma/zeromq, libfabric currently not implemented)
-    <customize_string> The remaining params for flesnet
-    <use_pattern_gen> enables/disables usage of the pattern generator
-    <use_dmsa_files> Decides if the input files are dmsa files
-    <use_infiniband> Decides whether infiniband shall be used or ethernet
-    <use_collectl> Decides if collectl should be used for tracking the network usage
     <logfile_collectl> The csv-file which collectl should use
 """
 
@@ -53,7 +41,7 @@ def calc_str(ip,num_entry_nodes, use_pattern_gen):
         if part != "":
             ip_string += "tcp://" + part + '/0 '
     shm_string = ""
-    if use_pattern_gen == '1':
+    if use_pattern_gen == 1:
         for i in range(0,int(num_entry_nodes)):
             shm_string += "pgen:/fles_in_e%s/0 " % (str(i))
     else: 
@@ -62,7 +50,7 @@ def calc_str(ip,num_entry_nodes, use_pattern_gen):
     return ip_string, shm_string
 
 def start_collectl(use_infiniband, csvfile_name):
-    if use_infiniband == '1':
+    if use_infiniband == 1:
         collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
         #print(collectl_command)
     else:
@@ -123,9 +111,9 @@ def start_mstool(path,dmsa_file, entry_node_idx, D_flag, mstool_communicater):
     
 
 def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-                transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infininband, use_collectl, logfile_collectl):
+                transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl, logfile_collectl):
     ip_string, shm_string = calc_str(ip, num_entry_nodes, use_pattern_gen)
-    if use_collectl == '1':
+    if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
         get_alloc_cpus(filename_cpus)
@@ -136,13 +124,13 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
         thread_collectl.start()
         time.sleep(1)
     grafana_string = ''
-    if use_grafana == '1':
+    if use_grafana == 1:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
     D_flag = ""
-    if use_dmsa_files == '1':
+    if use_dmsa_files == 1:
         D_flag = "-D 1"
-    if use_pattern_gen == '0':
+    if use_pattern_gen == 0:
         #mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
         #result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         mstool_communicater = queue.Queue()
@@ -160,15 +148,14 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
     input_data = ''
     while input_data == '':
         input_data = sys.stdin.read().strip()
-    #print('test')
-    if use_collectl == '1':
+    if use_collectl == 1:
         #result_collectl.terminate()
         #result_collectl.wait()
         #result_collectl_cpu.terminate()
         #result_collectl_cpu.wait()
         collectl_communicater.put("exit")
         thread_collectl.join()
-    if use_pattern_gen == '0':
+    if use_pattern_gen == 0:
         #result_mstool.terminate()
         #result_mstool.wait()
         mstool_communicater.put("exit")
@@ -176,27 +163,38 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
     result_flesnet.terminate()
     result_flesnet.wait()
     
+params = {}
+#print('test12')
+with open('tmp/entry_nodes_params.txt', 'r') as f:
+    print('test1')
+    for line in f:
+        if ':' in line:
+            key, value = line.strip().split(':', 1)
+            value = value.strip()
+            if value.lower() == 'true':
+                value = True
+            elif value.lower() == 'false':
+                value = False
+            else:
+                try:
+                    value = int(value)
+                except ValueError:
+                    pass
+            params[key] = value
 
+#print(params)
+for key, value in params.items():
+    globals()[key] = value
 
+ip = params.get('build node ips')
 arg = docopt.docopt(__doc__, version='0.2')
 input_file = arg["<input_file>"]
-ip = arg["<ip>"]
 logfile = arg["<logfile>"]
-num_entry_nodes = arg["<num_entry_nodes>"]
 entry_node_idx = arg["<entry_node_idx>"]
-influx_node_ip = arg["<influx_node_ip>"]
-influx_token = arg["<influx_token>"]
-use_grafana = arg["<use_grafana>"]
-path = arg["<path>"]
-transport_method = arg["<transport_method>"]
-customize_string = arg["<customize_string>"]
-use_pattern_gen = arg["<use_pattern_gen>"]
-use_dmsa_files = arg["<use_dmsa_files>"]
-use_infiniband = arg['<use_infiniband>']
-use_collectl = arg['<use_collectl>']
 logfile_collectl = arg['<logfile_collectl>']
+#customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
 
-entry_nodes(input_file,ip, logfile,num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
+entry_nodes(input_file,ip, logfile,num_entrynodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
             transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl,
             logfile_collectl)
 

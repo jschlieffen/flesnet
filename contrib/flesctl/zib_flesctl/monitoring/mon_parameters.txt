@@ -1,5 +1,5 @@
-file_name: ../logs/flesnet/entry_nodes/entry_node_htc-cmp504.log, 750
-file_name: ../logs/flesnet/build_nodes/build_node_htc-cmp505.log, 750
+file_name: ../logs/flesnet/entry_nodes/entry_node_htc-cmp105.log, 750
+file_name: ../logs/flesnet/build_nodes/build_node_htc-cmp106.log, 750
 num_buildnodes: 1
 num_entrynodes: 1
 enable_graph: 1

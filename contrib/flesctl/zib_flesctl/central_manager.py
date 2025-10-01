@@ -83,51 +83,6 @@ class Entry_nodes:
         self.Par_ = parameters
         self.pids = []
     
-
-    #TODO: make cpu param
-    def start_flesnet_v2(self):
-        self.write_Params()
-        file = 'input.py'
-        node_cnt = 0
-        for node in self.node_list.keys():
-            input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(node_cnt))), None)
-            if input_file is None:
-                input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == 'e_remaining'), None)
-            
-            logger.info(f'start entry node: {node}, with input file {input_file}')
-            logfile = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
-            logfile_collectl = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
-            if self.Par_.use_infiniband:
-                command = (
-                    'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s' 
-                    % (node,file,input_file,logfile,self.build_nodes_ips, 
-                    self.Par_.num_entrynodes ,self.node_list[node]['entry_node_idx'],
-                     self.Par_.influx_node_ip, self.Par_.influx_token, self.Par_.use_grafana, self.Par_.path,
-                     self.Par_.transport_method, self.Par_.customize_string,
-                     self.Par_.use_pattern_gen, self.Par_.use_dmsa_files, self.Par_.use_infiniband,
-                     self.Par_.use_collectl, logfile_collectl)
-                )
-            else:
-                command = (
-                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s' 
-                    % (node,file,input_file,logfile,self.build_nodes_eth_ips, 
-                    self.Par_.num_entrynodes ,self.node_list[node]['entry_node_idx'],
-                     self.Par_.influx_node_ip, self.Par_.influx_token, self.Par_.use_grafana, self.Par_.path,
-                     self.Par_.transport_method, self.Par_.customize_string,
-                     self.Par_.use_pattern_gen, self.Par_.use_dmsa_files, self.Par_.use_infiniband,
-                     self.Par_.use_collectl, logfile_collectl)
-                )
-            try:
-                #print(command)
-                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-            except subprocess.CalledProcessError as e:
-                logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
-                return 'shutdown'
-            time.sleep(1)
-            self.pids += [result]
-            logger.success('start successful')
-            node_cnt += 1
-        return None
     
     def write_Params(self):
         param_names = [
@@ -155,7 +110,7 @@ class Entry_nodes:
     
     def start_flesnet(self):
         self.write_Params()
-        file = 'input_V2.py'
+        file = 'input.py'
         node_cnt = 0
         for node in self.node_list.keys():
             input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(node_cnt))), None)
@@ -207,41 +162,7 @@ class Build_nodes:
         self.entry_node_eth_ips = entry_nodes_eth_ips
         self.Par_ = parameters
         self.pids = []
-        
-    def start_flesnet_V2(self):
-        file = 'output.py'
-        for node in self.node_list.keys():
-            logger.info(f'start build node: {node}')
-            logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (node)
-            logfile_collectl = 'logs/collectl/build_nodes/build_node_%s.csv' % (node)
-            if self.Par_.use_infiniband == 1:
-                command = (
-                    'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s'
-                    % (node,file,logfile, self.entry_node_ips, self.Par_.num_buildnodes ,
-                       self.node_list[node]['build_node_idx'], self.Par_.influx_node_ip, 
-                       self.Par_.influx_token, self.Par_.use_grafana, self.Par_.path,
-                       self.Par_.transport_method,self.Par_.customize_string,self.Par_.use_infiniband,
-                       self.Par_.use_collectl, logfile_collectl)
-                )
-            else: 
-                command = (
-                    'srun --nodelist=%s --exclusive -N 1 %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s'
-                    % (node,file,logfile, self.entry_node_eth_ips, self.Par_.num_buildnodes ,
-                       self.node_list[node]['build_node_idx'], self.Par_.influx_node_ip, 
-                       self.Par_.influx_token, self.Par_.use_grafana, self.Par_.path,
-                       self.Par_.transport_method,self.Par_.customize_string,self.Par_.use_infiniband,
-                       self.Par_.use_collectl, logfile_collectl)
-                )
-            try:
-               
-                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-            except subprocess.CalledProcessError as e:
-                logger.error('ERROR {e} occurried in build node: {node}. Shutdown flesnet')
-                return 'shutdown'            
-            self.pids += [result]
-        #print(command)
-        logger.success(f'start of build nodes successful')
-        return None
+    
     
 
     def write_Params(self):
@@ -267,15 +188,10 @@ class Build_nodes:
                 value = getattr(self.Par_, name, None)
                 Params_file.write(f"{name}: {value} \n")
         Params_file.close()
-        
-# =============================================================================
-# =============================================================================
-# #     Baustellee
-# =============================================================================
-# =============================================================================
+
     def start_flesnet(self):
         self.write_Params()
-        file = 'output_v2.py'
+        file = 'output.py'
         node_cnt = 0
         for node in self.node_list.keys():
             logger.info(f'start build node: {node}')
@@ -323,53 +239,6 @@ class Super_nodes:
         self.Par_ = parameters
         self.pids = []
         
-    def start_flesnet_V2(self):
-        file = 'super_nodes.py'
-        node_cnt = 0
-        for node in self.node_list.keys():
-            input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(node_cnt))), None)
-            if input_file is None:
-                input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == 'e_remaining'), None)
-            
-            logger.info(f'start entry node: {node}, with input file {input_file}')
-            logfile_entry_node = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
-            logfile_build_node = "logs/flesnet/build_nodes/build_node_%s.log" % node
-            logfile_collectl_entry_node = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
-            logfile_collectl_build_node = "logs/collectl/build_nodes/build_node_%s.csv" % node
-            if self.Par_.use_infiniband:
-                command = (
-                    'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s %s'
-                    % (node,file,input_file,logfile_entry_node, logfile_build_node,
-                       self.build_nodes_ips, self.entry_node_ips, 
-                       self.Par_.num_entrynodes , self.Par_.num_buildnodes,
-                       self.node_list[node]['entry_node_idx'], self.node_list[node]['build_node_idx'],
-                       self.Par_.influx_node_ip, self.Par_.influx_token, self.Par_.use_grafana, self.Par_.path,
-                       self.Par_.transport_method, self.Par_.customize_string,
-                       self.Par_.use_pattern_gen, self.Par_.use_dmsa_files,self.Par_.use_infiniband,
-                       self.Par_.use_collectl, logfile_collectl_entry_node, logfile_collectl_build_node)
-                )
-            else:
-                command = (
-                    'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s %s %s %s %s %s %s %s %s %s %s %s " %s" %s %s %s %s %s %s'
-                    % (node,file,input_file,logfile_entry_node, logfile_build_node,
-                       self.build_nodes_eth_ips, self.entry_node_eth_ips, 
-                       self.Par_.num_entrynodes , self.Par_.num_buildnodes,
-                       self.node_list[node]['entry_node_idx'], self.node_list[node]['build_node_idx'],
-                       self.Par_.influx_node_ip, self.Par_.influx_token, self.Par_.use_grafana, self.Par_.path,
-                       self.Par_.transport_method, self.Par_.customize_string,
-                       self.Par_.use_pattern_gen, self.Par_.use_dmsa_files,self.Par_.use_infiniband,
-                       self.Par_.use_collectl, logfile_collectl_entry_node, logfile_collectl_build_node)
-                )
-            try:
-                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-            except subprocess.CalledProcessError as e:
-                logger.error(f'ERROR {e} occurried in super node: {node}. Shutdown flesnet')
-                return 'shutdown'
-            time.sleep(1)
-            self.pids += [result]
-            logger.success('start successful')
-            node_cnt += 1
-        return None
     
     def write_Params(self):
         param_names = [
@@ -401,7 +270,7 @@ class Super_nodes:
     
     def start_flesnet(self):
         self.write_Params()
-        file = 'super_nodes_v2.py'
+        file = 'super_nodes.py'
         node_cnt = 0
         for node in self.node_list.keys():
             input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(node_cnt))), None)
@@ -452,33 +321,7 @@ class Timeslice_forwarding:
         self.Par_ = parameters
         self.pids = []
 
-        
 
-        
-    def start_receivers(self):
-        file = 'timeslice_forwarding.py'
-        for receiving_node,build_node in self.rec2build:
-            logger.info(f"start timeslice forwarding node {receiving_node} for build node {build_node['node']}")
-            logfile = 'logs/flesnet/tsclient/receiving_node_%s.log' % (receiving_node)
-            #print(build_node)
-            logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.csv' % (receiving_node)
-            build_node_ip = build_node['inf_ip']
-            command = (
-                    'srun --nodelist=%s -N 1 -c 5 %s %s %s %s %s %s %s %s %s %s %s %s %s'
-                    % (receiving_node,file,logfile, build_node_ip, self.Par_.influx_token, self.Par_.influx_node_ip, self.Par_.use_grafana, self.Par_.path,
-                       self.Par_.port, self.Par_.write_data_to_file, self.Par_.analyze_data,  self.Par_.use_infiniband, self.Par_.use_collectl, logfile_collectl
-                        )
-                )
-            try:
-                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-            except subprocess.CalledProcessError as e:
-                logger.error('ERROR {e} occurried in timeslice-forwarding: {receiving_node}. Shutdown flesnet')
-                return 'shutdown' 
-            self.pids += [result]
-        logger.success('start of timeslice receivers successful')
-        return None
-        
-            
     def write_Params(self):
         param_names = [
             "influx_node_ip",
@@ -487,30 +330,29 @@ class Timeslice_forwarding:
             "path",
             "port",
             "write_data_to_file",
-            "analyze_data"
+            "analyze_data",
             "use_infiniband",
             "use_collectl"
         ]
         with open('tmp/receiving_nodes_params.txt', 'w') as Params_file:
-            if self.Par_.use_infiniband:
-                Params_file.write(f"entry node ips: {self.entry_node_ips} \n")
-            else:
-                Params_file.write(f"entry node ips: {self.entry_node_eth_ips} \n")
             for name in param_names:
                 value = getattr(self.Par_, name, None)
                 Params_file.write(f"{name}: {value} \n")
         Params_file.close()   
         
-    def start_flesnet(self):
+    def start_receivers(self):
         self.write_Params()
-        file = 'timslice_forwarding_v2.py'
+        file = 'timeslice_forwarding.py'
         node_cnt = 0
         for receiving_node,build_node in self.rec2build:
             logger.info(f"start timeslice forwarding node {receiving_node} for build node {build_node['node']}")
             logfile = 'logs/flesnet/tsclient/receiving_node_%s.log' % (receiving_node)
             #print(build_node)
             logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.csv' % (receiving_node)
-            build_node_ip = build_node['inf_ip']
+            if self.Par_.use_infiniband:
+                build_node_ip = build_node['inf_ip']
+            else:
+                build_node_ip = build_node['eth_ip']
             command = (
                 'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s'
                 % (receiving_node, self.Par_.num_cpus ,file,logfile, build_node_ip, logfile_collectl)

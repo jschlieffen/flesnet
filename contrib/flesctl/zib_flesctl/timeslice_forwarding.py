@@ -6,21 +6,12 @@
 #@author: jschlieffen
 
 """
-Usage: timeslice_forwarding.py <logfile> <build_node_ip> <influx_node_ip> <influx_token> <use_grafana> <path> <port> <write_data_to_file> <analyze_data> <use_infiniband> <use_collectl> <logfile_collectl>
+Usage: timeslice_forwarding.py <logfile> <build_node_ip> <logfile_collectl>
 
 Arguments:
     
     <logfile> The Logfile to use
     <build_node_ip> The ip address to use
-    <influx_node_ip> The ip of the where the influx container is runnning
-    <influx_token> The token to the influx-db
-    <use_grafana> enables/disables grafana
-    <path> The path to tsclient
-    <port> The port for the timeslice-forwarding
-    <write_data_to_file> The file, where the timeslices should be saved. To deactivate the saving use -1
-    <analyze_data> activates the -a flag in the tsclient
-    <use_infiniband> Decides whether infiniband shall be used or ethernet
-    <use_collectl> Decides if collectl should be used for tracking the network usage
     <logfile_collectl> The csv-file which collectl should use
 """
 
@@ -44,18 +35,18 @@ import queue
 #may be extended
 def calc_ip_str(ip,port,write_data_to_file,path,analyze_data):
     ip_string = f"tcp://{ip}:{port}"
-    if write_data_to_file == '0':
+    if write_data_to_file == 0:
         output_file_string = ""
     else:
         output_file_string = f"-o file://{path}{write_data_to_file}"
-    if analyze_data == '1':
+    if analyze_data == 1:
         analyze_data_string = "-a"
     else:
         analyze_data_string = ""
     return ip_string,output_file_string,analyze_data_string
 
 def start_collectl(use_infiniband, csvfile_name):
-    if use_infiniband == '1':
+    if use_infiniband == 1:
         collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
         #print(collectl_command)
     else:
@@ -116,7 +107,7 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
         thread_collectl.start()
         time.sleep(1)
     grafana_string = ''
-    if use_grafana == '1':
+    if use_grafana == 1:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '-m influx2:%s:8086:tsclient_status: ' % (influx_node_ip)
     tsclient_commands = (
@@ -128,7 +119,7 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
     input_data = ''
     while input_data == '':
         input_data = sys.stdin.read().strip()
-    if use_collectl == '1':
+    if use_collectl == 1:
         #result_collectl.terminate()
         #result_collectl.wait()
         #result_collectl_cpu.terminate()
@@ -138,20 +129,34 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
     result_tsclient.terminate()
     result_tsclient.wait()
     
+
+params = {}
+#print('test12')
+with open('tmp/receiving_nodes_params.txt', 'r') as f:
+    print('test1')
+    for line in f:
+        if ':' in line:
+            key, value = line.strip().split(':', 1)
+            value = value.strip()
+            if value.lower() == 'true':
+                value = True
+            elif value.lower() == 'false':
+                value = False
+            else:
+                try:
+                    value = int(value)
+                except ValueError:
+                    pass
+            params[key] = value
+
+print(params)
+for key, value in params.items():
+    globals()[key] = value
     
 arg = docopt.docopt(__doc__, version='0.2')
 
 ip = arg["<build_node_ip>"]
 logfile = arg["<logfile>"]
-influx_node_ip = arg["<influx_node_ip>"]
-influx_token = arg["<influx_token>"]
-use_grafana = arg["<use_grafana>"]
-path = arg["<path>"]
-port = arg["<port>"]
-write_data_to_file = arg['<write_data_to_file>']
-analyze_data = arg['<analyze_data>']
-use_infiniband = arg['<use_infiniband>']
-use_collectl = arg['<use_collectl>']
 logfile_collectl = arg['<logfile_collectl>']
 
 main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_data_to_file, analyze_data, use_infiniband, use_collectl, logfile_collectl)
