@@ -168,8 +168,8 @@ class Entry_nodes:
             logfile = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
             logfile_collectl = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s %s'
-                % (node,file,input_file,logfile, self.node_list[node]['entry_node_idx'], logfile_collectl)
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
+                % (node, self.Par_.num_cpus ,file,input_file,logfile, self.node_list[node]['entry_node_idx'], logfile_collectl)
             )
             try:
                 #print(command)
@@ -282,8 +282,8 @@ class Build_nodes:
             logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (node)
             logfile_collectl = 'logs/collectl/build_nodes/build_node_%s.csv' % (node)
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s'
-                % (node,file,logfile, self.node_list[node]['build_node_idx'], logfile_collectl)
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s'
+                % (node, self.Par_.num_cpus ,file,logfile, self.node_list[node]['build_node_idx'], logfile_collectl)
             )
             try:
                 #print(command)
@@ -417,8 +417,8 @@ class Super_nodes:
             logfile_collectl_entry_node = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
             logfile_collectl_build_node = "logs/collectl/build_nodes/build_node_%s.csv" % node
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s %s %s %s %s'
-                % (node,file,input_file,logfile_entry_node, logfile_build_node, self.node_list[node]['entry_node_idx'],
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s %s %s'
+                % (node, self.Par_.num_cpus ,file,input_file,logfile_entry_node, logfile_build_node, self.node_list[node]['entry_node_idx'],
                    self.node_list[node]['build_node_idx'], logfile_collectl_entry_node, logfile_collectl_build_node)
             )
             try:
@@ -512,8 +512,8 @@ class Timeslice_forwarding:
             logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.csv' % (receiving_node)
             build_node_ip = build_node['inf_ip']
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c 5 %s %s %s %s'
-                % (node,file,logfile, build_node_ip, logfile_collectl)
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s'
+                % (receiving_node, self.Par_.num_cpus ,file,logfile, build_node_ip, logfile_collectl)
             )
             try:
                 #print(command)
@@ -525,6 +525,8 @@ class Timeslice_forwarding:
             self.pids += [result]
             logger.success('start successful')
             node_cnt += 1
+            
+        logger.success('start of timeslice receivers successful')
         return None
     
     def stop_timeslice_forwarding(self):
