@@ -10,6 +10,8 @@ import configparser as cfg
 import os
 import sys
 from log_msg import *
+import re
+import subprocess
 
 # =============================================================================
 # This file reads the params from the config file and checks the validation
@@ -69,8 +71,8 @@ class Params:
         self.use_collectl = self.get_value('general', 'use_collectl','int',required=True)
         self.num_cpus = self.get_value('general', 'num_cpus', 'int', required=False)
         self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
-        self.entry_nodes_list = self.get_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)
-        self.build_nodes_list = self.get_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)
+        self.entry_nodes_list = self.get_node_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)
+        self.build_nodes_list = self.get_node_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)
         self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', required=True)
         self.transport_method = self.get_value('flesnet_commands', 'transport_method', 'str', required=True)
         self.use_infiniband = self.get_value('flesnet_commands','use_infiniband','int', self.use_infiniband, False)
@@ -142,17 +144,39 @@ class Params:
             logger.warning(f'not required Param not set: {param}')
             return var
             
+    def get_node_list(self,section,param, var=None, required=False):
+        node_list = []
+        node_str = os.getenv(param)
+        if node_str is None:
+            node_str = self.config.get(section,param)
+        range_pattern = re.findall(r'(.*?)(\d+)-(\d+)', node_str)
+        list_pattern = re.findall(r'(.*?)(\d+(?:,\d+)*)', node_str)
+        for base, start, end in range_pattern:
+            start, end = int(start), int(end)
+            if start < 10:
+                node_list.extend([f"htc-cmp00{i}" for i in range(start, end + 1)])
+            elif start < 100:    
+                node_list.extend([f"htc-cmp0{i}" for i in range(start, end + 1)])
+            else:
+                node_list.extend([f"htc-cmp{i}" for i in range(start, end + 1)])
+        for base, numbers in list_pattern:
+            num_list = numbers.split(",")
+            node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
+        node_list = sorted(set(node_list))
+        #print(node_list)
+        print(node_list)
+        return node_list
 # =============================================================================
 # =============================================================================
 # # BAUSTELLE
 # =============================================================================
 # =============================================================================
-    def validation_params(self):
+    def validation_params_v2(self):
+        
         if self.use_pattern_gen != 1:
             if not self.input_files:
-                if self.use_pattern_gen == 0:
-                    logger.critical('no input files and no usage of the pattern generator')
-                    sys.exit(1)
+                logger.critical('no input files and no usage of the pattern generator')
+                sys.exit(1)
             else:
                 for elem in self.input_files:
                     if not os.path.isfile(elem[1]):
@@ -185,6 +209,120 @@ class Params:
             if self.write_data_to_file != '0':
                 logger.warning(f"The .tsa file is written in {self.path} unless you gave a path to the output file")
 
+    def validation_params(self):
+        print('test')
+        Params_check = params_checker(self)
+        Params_check.check_validity_of_files()
+        Params_check.check_validity_of_files()
+        if self.set_node_list:
+            Params_check.check_nodes_exist()
+        self.show_only_entry_nodes = Params_check.check_transport_method()
+        self.enable_progress_bar = Params_check.monitoring_check()
+        Params_check.check_timeslice_forwarding()
+
+class params_checker:
+    
+    def __init__(self, params):
+        self.Par_ = params
+        
+    
+    def check_validity_of_files(self):
+        if self.Par_.use_pattern_gen != 1:
+            if not self.Par_.input_files:
+                logger.critical('no input files and no usage of the pattern generator')
+                sys.exit(1)
+            else:
+                for elem in self.Par_.input_files:
+                    if not os.path.isfile(elem[1]):
+                        logger.critical(f'File {elem[1]} does not exist')
+                        sys.exit(1)
+    
+    def check_program_exists(self):
+        for program in ['./mstool', './flesnet']:
+            program_path = self.Par_.path + program
+            if not (os.path.isfile(program_path) and os.access(program_path, os.X_OK)):
+                logger.critical(f'Program {program} does not exist')
+                sys.exit(1)
+       
+# =============================================================================
+#     Baustelle
+# =============================================================================
+    def check_num_nodes(self):
+        if self.Par_.overlap_usage_of_nodes == 1:
+            num_nodes_req = 0
+            
+            
+        
+    def check_nodes_exist(self):
+        try:
+            cmd = ["sinfo", "-N", "-h", "-o", "%N %f"]
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            node_features = {}
+            for line in result.stdout.strip().splitlines():
+                if not line.strip():
+                    continue
+                parts = line.strip().split(None, 1)
+                node = parts[0]
+                features = parts[1] if len(parts) > 1 else ""
+                node_features[node] = features    
+                for node in self.Par_.entry_nodes_list:
+                    if node not in node_features:
+                        logger.critical(f"Entrynode: {node} not found on the cluster")
+                        sys.exit(1)
+                    if self.Par_.use_infiniband:
+                        features = node_features[node]
+                        #print(features.lower())
+                        if "infiniband" not in features.lower():
+                            logger.critical(f"Entrynode: {node} does not provide Infiniband")
+                            sys.exit(1)
+                for node in self.Par_.build_nodes_list:
+                    if node not in node_features:
+                        logger.critical(f"Buildnode: {node} not found on the cluster")
+                        sys.exit(1)
+                    if self.Par_.use_infiniband:
+                        features = node_features[node]
+                        if "infiniband" not in features.lower():
+                            logger.critical(f"Buildnode: {node} does not provide Infiniband")
+                            sys.exit(1)
+                        
+        except subprocess.CalledProcessError as e:
+            logger.error(f"[!] Error running sinfo: {e} Cannot check the validity of the given nodelist")
+
+    def check_transport_method(self):
+        if self.Par_.transport_method not in ['zeromq', 'rdma']:
+            if self.Par_.transport_method == 'libfabric':
+                logger.critical("Transport method libfabric is currently not working.")
+            else:
+                logger.critical(f"unknown transport method: {self.Par_.transport_method}")
+            sys.exit(1)
+        if self.Par_.transport_method == 'rdma' and self.Par_.use_infiniband == 0:
+            logger.critical("Transport method RDMA does not support ethernet connection")
+            sys.exit(1)
+        if self.Par_.transport_method == 'zeromq' and self.show_only_entry_nodes == 0:
+            logger.warning(f'transport method zeromq only shows data rate for the entry nodes. Therefore param show_only_entry_nodes is set to 1')
+            return 1
+        return 0
+
+    def monitoring_check(self):
+        if self.Par_.enable_progress_bar:
+            if self.Par_.use_pattern_gen == 1:
+                logger.warning('Pattern Generator is used, thus there is no limit for the total data. Therefore progress bar is disabled')
+                return 0
+        return 1
+    
+    def check_timeslice_forwarding(self):
+        if self.Par_.activate_timesliceforwarding == 1:
+            if int(self.Par_.port) < 1023:
+                logger.critical(f"used port for timeslice-forwarding: {self.Par_.port} is privileged, thus cannot be used")
+                sys.exit(1)
+            if f"tcp://*:{self.Par_.port}" not in self.Par_.customize_string:
+                logger.critical(f"used port for timeslice-forwarding: {self.Par_.port} does not coincide with the port used in flesnet")
+                sys.exit(1)
+            if self.Par_.write_data_to_file != '0':
+                logger.warning(f"The .tsa file is written in {self.Par_.path} unless you gave a path to the output file")
+    
+
+    
 # =============================================================================
 # only for dev purpose
 # =============================================================================
