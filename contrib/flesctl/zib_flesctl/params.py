@@ -164,7 +164,7 @@ class Params:
             node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
         node_list = sorted(set(node_list))
         #print(node_list)
-        print(node_list)
+        #print(node_list)
         return node_list
 # =============================================================================
 # =============================================================================
@@ -209,49 +209,85 @@ class Params:
             if self.write_data_to_file != '0':
                 logger.warning(f"The .tsa file is written in {self.path} unless you gave a path to the output file")
 
-    def validation_params(self):
-        print('test')
-        Params_check = params_checker(self)
+    def validation_params(self, system_check):
+        #print('test')
+        Params_check = params_checker(self, system_check)
         Params_check.check_validity_of_files()
         Params_check.check_validity_of_files()
         if self.set_node_list:
             Params_check.check_nodes_exist()
+            
+        if os.getenv('SLURM_JOB_NUM_NODES'):
+            Params_check.check_num_nodes()
+            if self.set_node_list:
+                Params_check.check_req_nodes_alloc
         self.show_only_entry_nodes = Params_check.check_transport_method()
         self.enable_progress_bar = Params_check.monitoring_check()
         Params_check.check_timeslice_forwarding()
+        return Params_check.Params_valid
 
 class params_checker:
     
-    def __init__(self, params):
+    def __init__(self, params, system_check):
         self.Par_ = params
+        self.system_check = system_check
+        self.Params_valid = True
         
+    def exit_program(self):
+        if not self.system_check:
+            logger.error("Invalid config. Shutdown program")
+            sys.exit(1)
+        self.Params_valid = False
     
     def check_validity_of_files(self):
         if self.Par_.use_pattern_gen != 1:
             if not self.Par_.input_files:
                 logger.critical('no input files and no usage of the pattern generator')
-                sys.exit(1)
+                self.exit_program()
             else:
                 for elem in self.Par_.input_files:
                     if not os.path.isfile(elem[1]):
                         logger.critical(f'File {elem[1]} does not exist')
-                        sys.exit(1)
+                        self.exit_program()
     
     def check_program_exists(self):
         for program in ['./mstool', './flesnet']:
             program_path = self.Par_.path + program
             if not (os.path.isfile(program_path) and os.access(program_path, os.X_OK)):
                 logger.critical(f'Program {program} does not exist')
-                sys.exit(1)
+                self.exit_program()
        
 # =============================================================================
 #     Baustelle
 # =============================================================================
     def check_num_nodes(self):
+        #print('test num nodes')
         if self.Par_.overlap_usage_of_nodes == 1:
-            num_nodes_req = 0
-            
-            
+            num_tot_nodes_req = max(self.Par_.num_buildnodes, self.Par_.entry_nodes) 
+
+            if self.Par_.set_node_list:
+                num_nodes_req_list = max(len(self.Par_.entry_nodes_list), len(self.Par_.build_nodes_list))
+        else:
+            num_tot_nodes_req = self.Par_.num_buildnodes + self.Par_.num_entrynodes
+
+            if self.Par_.set_node_list:
+                num_nodes_req_list = len(set(self.Par_.entry_nodes_list  + self.Par_.build_nodes_list))
+        if self.Par_.activate_timesliceforwarding:
+            num_tot_nodes_req += self.Par_.num_buildnodes
+        num_nodes_get = int(os.getenv('SLURM_JOB_NUM_NODES'))
+        if num_tot_nodes_req < num_nodes_get:
+            logger.warning(f"Too many nodes allocated: Required: {num_tot_nodes_req}, Got: {num_nodes_get}. Remaining nodes are unused")
+        if num_tot_nodes_req > num_nodes_get:
+            logger.critical(f"Not enough nodes allocated. Expected: {num_tot_nodes_req}, Got: {num_nodes_get}.")
+            self.exit_program()
+        if self.Par_.set_node_list:
+            if num_nodes_req_list < num_tot_nodes_req:
+                logger.warning(f"Not all nodes that are required are set. Fill the remaining ones automatically")
+            if num_nodes_req_list > num_tot_nodes_req:
+                logger.critical(f"More nodes are set in the node list, then are required.")
+                self.exit_program()
+    
+    
         
     def check_nodes_exist(self):
         try:
@@ -265,28 +301,57 @@ class params_checker:
                 node = parts[0]
                 features = parts[1] if len(parts) > 1 else ""
                 node_features[node] = features    
-                for node in self.Par_.entry_nodes_list:
-                    if node not in node_features:
-                        logger.critical(f"Entrynode: {node} not found on the cluster")
-                        sys.exit(1)
-                    if self.Par_.use_infiniband:
-                        features = node_features[node]
-                        #print(features.lower())
-                        if "infiniband" not in features.lower():
-                            logger.critical(f"Entrynode: {node} does not provide Infiniband")
-                            sys.exit(1)
-                for node in self.Par_.build_nodes_list:
-                    if node not in node_features:
-                        logger.critical(f"Buildnode: {node} not found on the cluster")
-                        sys.exit(1)
-                    if self.Par_.use_infiniband:
-                        features = node_features[node]
-                        if "infiniband" not in features.lower():
-                            logger.critical(f"Buildnode: {node} does not provide Infiniband")
-                            sys.exit(1)
+            for node in self.Par_.entry_nodes_list:
+                if node not in node_features:
+                    logger.critical(f"Entrynode: {node} not found on the cluster")
+                    self.exit_program()
+                if self.Par_.use_infiniband:
+                    features = node_features[node]
+                    #print(features.lower())
+                    if "infiniband" not in features.lower():
+                        logger.critical(f"Entrynode: {node} does not provide Infiniband")
+                        self.exit_program()
+            for node in self.Par_.build_nodes_list:
+                if node not in node_features:
+                    logger.critical(f"Buildnode: {node} not found on the cluster")
+                    self.exit_program()
+                if self.Par_.use_infiniband:
+                    features = node_features[node]
+                    if "infiniband" not in features.lower():
+                        logger.critical(f"Buildnode: {node} does not provide Infiniband")
+                        self.exit_program()
                         
         except subprocess.CalledProcessError as e:
             logger.error(f"[!] Error running sinfo: {e} Cannot check the validity of the given nodelist")
+
+    def check_req_nodes_alloc(self):
+        node_str = os.environ.get('SLURM_NODELIST')
+        node_list = []
+        if node_str is None:
+            logger.critical('SLURM_NODELIST is not set, Maybe you forget to allocate the nodes')
+            self.exit_program()
+        range_pattern = re.findall(r'(.*?)(\d+)-(\d+)', node_str)
+        list_pattern = re.findall(r'(.*?)(\d+(?:,\d+)*)', node_str)
+        for base, start, end in range_pattern:
+            start, end = int(start), int(end)
+            if start < 10:
+                node_list.extend([f"htc-cmp00{i}" for i in range(start, end + 1)])
+            elif start < 100:    
+                node_list.extend([f"htc-cmp0{i}" for i in range(start, end + 1)])
+            else:
+                node_list.extend([f"htc-cmp{i}" for i in range(start, end + 1)])
+        for base, numbers in list_pattern:
+            num_list = numbers.split(",")
+            node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
+        node_list = sorted(set(node_list))
+        for entry_node in self.Par_.entry_nodes_list:
+            if entry_node not in node_list:
+                logger.critical(f"required entry node: {entry_node} not allocated")
+                self.exit_program()
+        for build_node in self.Par_.build_nodes_list:
+            if build_node not in node_list:
+                logger.critical(f"required build node: {build_node} not allocated")
+                self.exit_program()
 
     def check_transport_method(self):
         if self.Par_.transport_method not in ['zeromq', 'rdma']:
@@ -294,10 +359,10 @@ class params_checker:
                 logger.critical("Transport method libfabric is currently not working.")
             else:
                 logger.critical(f"unknown transport method: {self.Par_.transport_method}")
-            sys.exit(1)
+            self.exit_program()
         if self.Par_.transport_method == 'rdma' and self.Par_.use_infiniband == 0:
             logger.critical("Transport method RDMA does not support ethernet connection")
-            sys.exit(1)
+            self.exit_program()
         if self.Par_.transport_method == 'zeromq' and self.show_only_entry_nodes == 0:
             logger.warning(f'transport method zeromq only shows data rate for the entry nodes. Therefore param show_only_entry_nodes is set to 1')
             return 1
@@ -314,10 +379,10 @@ class params_checker:
         if self.Par_.activate_timesliceforwarding == 1:
             if int(self.Par_.port) < 1023:
                 logger.critical(f"used port for timeslice-forwarding: {self.Par_.port} is privileged, thus cannot be used")
-                sys.exit(1)
+                self.exit_program()
             if f"tcp://*:{self.Par_.port}" not in self.Par_.customize_string:
                 logger.critical(f"used port for timeslice-forwarding: {self.Par_.port} does not coincide with the port used in flesnet")
-                sys.exit(1)
+                self.exit_program()
             if self.Par_.write_data_to_file != '0':
                 logger.warning(f"The .tsa file is written in {self.Par_.path} unless you gave a path to the output file")
     

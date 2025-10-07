@@ -32,7 +32,7 @@ class exec_:
     
     def __init__(self):
         self.Par_ = par.Params('config.cfg')
-        self.Par_.validation_params()
+        foobar = self.Par_.validation_params(False)
         logger.success('Params valid and successfully set')
         self.execution_cls = None
         self.running = True

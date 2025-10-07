@@ -96,7 +96,10 @@ def main():
     else:
         logger.success('setup is ready for flesctrl.')  
     Par_ = par.Params('config.cfg')
-    Par_.validation_params()
+    if Par_.validation_params(True):
+        logger.success(f"Params are valid and ready for start")
+    else:
+        logger.error("Params invalid. Check logmessages")
 
 if __name__ == '__main__':
     main()
