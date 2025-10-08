@@ -163,54 +163,9 @@ class Params:
             num_list = numbers.split(",")
             node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
         node_list = sorted(set(node_list))
-        #print(node_list)
-        #print(node_list)
         return node_list
-# =============================================================================
-# =============================================================================
-# # BAUSTELLE
-# =============================================================================
-# =============================================================================
-    def validation_params_v2(self):
-        
-        if self.use_pattern_gen != 1:
-            if not self.input_files:
-                logger.critical('no input files and no usage of the pattern generator')
-                sys.exit(1)
-            else:
-                for elem in self.input_files:
-                    if not os.path.isfile(elem[1]):
-                        logger.critical(f'File {elem[1]} does not exist')
-                        sys.exit(1)
-        for program in ['./mstool', './flesnet']:
-            program_path = self.path + program
-            if not (os.path.isfile(program_path) and os.access(program_path, os.X_OK)):
-                logger.critical(f'Program {program} does not exist')
-                sys.exit(1)
-        if self.transport_method == 'zeromq' and self.show_only_entry_nodes == 0:
-            logger.warning(f'transport method zeromq only shows data rate for the entry nodes. Therefore param show_only_entry_nodes is set to 1')
-            self.show_only_entry_nodes = 1
-        
-        if self.enable_progress_bar:
-            if self.use_pattern_gen == 1:
-                logger.warning('Pattern Generator is used, thus there is no limit for the total data. Therefore progress bar is disabled')
-                self.show_progress_bar = 0
-            for tup in self.input_files:
-                if len(tup) == 1:
-                    logger.warning(f'File for entry node {tup[0]} is not set. Requested for the progress bar. Therefore progress bar is disabled')
-                    self.show_progress_bar = 0
-        if self.activate_timesliceforwarding == 1:
-            if int(self.port) < 1023:
-                logger.critical(f"used port for timeslice-forwarding: {self.port} is privileged, thus cannot be used")
-                sys.exit(1)
-            if self.port not in self.customize_string:
-                logger.critical(f"used port for timeslice-forwarding: {self.port} does not coincide with the port used in flesnet")
-                sys.exit(1)
-            if self.write_data_to_file != '0':
-                logger.warning(f"The .tsa file is written in {self.path} unless you gave a path to the output file")
 
     def validation_params(self, system_check):
-        #print('test')
         Params_check = params_checker(self, system_check)
         Params_check.check_validity_of_files()
         Params_check.check_validity_of_files()
@@ -226,6 +181,12 @@ class Params:
         Params_check.check_timeslice_forwarding()
         return Params_check.Params_valid
 
+
+# =============================================================================
+# This class checks the different parameters from the config file. Is currently
+# used in before the start of flesctrl and in the setup checker .
+# Might be extended in the future.
+# =============================================================================
 class params_checker:
     
     def __init__(self, params, system_check):
@@ -257,11 +218,8 @@ class params_checker:
                 logger.critical(f'Program {program} does not exist')
                 self.exit_program()
        
-# =============================================================================
-#     Baustelle
-# =============================================================================
+
     def check_num_nodes(self):
-        #print('test num nodes')
         if self.Par_.overlap_usage_of_nodes == 1:
             num_tot_nodes_req = max(self.Par_.num_buildnodes, self.Par_.entry_nodes) 
 
@@ -387,17 +345,3 @@ class params_checker:
                 logger.warning(f"The .tsa file is written in {self.Par_.path} unless you gave a path to the output file")
     
 
-    
-# =============================================================================
-# only for dev purpose
-# =============================================================================
-def main():
-    Par_ = Params('config.cfg')
-    Par_.validation_params()
-    print('\n')
-    print(Par_)
-    for handler in logger.handlers[:]:
-        logger.removeHandler(handler)
-
-if __name__ == '__main__':
-    main()
