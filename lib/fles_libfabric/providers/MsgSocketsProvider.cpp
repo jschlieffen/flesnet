@@ -20,6 +20,8 @@
 #include <netinet/in.h>
 #include <netinet/ip.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+
 
 namespace tl_libfabric {
 
@@ -41,7 +43,7 @@ struct fi_info* MsgSocketsProvider::exists(std::string local_host_name) {
 
   if (res == 0) {
     // TODO this freeinfo method throws invalid pointer exception!!!
-    // fi_freeinfo(hints);
+    //fi_freeinfo(hints);
     return info;
   }
 
@@ -65,7 +67,7 @@ void MsgSocketsProvider::accept(struct fid_pep* pep,
                                 unsigned int /*count*/,
                                 fid_eq* eq) {
   std::string port_s = std::to_string(port);
-
+  std::cout<<"hostname accept: "<<hostname<<std::endl;
   struct fi_info* accept_info = nullptr;
   int res = fi_getinfo(FIVERSION, hostname.c_str(), port_s.c_str(), FI_SOURCE,
                        info_, &accept_info);
@@ -107,6 +109,7 @@ void MsgSocketsProvider::accept(struct fid_pep* pep,
               << fi_strerror(-res);
     throw LibfabricException("fi_listen in accept failed");
   }
+  std::cout<<"test listen"<<std::endl;
 }
 
 void MsgSocketsProvider::connect(fid_ep* ep,
@@ -118,6 +121,7 @@ void MsgSocketsProvider::connect(fid_ep* ep,
                                  const void* param,
                                  size_t param_len,
                                  void* addr) {
+  std::cout<<"test connect"<<std::endl;
   int res = fi_connect(ep, addr, param, param_len);
   if (res != 0) {
     L_(fatal) << "fi_connect failed: " << res << "=" << fi_strerror(-res);

@@ -2,6 +2,11 @@
 // Copyright 2016 Thorsten Schuett <schuett@zib.de>, Farouk Salem <salem@zib.de>
 
 #include "Connection.hpp"
+#include "providers/Provider.hpp"
+#include <rdma/fi_eq.h> 
+#include <rdma/fi_errno.h>
+#include <stdio.h>
+
 
 namespace tl_libfabric {
 
@@ -94,10 +99,14 @@ void Connection::connect(const std::string& hostname,
   }
 
   setup_mr(domain);
+  std::cout<<"test loc. connect"<<std::endl;
   Provider::getInst()->connect(ep_, max_send_wr_, max_send_sge_, max_recv_wr_,
                                max_recv_sge_, max_inline_data_,
                                private_data->data(), private_data->size(),
                                info2->dest_addr);
+  if (!Provider::getInst()->has_av()){
+    LibfabricBarrier::get_instance()->append_endpoint(ep_, cq, index_, true);
+  }
   setup();
 }
 
@@ -163,9 +172,9 @@ void Connection::on_connect_request(struct fi_eq_cm_entry* event,
   }
 #pragma GCC diagnostic pop
 
-  // setup(pd);
+  //setup(pd);
   setup_mr(pd);
-
+  //setup();
   auto private_data = get_private_data();
   assert(private_data->size() <= 255);
 
@@ -176,12 +185,14 @@ void Connection::on_connect_request(struct fi_eq_cm_entry* event,
   }
   // accept_connect_request();
   err = fi_accept(ep_, private_data->data(), private_data->size());
+  std::cout<<"test fi connect"<<std::endl;
   if (err != 0) {
     L_(fatal) << "fi_accept failed: " << err << "=" << fi_strerror(-err);
     throw LibfabricException("fi_accept failed");
   }
-
-  // setup(pd);
+    if (!Provider::getInst()->has_av()){
+    LibfabricBarrier::get_instance()->append_endpoint(ep_, cq, index_, true);
+  }  // setup(pd);
   setup();
 }
 

@@ -1,6 +1,9 @@
 // Copyright 2020 Farouk Salem <salem@zib.de>
 
 #include "LibfabricCollective.hpp"
+#include "log.hpp"
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 namespace tl_libfabric {
 
@@ -8,12 +11,16 @@ LibfabricCollective::LibfabricCollective(uint32_t remote_index,
                                          struct fid_domain* pd)
     : remote_index_(remote_index), pd_(pd) {
 
-  initialize_cq(&recv_cq_);
-  assert(recv_cq_ != nullptr);
-  initialize_cq(&send_cq_);
-  assert(send_cq_ != nullptr);
   // av
   if (Provider::getInst()->has_av()) {
+
+  initialize_cq(&recv_cq_);
+  assert(recv_cq_ != nullptr);
+  std::cout<<"receive cq: "<<recv_cq_<<std::endl;
+  initialize_cq(&send_cq_);
+  std::cout<<"send cq: "<<send_cq_<<std::endl;
+  assert(send_cq_ != nullptr);
+    
     initialize_av();
   }
 }
@@ -26,7 +33,7 @@ void LibfabricCollective::initialize_cq(struct fid_cq** cq) {
   cq_attr.flags = 0;
   cq_attr.format = FI_CQ_FORMAT_CONTEXT;
   cq_attr.wait_obj = FI_WAIT_NONE;
-  cq_attr.signaling_vector = Provider::vector++; // ??
+  cq_attr.signaling_vector = 0; // ??
   cq_attr.wait_cond = FI_CQ_COND_NONE;
   cq_attr.wait_set = nullptr;
   int res = fi_cq_open(pd_, &cq_attr, cq, nullptr);
@@ -60,6 +67,8 @@ bool LibfabricCollective::add_endpoint(uint32_t index,
 
   L_(debug) << "add_endpoint " << index << ":" << hostname << " root "
             << root_ep;
+  std::cout<<"index: "<<index<<std::endl;
+  std::cout<<"endpointlist size: "<<endpoint_list_.size()<<std::endl;
   assert(index == endpoint_list_.size());
 
   struct LibfabricCollectiveEPInfo* ep_info = new LibfabricCollectiveEPInfo();
@@ -71,6 +80,22 @@ bool LibfabricCollective::add_endpoint(uint32_t index,
   create_send_mr(ep_info);
   endpoint_list_.push_back(ep_info);
   return true;
+}
+
+void LibfabricCollective::append_endpoint(fid_ep* ep, 
+                                          struct fid_cq* cq,
+                                          uint32_t index,
+                                          bool root_ep){
+  //L_(fatal)<<"append endpoint";
+  struct LibfabricCollectiveEPInfo* ep_info = new LibfabricCollectiveEPInfo();
+  ep_info->index = index;
+  ep_info->root_ep = root_ep;
+  ep_info->ep = ep;
+  create_recv_mr(ep_info);
+  create_send_mr(ep_info);
+  endpoint_list_.push_back(ep_info);
+  recv_cq_ = cq;
+  send_cq_ = cq;
 }
 
 fi_addr_t LibfabricCollective::add_av(struct fi_info* fiinfo) {
@@ -89,8 +114,11 @@ void LibfabricCollective::create_endpoint(
   struct fi_info* fiinfo =
       get_info(ep_info->index, ep_type, prov_name, hostname);
   assert(fiinfo != nullptr);
-  if (hostname != "")
+  std::cout<<"hostname: "<<hostname<<std::endl;
+  if (Provider::getInst()->has_av() && hostname != ""){
+
     ep_info->fi_addr = add_av(fiinfo);
+  }
   int err = fi_endpoint(pd_, fiinfo, &ep_info->ep, this);
   if (err != 0) {
     L_(fatal) << "fi_endpoint failed: " << err << "=" << fi_strerror(-err);
@@ -119,11 +147,13 @@ void LibfabricCollective::create_endpoint(
       throw LibfabricException("fi_ep_bind failed (av)");
     }
   }
+  std::cout<<"test fi enable"<<std::endl;
   err = fi_enable(ep_info->ep);
   if (err != 0) {
     L_(fatal) << "fi_enable failed: " << err << "=" << fi_strerror(-err);
     throw LibfabricException("fi_enable failed");
   }
+
   size_t addr_len = sizeof(ep_info->send_buffer);
   err = fi_getname(&ep_info->ep->fid, &ep_info->send_buffer, &addr_len);
   assert(err == 0);
@@ -134,12 +164,12 @@ struct fi_info* LibfabricCollective::get_info(uint32_t index,
                                               const std::string prov_name,
                                               const std::string hostname) {
   // TODO update port
-  uint32_t port = (hostname == "" ? 14195 + remote_index_ * 2 + index
-                                  : 14195 + remote_index_ + index * 2);
-
+  uint32_t port = (hostname == "" ? 50000 + remote_index_ * 2 + index 
+                                  : 50000 + remote_index_ + index * 2);
+  std::cout<<port<<std::endl;
   struct fi_info* info = nullptr;
   // TODO hard-coded ep_type
-  assert(ep_type == FI_EP_RDM);
+  //assert(ep_type == FI_EP_RDM);
   struct fi_info* hints = Provider::get_hints(ep_type, prov_name);
   int err;
   // TODO define the port in config file
@@ -228,6 +258,7 @@ void LibfabricCollective::create_send_mr(LibfabricCollectiveEPInfo* ep_info) {
 }
 
 bool LibfabricCollective::deactive_endpoint(uint32_t index) {
+  std::cout<<"test deactivate endpoint"<<std::endl;
   assert(index < endpoint_list_.size());
   struct LibfabricCollectiveEPInfo* ep_info = endpoint_list_[index];
   assert(ep_info->index == index);
@@ -236,36 +267,43 @@ bool LibfabricCollective::deactive_endpoint(uint32_t index) {
   return true;
 }
 void LibfabricCollective::wait_for_cq(struct fid_cq* cq, const int32_t events) {
-
+  std::cout<<"cq: "<<cq<<std::endl;
   struct fi_cq_entry* wc = new struct fi_cq_entry[MAX_CQ_ENTRIES];
   int ne, received = 0, expected = std::min(MAX_CQ_ENTRIES, events),
           remaining = events - MAX_CQ_ENTRIES;
 
   while (received < expected) {
-    ne = fi_cq_read(cq, &wc, (expected - received));
+
+    ne = fi_cq_read(cq, wc, (expected - received));
+
+
     if ((ne < 0) && (ne != -FI_EAGAIN)) {
+      struct fi_cq_err_entry err;
+      fi_cq_readerr(cq, &err, 0);
       L_(fatal) << "wait_for_cq failed: " << ne << "=" << fi_strerror(-ne);
       throw LibfabricException("wait_for_cq failed");
     }
-
     if (ne == -FI_EAGAIN || ne == 0) {
       continue;
     }
-
     L_(debug) << "got " << ne << " events";
     received += ne;
     for (int i = 0; i < ne; i++) {
+          std::cout << "wc context = " << wc[i].op_context << std::endl;
       struct fi_custom_context* context =
           static_cast<struct fi_custom_context*>(wc[i].op_context);
       assert(context != nullptr);
-      if (endpoint_list_[context->op_context]->fi_addr == FI_ADDR_UNSPEC) {
-        int res = fi_av_insert(
-            av_, &endpoint_list_[context->op_context]->recv_buffer, 1,
-            &endpoint_list_[context->op_context]->fi_addr, 0, NULL);
-        assert(res == 1);
-        endpoint_list_[context->op_context]->recv_msg_wr.addr =
-            endpoint_list_[context->op_context]->send_msg_wr.addr =
-                endpoint_list_[context->op_context]->fi_addr;
+      //AV!!!
+      if (Provider::getInst()->has_av()){
+        if (endpoint_list_[context->op_context]->fi_addr == FI_ADDR_UNSPEC) {
+          int res = fi_av_insert(
+              av_, &endpoint_list_[context->op_context]->recv_buffer, 1,
+              &endpoint_list_[context->op_context]->fi_addr, 0, NULL);
+          assert(res == 1);
+          endpoint_list_[context->op_context]->recv_msg_wr.addr =
+              endpoint_list_[context->op_context]->send_msg_wr.addr =
+                  endpoint_list_[context->op_context]->fi_addr;
+        }
       }
     }
   }

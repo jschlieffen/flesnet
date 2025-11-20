@@ -326,9 +326,9 @@ void TimesliceBuilder::operator()() {
       conn_.resize(num_input_nodes_);
       bootstrap_wo_connections();
     }
-
+    std::cout<<"test call barrier begin"<<std::endl;
     LibfabricBarrier::get_instance()->call_barrier();
-
+    std::cout<<"test call barrier end"<<std::endl;
     time_begin_ = std::chrono::high_resolution_clock::now();
     DDSchedulerOrchestrator::set_begin_time(time_begin_);
 

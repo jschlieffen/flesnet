@@ -153,6 +153,7 @@ void InputChannelSender::report_status() {
 }
 
 void InputChannelSender::sync_buffer_positions() {
+  L_(debug)<<"sync buffer positions";
   for (auto& c : conn_) {
     c->try_sync_buffer_positions();
   }

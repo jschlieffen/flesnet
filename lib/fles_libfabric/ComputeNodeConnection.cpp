@@ -2,6 +2,7 @@
 // Copyright 2016 Thorsten Schuett <schuett@zib.de>, Farouk Salem <salem@zib.de>
 
 #include "ComputeNodeConnection.hpp"
+#include "providers/Provider.hpp"
 
 namespace tl_libfabric {
 
@@ -66,7 +67,7 @@ ComputeNodeConnection::ComputeNodeConnection(
 
 void ComputeNodeConnection::post_recv_status_message() {
   if (false) {
-    L_(trace) << "[c" << remote_index_ << "] "
+    L_(debug) << "[c" << remote_index_ << "] "
               << "[" << index_ << "] "
               << "POST RECEIVE status message";
   }
@@ -165,10 +166,12 @@ void ComputeNodeConnection::setup_mr(struct fid_domain* pd) {
 }
 
 void ComputeNodeConnection::setup() {
-  L_(info) << "Calling add_endpoint in setup";
-  LibfabricBarrier::get_instance()->add_endpoint(
-      index_, Provider::getInst()->get_info(), "", false);
-  L_(info) << "END OF Calling add_endpoint in setup";
+  if (Provider::getInst()->has_av()){
+    L_(info) << "Calling add_endpoint in setup";
+    LibfabricBarrier::get_instance()->add_endpoint(
+        index_, Provider::getInst()->get_info(), "", false);
+    L_(info) << "END OF Calling add_endpoint in setup";
+  }
   setup_heartbeat();
 
   // setup send and receive buffers

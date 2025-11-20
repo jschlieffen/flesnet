@@ -9,6 +9,7 @@
 #include <rdma/fi_endpoint.h>
 #include <rdma/fi_tagged.h>
 #include <sys/uio.h>
+//#include <netinet/in.h>  
 
 namespace tl_libfabric {
 
@@ -21,11 +22,12 @@ struct LibfabricCollectiveEPInfo {
   struct iovec recv_sge = iovec();
   struct fid_mr* mr_recv = nullptr;
   unsigned char recv_buffer[64];
-
+  //struct sockaddr_in peer_addr;
   struct fi_msg_tagged send_msg_wr;
   struct iovec send_sge = iovec();
   struct fid_mr* mr_send = nullptr;
   unsigned char send_buffer[64];
+
 
   bool root_ep = false;
   bool active = true;

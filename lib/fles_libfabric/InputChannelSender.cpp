@@ -4,6 +4,7 @@
 
 #include "InputChannelSender.hpp"
 #include "ConstVariables.hpp"                          // for ConstVariables
+#include "log.hpp"
 
 #include <algorithm>                                   // for min
 #include <cstring>                                     // for strerror, size_t
@@ -31,7 +32,6 @@ InputChannelSender::InputChannelSender(
       overlap_size_(overlap_size), max_timeslice_number_(max_timeslice_number),
       min_acked_desc_(data_source.desc_buffer().size() / 4),
       min_acked_data_(data_source.data_buffer().size() / 4) {
-
   start_index_desc_ = sent_desc_ = acked_desc_ = cached_acked_desc_ =
       data_source.get_read_index().desc;
   start_index_data_ = sent_data_ = acked_data_ = cached_acked_data_ =
@@ -203,6 +203,7 @@ void InputChannelSender::send_timeslices() {
 }
 
 void InputChannelSender::bootstrap_with_connections() {
+  std::cout<<"bootstrap with connection"<<std::endl;
   connect();
   while (connected_ != compute_hostnames_.size()) {
     poll_cm_events();
@@ -214,7 +215,7 @@ void InputChannelSender::bootstrap_wo_connections() {
   init_context(Provider::getInst()->get_info(), compute_hostnames_,
                compute_services_);
   LibfabricBarrier::create_barrier_instance(input_index_, pd_, false);
-
+  std::cout<<"bootstrap w.o. connection"<<std::endl;
   conn_.resize(compute_hostnames_.size());
   // setup connections objects
   for (unsigned int i = 0; i < compute_hostnames_.size(); ++i) {
@@ -254,9 +255,9 @@ void InputChannelSender::operator()() {
     }
 
     data_source_.proceed();
-
+    std::cout<<"test call barrier begin"<<std::endl;
     LibfabricBarrier::get_instance()->call_barrier();
-
+    std::cout<<"test call barrier end"<<std::endl;
     time_begin_ = std::chrono::high_resolution_clock::now();
     InputSchedulerOrchestrator::update_input_begin_time(time_begin_);
 
@@ -269,7 +270,12 @@ void InputChannelSender::operator()() {
     sync_heartbeat();
     report_status();
     send_timeslices();
-
+    /*
+    sync_buffer_positions();
+    sync_data_source(true);
+    sync_heartbeat();
+    report_status();
+    */
     while (InputSchedulerOrchestrator::get_sent_timeslices() <=
                max_timeslice_number_ &&
            !abort_) {
@@ -278,7 +284,6 @@ void InputChannelSender::operator()() {
       update_compute_schedulers();
       data_source_.proceed();
     }
-
     L_(info) << "[i" << input_index_ << "]"
              << "All timeslices are sent.  wait for pending send completions!";
 
@@ -366,7 +371,7 @@ bool InputChannelSender::try_send_timeslice(uint64_t timeslice, uint32_t cn) {
         InputSchedulerOrchestrator::log_timeslice_CB_blocked(cn, timeslice,
                                                              true);
 
-        // conn_[cn]->inc_write_pointers(total_length, 1);
+        //conn_[cn]->inc_write_pointers(total_length, 1);
         conn_[cn]->add_timeslice_data_address(total_length, 1);
         InputSchedulerOrchestrator::mark_timeslice_transmitted(cn, timeslice,
                                                                total_length);

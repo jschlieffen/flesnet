@@ -28,8 +28,9 @@ public:
 
   Provider(const Provider&) = delete;
   Provider& operator=(const Provider&) = delete;
-
+  //TODO: fix this BS
   virtual bool has_av() const { return false; };
+
   virtual bool has_eq_at_eps() const { return true; };
   virtual bool is_connection_oriented() const { return true; };
 

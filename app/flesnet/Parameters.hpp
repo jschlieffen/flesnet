@@ -99,6 +99,10 @@ public:
   /// flag to check whether to drop timeslice processing
   [[nodiscard]] bool drop_process_ts() const { return drop_process_ts_; }
 
+  [[nodiscard]] std::string input_node_name() const { return input_node_name_; }
+
+  [[nodiscard]] std::string output_node_name() const { return output_node_name_; }
+  
   /// Retrieve the history size of intervals that the scheduler would decide
   /// based on
   [[nodiscard]] uint32_t scheduler_history_size() const {
@@ -178,6 +182,10 @@ private:
 
   /// flag to check whether to drop timeslice processing
   bool drop_process_ts_ = false;
+
+  std::string input_node_name_;
+
+  std::string output_node_name_;
 
   /// This history size of intervals that the scheduler would decide based on
   uint32_t scheduler_history_size_{};

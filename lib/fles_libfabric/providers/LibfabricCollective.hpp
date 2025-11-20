@@ -31,6 +31,11 @@ public:
 
   bool deactive_endpoint(uint32_t index);
 
+  void append_endpoint(fid_ep* ep, 
+                      struct fid_cq* cq,
+                      uint32_t index,
+                      bool root_ep);
+
 protected:
   ~LibfabricCollective();
   LibfabricCollective(uint32_t remote_index, struct fid_domain* pd);

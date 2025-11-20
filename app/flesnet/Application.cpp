@@ -189,7 +189,7 @@ void Application::create_input_channel_senders() {
 
       data_sources_.push_back(std::unique_ptr<InputBufferReadInterface>(
           new FlesnetPatternGenerator(datasize, descsize, index, size_mean,
-                                      (pattern != 0), (size_var != 0), delay_ns,
+                                      true, (size_var != 0), delay_ns,
                                       initial_ns)));
     } else {
       L_(fatal) << "unknown input scheme: " << scheme;

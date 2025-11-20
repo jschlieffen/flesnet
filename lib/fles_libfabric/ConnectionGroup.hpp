@@ -92,6 +92,7 @@ public:
     uint32_t event_kind;
 
     ssize_t count = fi_eq_read(eq_, &event_kind, buffer, event_size, 0);
+    //std::cout<<"test fi eq read"<<std::endl;
     if (count > 0) {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wold-style-cast"

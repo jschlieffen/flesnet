@@ -528,6 +528,12 @@ void InputChannelConnection::connect(const std::string& hostname,
                                      struct fid_cq* cq,
                                      struct fid_av* av,
                                      fi_addr_t fi_addr) {
+  // L_(debug) << "fi_addr: " << fi_addr;
+  // L_(debug) << "Calling add_endpoint in setup";
+
+  // assert(LibfabricBarrier::get_instance() != nullptr);
+  // LibfabricBarrier::get_instance()->add_endpoint(
+  //     index_, Provider::getInst()->get_info(), hostname, true);
   Connection::connect(hostname, service, domain, cq, av);
   if (not Provider::getInst()->is_connection_oriented()) {
     size_t addr_len = sizeof(send_status_message_.my_address);
@@ -541,10 +547,12 @@ void InputChannelConnection::connect(const std::string& hostname,
     heartbeat_send_wr.addr = fi_addr;
     post_send_status_message();
   }
-  L_(debug) << "Calling add_endpoint in setup";
-  assert(LibfabricBarrier::get_instance() != nullptr);
-  LibfabricBarrier::get_instance()->add_endpoint(
-      index_, Provider::getInst()->get_info(), hostname, true);
+  if (Provider::getInst()->has_av()){
+    L_(debug) << "Calling add_endpoint in setup";
+    assert(LibfabricBarrier::get_instance() != nullptr);
+    LibfabricBarrier::get_instance()->add_endpoint(
+        index_, Provider::getInst()->get_info(), hostname, true);
+  }
 }
 
 void InputChannelConnection::reconnect() {

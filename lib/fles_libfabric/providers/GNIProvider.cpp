@@ -43,7 +43,7 @@ struct fi_info* GNIProvider::exists(const std::string& local_host_name) {
                        hints, &info);
 
   if (res == 0) {
-    // std::cout << info->src_addrlen << std::endl;
+    //  std::cout << info->src_addrlen << std::endl;
     // fi_freeinfo(hints);
     return info;
   }

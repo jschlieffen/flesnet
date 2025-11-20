@@ -27,9 +27,9 @@ LibfabricContextPool::~LibfabricContextPool() {
 
   available_.clear();
   in_use_.clear();
-  L_(info) << "LibfabricContextPool deconstructor: Total number of created "
-              "objects "
-           << context_counter_;
+  //L_(info) << "LibfabricContextPool deconstructor: Total number of created "
+  //            "objects "
+  //         << context_counter_;
 }
 
 struct fi_custom_context* LibfabricContextPool::getContext() {

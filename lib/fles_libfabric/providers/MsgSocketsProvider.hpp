@@ -27,7 +27,7 @@ public:
   struct fid_fabric* get_fabric() override {
     return fabric_;
   };
-
+  //bool has_av() const override { return true; };
   static struct fi_info* exists(std::string local_host_name);
 
   void accept(struct fid_pep* pep,

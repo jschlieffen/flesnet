@@ -6,6 +6,7 @@
 #include <functional>
 #include <queue>
 #include <utility>
+#include <iostream>
 
 class Scheduler {
 public:
@@ -48,11 +49,15 @@ public:
 
   void timer() {
     event::time_type now = std::chrono::system_clock::now();
-
+    //std::cout<<"test scheduler while loop"<<std::endl;
     while (!event_queue_.empty() && (event_queue_.top().when_ <= now)) {
+      //std::cout<<"test scheduler while loop condition"<<std::endl;
       event_queue_.top()();
+      //std::cout<<"test scheduler event queue top"<<std::endl;
       event_queue_.pop();
+      //std::cout<<"test scheduler event queue pop"<<std::endl;
     }
+    //std::cout<<"test scheduler while loop ende"<<std::endl;
   }
 
 private:

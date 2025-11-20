@@ -31,9 +31,8 @@ struct fi_info* MsgGNIProvider::exists(std::string local_host_name) {
   struct fi_info* hints =
       Provider::get_hints(FI_EP_MSG, "gni"); // fi_allocinfo();
   struct fi_info* info = nullptr;
-
   int res =
-      fi_getinfo(FIVERSION, local_host_name.c_str(), nullptr, 0, hints, &info);
+      fi_getinfo(FIVERSION, local_host_name.c_str(), nullptr, 0 /* FI_SOURCE*/, hints, &info);
 
   if (res == 0) {
     // fi_freeinfo(hints);

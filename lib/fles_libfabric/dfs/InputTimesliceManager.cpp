@@ -206,6 +206,13 @@ void InputTimesliceManager::log_timeslice_transmit_time(uint32_t compute_index,
   timeslice_info->data = timeslice_data;
   timeslice_info->compute_desc = descriptor_index;
   timeslice_info->transmit_time = std::chrono::high_resolution_clock::now();
+  /*
+  conn_timeslice_info_.get(compute_index)->add(timeslice, timeslice_info);
+  conn_desc_timeslice_info_.get(compute_index)
+             ->add(descriptor_index, timeslice);
+  future_conn_timeslices_.get(compute_index)->erase(timeslice);
+  */
+  
   assert(
       conn_timeslice_info_.get(compute_index)->add(timeslice, timeslice_info));
   assert(conn_desc_timeslice_info_.get(compute_index)

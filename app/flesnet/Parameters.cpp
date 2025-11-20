@@ -155,6 +155,14 @@ void Parameters::parse_options(int argc, char* argv[]) {
              po::value<uint32_t>(&scheduler_history_size_)->default_value(100),
              "The scheduler history size (LibFabric only)");
   config_add(
+      "input-node-name",
+      po::value<std::string>(&input_node_name_)->default_value("."),
+      "test (LibFabric only)");
+  config_add(
+      "output-node-name",
+      po::value<std::string>(&output_node_name_)->default_value("."),
+      "test (LibFabric only)");
+  config_add(
       "scheduler-interval-length",
       po::value<uint32_t>(&scheduler_interval_length_)->default_value(10000),
       "The initial scheduler interval Timeslices (LibFabric only)");

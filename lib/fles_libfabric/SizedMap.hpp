@@ -30,6 +30,23 @@ public:
   VALUE get(const KEY key) const;
 
   KEY get_last_key() const;
+  // Non-const iterators
+  typename std::map<KEY, VALUE>::iterator begin() {
+      return map_.begin();
+  }
+
+  typename std::map<KEY, VALUE>::iterator end() {
+      return map_.end();
+  }
+
+  // Const iterators
+  typename std::map<KEY, VALUE>::const_iterator begin() const {
+      return map_.begin();
+  }
+
+  typename std::map<KEY, VALUE>::const_iterator end() const {
+      return map_.end();
+  }
 
   typename std::map<KEY, VALUE>::iterator get_begin_iterator();
 
