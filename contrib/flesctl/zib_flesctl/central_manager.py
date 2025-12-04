@@ -24,7 +24,8 @@ import curses
 import signal
 from log_msg import *
 import logfile_gen as Logfile
-
+import random
+import numpy as np
 
 # =============================================================================
 # This file deals with scheduling the nodes and starting the import processes.
@@ -81,7 +82,7 @@ class Entry_nodes:
         self.build_nodes_ips = build_nodes_ips
         self.build_nodes_eth_ips = build_nodes_eth_ips
         self.Par_ = parameters
-        self.pids = []
+        self.pids = {}
     
     
     def write_Params(self):
@@ -123,7 +124,7 @@ class Entry_nodes:
             logfile = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
             logfile_collectl = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
+                'srun --nodelist=%s --exclusive -N 1 -c %s Can%s %s %s %s %s'
                 % (node, self.Par_.num_cpus ,file,input_file,logfile, self.node_list[node]['entry_node_idx'], logfile_collectl)
             )
             try:
@@ -133,14 +134,33 @@ class Entry_nodes:
                 logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
-            self.pids += [result]
+            self.pids[node] = result
             logger.success('start successful')
             node_cnt += 1
         return None
     
+    def kill_process(self, kill_node):
+        logger.info(f"Killing entry node: {kill_node}")
+        self.pids[kill_node].stdin.write('kill')
+        self.pids[kill_node].stdin.flush()
+        stdout, stderr = self.pids[kill_node].communicate(timeout=0.1)
+        print('Output: ',stdout)
+        print('Error: ', stderr)
+        print('\n')
+        
+    def revieve_process(self, revieve_node):
+        logger.info(f"Reviving entry node: {revieve_node}")
+        self.pids[revieve_node].stdin.write('revieve')
+        stdout, stderr = self.pids[revieve_node].communicate(timeout=0.1)
+        print('Output: ',stdout)
+        print('Error: ', stderr)
+        print('\n')
+ 
+    
     def stop_flesnet(self):
-        for pid in self.pids:
+        for pid in self.pids.values():
             pid.stdin.write('stop')
+            pid.stdin.flush()
             stdout, stderr = pid.communicate()
             print('Output: ',stdout)
             print('Error: ', stderr)
@@ -161,7 +181,7 @@ class Build_nodes:
         self.entry_node_ips = entry_nodes_ips
         self.entry_node_eth_ips = entry_nodes_eth_ips
         self.Par_ = parameters
-        self.pids = []
+        self.pids = {}
     
     
 
@@ -208,14 +228,32 @@ class Build_nodes:
                 logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
-            self.pids += [result]
+            self.pids[node] = result
             logger.success('start successful')
             node_cnt += 1
         return None
 
+    #TODO: Communication via file not via terminal.
+    def kill_process(self, kill_node):
+        logger.info(f"Killing entry node: {kill_node}")
+        self.pids[kill_node].stdin.write('kill')
+        self.pids[kill_node].stdin.flush()
+        stdout, stderr = self.pids[kill_node].communicate(timeout=0.1)
+        print('Output: ',stdout)
+        print('Error: ', stderr)
+        print('\n')
+        
+    def revieve_process(self, revieve_node):
+        logger.info(f"Reviving entry node: {revieve_node}")
+        self.pids[revieve_node].stdin.write('revieve')
+        stdout, stderr = self.pids[revieve_node].communicate(timeout=0.1)
+        print('Output: ',stdout)
+        print('Error: ', stderr)
+        print('\n')
     def stop_flesnet(self):
-        for pid in self.pids:
+        for pid in self.pids.values():
             pid.stdin.write('stop')
+            pid.stdin.flush()
             stdout, stderr = pid.communicate()
             print('Output: ',stdout)
             print('Error: ', stderr)
@@ -303,6 +341,8 @@ class Super_nodes:
         return None
 
 
+
+    
     def stop_flesnet(self):
         for pid in self.pids:
             pid.stdin.write('stop')
@@ -703,9 +743,89 @@ class execution:
                 self.monitoring()
             except Exception as e:
                 logger.critical(f'Error {e} occured during monotoring. Terminating')
+        if self.Par_.kill_nodes:
+            try:
+                self.kill_nodes_fct()
+            except Exception as e:
+                logger.critical(f'Error {e} occured during robustness test. Terminating')
+                self.stop_program()
+                
         while True:
             time.sleep(1)
     
+    def kill_nodes_fct(self):
+        kill_dict = {}
+        revieve_dict = {
+                "Entry nodes" : [],
+                "Build nodes" : [],
+                "Process nodes" : []
+            }
+        num_kills = self.Par_.num_entrynodes_kills + self.Par_.num_buildnodes_kills
+        revieve_count = 0
+        if self.Par_.activate_timesliceforwarding:
+            num_kills += self.Par_.num_processnodes_kills
+        if self.Par_.set_kill_list == 1:
+            kill_dict["Entry nodes"] = self.Par_.entry_node_kill_list
+            kill_dict["Build nodes"] = self.Par_.build_node_kill_list
+            if self.Par_.activate_timesliceforwarding:
+                kill_dict["Processing nodes"] = self.Par_.process_node_kill_list
+        else:
+            kill_dict["Entry nodes"] = random.sample([entry_node for entry_node in self.entry_nodes.keys()], self.Par_.num_entrynodes_kills)
+            kill_dict["Build nodes"] = random.sample([build_node for build_node in self.build_nodes.keys()],self.Par_.num_buildnodes_kills)
+            if self.Par_.activate_timesliceforwarding:
+                kill_dict["Processing nodes"] = random.sample([receiving_node for receiving_node, build_node in self.rec2build], self.Par_.num_processnodes_kills)
+            else:
+                kill_dict["Processing nodes"] = []
+        while num_kills != revieve_count:
+            td = self.Par_.timer_for_kill.total_seconds()
+            sleep_val = np.random.poisson(td)
+            time.sleep(sleep_val)
+            #Params mehr mit einbeziehen 
+            print('test')
+            weights_rc_1 = [sum(len(kill_nodes) for kill_nodes in kill_dict.values()), sum(len(revive_nodes) for revive_nodes in revieve_dict.values())]
+            
+            kill_or_revieve = random.choices(["Kill", "Revieve"], weights=weights_rc_1, k=1)[0]
+            print('test weights 1')
+            if kill_or_revieve == "Kill":
+                weights_rc_2 = [len(kill_node) for kill_node in kill_dict.values()]
+                print(weights_rc_2)
+                node_type = random.choices(["Entry", "Build", "Process"], weights=weights_rc_2, k=1)[0]
+                print('test weights 2')
+                if node_type == "Entry":
+                    to_kill_node = random.choice(kill_dict["Entry nodes"])
+                    self.entry_nodes_cls.kill_process(to_kill_node)
+                    kill_dict["Entry nodes"].remove(to_kill_node)
+                    revieve_dict["Entry nodes"].append(to_kill_node)
+                elif node_type == "Build":
+                    to_kill_node = random.choice(kill_dict["Build nodes"])
+                    self.build_nodes_cls.kill_process(to_kill_node)
+                    kill_dict["Build nodes"].remove(to_kill_node)
+                    revieve_dict["Build nodes"].append(to_kill_node)
+                #Baustelle
+                elif node_type == "Process":
+                    to_kill_node = random.choice(kill_dict["Process nodes"])
+                    self.process_nodes_cls.kill_process(to_kill_node)
+                    kill_dict["Process nodes"].remove(to_kill_node)
+                    revieve_dict["Process nodes"].append(to_kill_node)
+            else: 
+                weights_rc_2 = [len(revieve_node) for revieve_node in revieve_dict.values()]
+                node_type = random.choices(["Entry", "Build", "Process"], weights_rc_2, k=1)[0]
+                if node_type == "Entry":
+                    to_revieve_node = random.choice(revieve_dict["Entry nodes"])
+                    self.entry_nodes_cls.revieve_process(to_revieve_node)
+                    revieve_dict["Entry nodes"].remove(to_revieve_node)
+                elif node_type == "Build":
+                    to_revieve_node = random.choice(revieve_dict["Build nodes"])
+                    self.build_nodes_cls.revieve_process(to_revieve_node)
+                    revieve_dict["Build nodes"].remove(to_revieve_node)
+                #Baustelle
+                elif node_type == "Process":
+                    to_revieve_node = random.choice(revieve_dict["Process nodes"])
+                    self.process_nodes_cls.revieve_process(to_revieve_node)
+                    revieve_dict["Build nodes"].remove(to_revieve_node)
+                revieve_count += 1
+                
+                
     # =============================================================================
     # Stops the experiment and kills every process connected    
     # =============================================================================

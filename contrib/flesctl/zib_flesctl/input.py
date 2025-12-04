@@ -146,8 +146,18 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
     print(flesnet_commands)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     input_data = ''
-    while input_data == '':
+    while 'stop' not in input_data:
         input_data = sys.stdin.read().strip()
+        if input_data == 'kill':
+            print('kill')
+            print(input_data)
+            #result_flesnet.terminate()
+            #result_flesnet.wait()
+        elif input_data == 'revieve':
+            print('revieve')
+            #result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    print(input_data)
+    print(type(input_data))
     if use_collectl == 1:
         #result_collectl.terminate()
         #result_collectl.wait()

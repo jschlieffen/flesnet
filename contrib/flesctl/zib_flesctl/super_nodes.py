@@ -156,6 +156,7 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
 
     build_nodes_thread.start()
     input_data = ''
+    #BAUSTELLE
     while input_data == '':
         input_data = sys.stdin.read().strip()
     if use_collectl == 1:
