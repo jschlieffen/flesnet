@@ -28,6 +28,16 @@ class Params:
         self.num_buildnodes = 0
         self.use_collectl = 0
         self.num_cpus = 2
+        self.kill_nodes = 0
+        self.timer_for_kill = timedelta(minutes=1)
+        self.num_entrynodes_kills = 1 
+        self.num_buildnodes_kills = 1
+        self.num_processnodes_kills = 1
+        self.revive_nodes=1
+        self.set_kill_list = 0
+        self.entry_node_kill_list = []
+        self.build_node_kill_list = []
+        self.process_node_kill_list = []
         self.set_node_list=0
         self.entry_nodes_list=[]
         self.build_nodes_list=[]
@@ -69,6 +79,7 @@ class Params:
     def get_params(self, config_file):        
         self.get_num_nodes_par()
         self.get_general_par()
+        self.get_kill_par()
         self.get_node_list_par()
         self.get_flesnet_par()
         self.get_mstool_par()
@@ -85,6 +96,22 @@ class Params:
         self.num_cpus = self.get_value('general', 'num_cpus', 'int', required=False)
         self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', self.overlap_usage_of_nodes, False)
         
+    def get_kill_par(self):
+        self.kill_nodes = self.get_value('robustness_test', 'kill_nodes_during_execution', 'int',self.kill_nodes, required=False)
+        self.timer_for_kill = self.get_value('robustness_test', 'timer_for_kills', 'time', self.timer_for_kill, required=False)
+        self.num_entrynodes_kills = self.get_value('robustness_test', 'num_entry_nodes_kills', 'int' , self.num_entrynodes_kills, required=False)
+        self.num_buildnodes_kills = self.get_value('robustness_test', 'num_build_nodes_kills', 'int' , self.num_buildnodes_kills, required=False)
+        self.num_processnodes_kills = self.get_value('robustness_test', 'num_process_nodes_kills', 'int' , self.num_processnodes_kills, required=False)
+        self.revive_nodes=self.get_value('robustness_test', 'revive_nodes', 'int' , self.revive_nodes, required=False)
+        self.set_kill_list = self.get_value('robustness_test', 'set_kill_list', 'int' , self.set_kill_list, required=False)
+        self.entry_node_kill_list = self.get_node_list('robustness_test', 'entry_node_kill_list', self.entry_node_kill_list, False)
+        self.build_node_kill_list = self.get_node_list('robustness_test', 'build_node_kill_list', self.build_node_kill_list, False)
+        self.process_node_kill_list = self.get_node_list('robustness_test', 'process_node_kill_list', self.process_node_kill_list, False)
+    
+    
+# =============================================================================
+#     TODO: make node list for timeslice-forwarding
+# =============================================================================
     def get_node_list_par(self):
         self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
         self.entry_nodes_list = self.get_node_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)
@@ -125,10 +152,18 @@ class Params:
         if val is not None:
             if par_type=='int':
                 return int(val)
+            elif par_type == 'time':
+                time_str = self.config.get(section, param)
+                h, m, s = map(int, time_str.split(":"))
+                return timedelta(hours=h, minutes=m, seconds=s)
             return val
         elif self.config.has_option(section, param):
             if par_type == 'int':
                 return self.config.getint(section, param)
+            elif par_type == 'time':
+                time_str = self.config.get(section, param)
+                h, m, s = map(int, time_str.split(":"))
+                return timedelta(hours=h, minutes=m, seconds=s)
             else:
                 return self.config.get(section, param)
         elif required:
@@ -189,10 +224,12 @@ class Params:
         node_list = sorted(set(node_list))
         return node_list
 
+        
+
     def validation_params(self, system_check):
         Params_check = params_checker(self, system_check)
         Params_check.check_validity_of_files()
-        Params_check.check_validity_of_files()
+            
         if self.set_node_list:
             Params_check.check_nodes_exist()
             
@@ -200,6 +237,8 @@ class Params:
             Params_check.check_num_nodes()
             if self.set_node_list:
                 Params_check.check_req_nodes_alloc
+        if self.kill_nodes:
+            Params_check.check_kill_par()
         self.show_only_entry_nodes = Params_check.check_transport_method()
         self.enable_progress_bar = Params_check.monitoring_check()
         Params_check.check_timeslice_forwarding()
@@ -241,7 +280,6 @@ class params_checker:
             if not (os.path.isfile(program_path) and os.access(program_path, os.X_OK)):
                 logger.critical(f'Program {program} does not exist')
                 self.exit_program()
-       
 
     def check_num_nodes(self):
         if self.Par_.overlap_usage_of_nodes == 1:
@@ -334,6 +372,37 @@ class params_checker:
             if build_node not in node_list:
                 logger.critical(f"required build node: {build_node} not allocated")
                 self.exit_program()
+                
+    def check_kill_par(self):
+        if self.Par_.timer_for_kill == timedelta(seconds=0):
+            logger.critical("Cannot kill programs immediatly")
+            self.exit_program()
+        if self.Par_.activate_timesliceforwarding == 0 and self.Par_.num_processnodes_kills > 0:
+            logger.warning("Cannot kill process nodes. Timeslice-forwarding is deactivated")
+        if self.Par_.num_entrynodes_kills > self.Par_.num_entrynodes:
+            logger.critical(f"Too many entry node kills: num entry nodes total: {self.Par_.num_entrynodes}, entry node kills: :{self.Par_.num_entrynodes_kills}")
+            self.exit_program()
+        if self.Par_.num_buildnodes_kills > self.Par_.num_buildnodes:
+            logger.critical(f"Too many build node kills: num build nodes total: {self.Par_.num_buildnodes}, build node kills: :{self.Par_.num_buildnodes_kills}")
+            self.exit_program()
+        if self.Par_.num_processnodes_kills > self.Par_.num_buildnodes:
+            logger.critical(f"Too many process node kills: num process nodes total: {self.Par_.num_buildnodes}, process node kills: :{self.Par_.num_processnodes_kills}")
+            self.exit_program()
+        if self.Par_.set_kill_list:
+            if not self.Par_.set_node_list:
+                logger.critical("Node list is not set, but kill list. Might happen that nodes are gonna be killed that are not part of the allocation")
+                self.exit_program()
+            for kill_entry in self.Par_.entry_node_kill_list:
+                if kill_entry not in self.Par_.entry_nodes_list:
+                    logger.critical(f"Supposed to kill entry node: {kill_entry}. But this is not contained in the entry nodes list")
+                    self.exit_program()
+            for kill_build in self.Par_.build_node_kill_list:
+                if kill_build not in self.Par_.build_nodes_list:
+                    logger.critical(f"Supposed to kill build node: {kill_build}. But this is not contained in the build nodes list")
+                    self.exit_program()
+                        
+            #TODO: Repeat for process nodes once implemented
+                
 
     def check_transport_method(self):
         if self.Par_.transport_method not in ['zeromq', 'rdma']:
