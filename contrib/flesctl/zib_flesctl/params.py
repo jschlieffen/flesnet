@@ -12,6 +12,7 @@ import sys
 from log_msg import *
 import re
 import subprocess
+from datetime import datetime, timedelta
 
 # =============================================================================
 # This file reads the params from the config file and checks the validation
@@ -66,34 +67,57 @@ class Params:
     # or not 
     # =============================================================================
     def get_params(self, config_file):        
+        self.get_num_nodes_par()
+        self.get_general_par()
+        self.get_node_list_par()
+        self.get_flesnet_par()
+        self.get_mstool_par()
+        self.get_tsclient_par()
+        self.get_mon_par()
+        self.get_influx_par()
+
+    def get_num_nodes_par(self):
         self.num_entrynodes = self.get_value('Number_of_Nodes', 'entry_nodes', 'int', required=True)
         self.num_buildnodes = self.get_value('Number_of_Nodes', 'build_nodes', 'int', required=True)
+        
+    def get_general_par(self):
         self.use_collectl = self.get_value('general', 'use_collectl','int',required=True)
         self.num_cpus = self.get_value('general', 'num_cpus', 'int', required=False)
+        self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', self.overlap_usage_of_nodes, False)
+        
+    def get_node_list_par(self):
         self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
         self.entry_nodes_list = self.get_node_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)
         self.build_nodes_list = self.get_node_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)
+        
+    def get_flesnet_par(self):
         self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', required=True)
         self.transport_method = self.get_value('flesnet_commands', 'transport_method', 'str', required=True)
         self.use_infiniband = self.get_value('flesnet_commands','use_infiniband','int', self.use_infiniband, False)
         self.customize_string = self.get_value('flesnet_commands', 'customize_string', 'str', True)
+    
+    def get_mstool_par(self):
         self.use_pattern_gen = self.get_value('mstool_commands', 'use_pattern_gen', 'int', self.use_pattern_gen, False)
         self.use_dmsa_files = self.get_value('mstool_commands', 'use_dmsa_files', 'int', self.use_dmsa_files, False)
         self.input_files = self.get_input_file_list('input_file')
+    
+    def get_tsclient_par(self):
         self.activate_timesliceforwarding = self.get_value('tsclient_commands', 'activate_timesliceforwarding','int', True)
         self.write_data_to_file = self.get_value('tsclient_commands', 'write_data_to_file', 'str', self.write_data_to_file, False)
         self.analyze_data = self.get_value('tsclient_commands', 'analyze_data', 'str', self.analyze_data, False)
         self.port = self.get_value('tsclient_commands', 'port', 'str', self.port, False)
+        
+    def get_mon_par(self):
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)
         self.enable_graph = self.get_value('Monotoring', 'show_graph', 'int', False)
         self.enable_progress_bar = self.get_value('Monotoring', 'show_progress_bar', 'int', self.enable_progress_bar, False)
         self.show_only_entry_nodes = self.get_value('Monotoring', 'show_only_entry_nodes', 'int', self.show_only_entry_nodes, False)
-        self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', self.overlap_usage_of_nodes, False)
+        
+    def get_influx_par(self):
         self.use_grafana = self.get_value('influxdb', 'use_grafana', 'int', True)
         self.influx_node_ip = self.get_value('influxdb', 'influx_node_ip','str', self.influx_node_ip, False)
         self.influx_token = self.get_value('influxdb', 'token','str', self.influx_token, False)
 
-        
     
     def get_value(self, section, param, par_type, var=None, required=False):
         val = os.getenv(param)
