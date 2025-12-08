@@ -31,6 +31,7 @@ import logfile_gen as Logfile
 class exec_:
     
     def __init__(self):
+        self.clean_files()
         self.Par_ = par.Params('config.cfg')
         foobar = self.Par_.validation_params(False)
         logger.success('Params valid and successfully set')
@@ -104,6 +105,25 @@ class exec_:
 
         sys.exit(1)
         
+    def clean_files(self):
+        with open("tmp/central_manager.txt", "w") as f:
+            f.truncate(0)
+            f.close()
+        with open("tmp/nodes_response.txt", "w") as f:
+            f.truncate(0)
+            f.close()
+        with open("tmp/build_nodes_params.txt", "w") as f:
+            f.truncate(0)
+            f.close()
+        with open("tmp/entry_nodes_params.txt", "w") as f:
+            f.truncate(0)
+            f.close()
+        with open("tmp/super_nodes_params.txt", "w") as f:
+            f.truncate(0)
+            f.close()
+        with open("tmp/receiving_nodes_params.txt", "w") as f:
+            f.truncate(0)
+            f.close()
     
     def create_logfile(self):
         Logfile.logfile.write()

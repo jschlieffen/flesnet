@@ -113,7 +113,9 @@ class Entry_nodes:
         self.write_Params()
         file = 'input.py'
         node_cnt = 0
+        print('test')
         for node in self.node_list.keys():
+            print('test ' +node )
             input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(node_cnt))), None)
             if input_file is None:
                 input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == 'e_remaining'), None)
@@ -124,7 +126,7 @@ class Entry_nodes:
             logfile = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
             logfile_collectl = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s Can%s %s %s %s %s'
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
                 % (node, self.Par_.num_cpus ,file,input_file,logfile, self.node_list[node]['entry_node_idx'], logfile_collectl)
             )
             try:
@@ -141,6 +143,23 @@ class Entry_nodes:
     
     def kill_process(self, kill_node):
         logger.info(f"Killing entry node: {kill_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"{kill_node}: kill")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"{kill_node}: done killing":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.success(f"Entry node: {kill_node} killed")
+                
+    
+    def kill_process_V2(self, kill_node):
+        logger.info(f"Killing entry node: {kill_node}")
         self.pids[kill_node].stdin.write('kill')
         self.pids[kill_node].stdin.flush()
         stdout, stderr = self.pids[kill_node].communicate(timeout=0.1)
@@ -148,7 +167,25 @@ class Entry_nodes:
         print('Error: ', stderr)
         print('\n')
         
-    def revieve_process(self, revieve_node):
+    #TODO: Tippfehler, es heisst revive
+    def revieve_process(self, revive_node):
+        logger.info(f"revive entry node: {revive_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"{revive_node}: revive")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"{revive_node}: done reviving":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.success(f"Entry node: {revive_node} revive")
+        
+        
+    def revieve_process_V2(self, revieve_node):
         logger.info(f"Reviving entry node: {revieve_node}")
         self.pids[revieve_node].stdin.write('revieve')
         stdout, stderr = self.pids[revieve_node].communicate(timeout=0.1)
@@ -158,6 +195,19 @@ class Entry_nodes:
  
     
     def stop_flesnet(self):
+        for node in self.node_list.keys():
+            logger.info(f"stopping entry node: {node}")
+            with open("tmp/central_manager.txt", "w") as f:
+                f.write(f"{node}: stop")
+                f.flush()
+                os.fsync(f.fileno())
+            stdout, stderr = self.pids[node].communicate()
+            print('Output: ',stdout)
+            print('Error: ', stderr)
+            print('\n')
+        
+    
+    def stop_flesnet_V2(self):
         for pid in self.pids.values():
             pid.stdin.write('stop')
             pid.stdin.flush()
@@ -233,8 +283,25 @@ class Build_nodes:
             node_cnt += 1
         return None
 
-    #TODO: Communication via file not via terminal.
+    #TODO: super nodes
     def kill_process(self, kill_node):
+        logger.info(f"Killing build node: {kill_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"{kill_node}: kill")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"{kill_node}: done killing":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.success(f"Build node: {kill_node} killed")
+
+    #TODO: Communication via file not via terminal.
+    def kill_process_V2(self, kill_node):
         logger.info(f"Killing entry node: {kill_node}")
         self.pids[kill_node].stdin.write('kill')
         self.pids[kill_node].stdin.flush()
@@ -243,14 +310,46 @@ class Build_nodes:
         print('Error: ', stderr)
         print('\n')
         
-    def revieve_process(self, revieve_node):
+        
+    #TODO: Tippfehler, es heisst revive
+    def revieve_process(self, revive_node):
+        logger.info(f"revive build node: {revive_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"{revive_node}: revive")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"{revive_node}: done reviving":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.success(f"build node: {revive_node} revive") 
+        
+        
+    def revieve_process_V2(self, revieve_node):
         logger.info(f"Reviving entry node: {revieve_node}")
         self.pids[revieve_node].stdin.write('revieve')
         stdout, stderr = self.pids[revieve_node].communicate(timeout=0.1)
         print('Output: ',stdout)
         print('Error: ', stderr)
         print('\n')
+        
     def stop_flesnet(self):
+        for node in self.node_list.keys():
+            logger.info(f"stopping build node: {node}")
+            with open("tmp/central_manager.txt", "w") as f:
+                f.write(f"{node}: stop")
+                f.flush()
+                os.fsync(f.fileno())
+            stdout, stderr = self.pids[node].communicate()
+            print('Output: ',stdout)
+            print('Error: ', stderr)
+            print('\n')
+    
+    def stop_flesnet_V2(self):
         for pid in self.pids.values():
             pid.stdin.write('stop')
             pid.stdin.flush()
@@ -1004,6 +1103,5 @@ class execution:
         return total_data, avg_data_rate
             
 
-        
-    
+
     

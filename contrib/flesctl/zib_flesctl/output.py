@@ -21,7 +21,7 @@ import sys
 import os
 import threading
 import queue
-
+import signal
 
 # =============================================================================
 # This file starts flesnet on a build node. It is started with 
@@ -89,9 +89,18 @@ def get_alloc_cpus(filename):
         for cpu in alloc_cpus:
             file.write(f"{cpu}\n")
 
+
+def write_response(node_name, msg):
+    with open("tmp/nodes_response.txt", "w") as f:
+        f.write(f"{node_name}: done {msg}")
+        f.flush()
+        os.fsync(f.fileno())
+        
+        
 def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-                transport_method, customize_string, use_infininband, use_collectl, logfile_collectl):
+                transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl):
     ip_string, shm_string = calc_str(ip, num_build_nodes)
+    node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
@@ -112,10 +121,11 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
            customize_string, grafana_string)
     )
     print(flesnet_commands)
-    result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
     input_data = ''
     #print(flesnet_commands)
     #print(result_flesnet)
+    """
     while 'stop' not in input_data:
         input_data = sys.stdin.read().strip()
         if input_data == 'kill':
@@ -127,6 +137,46 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
             #result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     print(input_data)
     print(type(input_data))
+    """
+    msg,action = "", ""
+    prev_action = ""
+    while True:
+        time.sleep(0.5)
+        try:
+            with open("tmp/central_manager.txt", "r") as f:
+                msg = f.read().strip()
+                #ode, action = line.split(": ")
+                f.close()
+
+        except FileNotFoundError:
+            msg = ""
+        #print(type(msg))
+        #print('htc-cmp506' in msg)
+        if node_name in msg:
+            #print('test')
+            #print(action)
+            node, action = msg.split(": ")
+            #print(node)
+            #print('action ' + action)
+            if action == prev_action: 
+                continue
+            elif action == "kill":
+                print('test kill')
+                #result_flesnet.terminate()
+                #result_flesnet.wait()
+                os.killpg(os.getpgid(result_flesnet.pid), signal.SIGKILL)
+
+                print('test kill 1')
+                write_response(node_name, "killing")
+                prev_action = action
+            elif action == "revive":
+                result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
+                write_response(node_name, "reviving")
+                prev_action = action
+            elif action == "stop":
+                print('test action')
+                break
+    
     if use_collectl == 1:
         #result_collectl.terminate()
         #result_collectl.wait()
@@ -136,6 +186,7 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
         thread_collectl.join()
     result_flesnet.terminate()
     result_flesnet.wait()
+    write_response(node_name, "terminating")
 
 params = {}
 #print('test12')

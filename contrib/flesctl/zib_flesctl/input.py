@@ -22,6 +22,7 @@ import sys
 import os
 import threading
 import queue
+import signal
 
 # =============================================================================
 # This file starts mstool and flesnet on an entry node. It is started with 
@@ -109,10 +110,16 @@ def start_mstool(path,dmsa_file, entry_node_idx, D_flag, mstool_communicater):
             break
     
     
+def write_response(node_name, msg):
+    with open("tmp/nodes_response.txt", "w") as f:
+        f.write(f"{node_name}: done {msg}")
+        f.flush()
+        os.fsync(f.fileno())
 
 def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
                 transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl, logfile_collectl):
     ip_string, shm_string = calc_str(ip, num_entry_nodes, use_pattern_gen)
+    node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
@@ -144,8 +151,9 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
           customize_string, grafana_string)
     )
     print(flesnet_commands)
-    result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
     input_data = ''
+    """
     while 'stop' not in input_data:
         input_data = sys.stdin.read().strip()
         if input_data == 'kill':
@@ -156,8 +164,47 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
         elif input_data == 'revieve':
             print('revieve')
             #result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    print(input_data)
-    print(type(input_data))
+    """
+    msg,action = "", ""
+    prev_action = ""
+    while True:
+        time.sleep(0.5)
+        try:
+            with open("tmp/central_manager.txt", "r") as f:
+                msg = f.read().strip()
+                #ode, action = line.split(": ")
+                f.close()
+
+        except FileNotFoundError:
+            msg = ""
+        #print(msg)
+        #print(node_name)
+        if node_name in msg:
+            #print('test')
+            #print(action)
+            node, action = msg.split(": ")
+            #print(node)
+            #print('action ' + action)
+            if action == prev_action: 
+                continue
+            if action == "kill":
+                print('test kill')
+                #result_flesnet.terminate()
+                #result_flesnet.wait()
+                os.killpg(os.getpgid(result_flesnet.pid), signal.SIGKILL)
+                print('test kill 1')
+                write_response(node_name, "killing")
+                prev_action = action
+            elif action == "revive":
+                result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
+                write_response(node_name, "reviving")
+                prev_action = action
+            elif action == "stop":
+                print('test action')
+                break
+    
+    #print(input_data)
+    #print(type(input_data))
     if use_collectl == 1:
         #result_collectl.terminate()
         #result_collectl.wait()
@@ -172,7 +219,9 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
         thread_mstool.join()
     result_flesnet.terminate()
     result_flesnet.wait()
+    write_response(node_name, "terminating")
     
+
 params = {}
 #print('test12')
 with open('tmp/entry_nodes_params.txt', 'r') as f:
@@ -191,6 +240,7 @@ with open('tmp/entry_nodes_params.txt', 'r') as f:
                 except ValueError:
                     pass
             params[key] = value
+    f.close()
 
 #print(params)
 for key, value in params.items():
@@ -203,6 +253,8 @@ logfile = arg["<logfile>"]
 entry_node_idx = arg["<entry_node_idx>"]
 logfile_collectl = arg['<logfile_collectl>']
 #customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
+print('test')
+
 
 entry_nodes(input_file,ip, logfile,num_entrynodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
             transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl,
