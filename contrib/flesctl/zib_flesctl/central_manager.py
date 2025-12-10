@@ -978,7 +978,11 @@ class execution:
     
     #TODO:clean up this mess
     def kill_nodes_fct(self):
-        kill_dict = {}
+        kill_dict = {
+                "Entry nodes" : [],
+                "Build nodes" : [],
+                "Process nodes" : []
+            }
         revieve_dict = {
                 "Entry nodes" : [],
                 "Build nodes" : [],
