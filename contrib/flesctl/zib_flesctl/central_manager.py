@@ -1,18 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #Created on Thu Dec 19 15:04:17 2024
-
-#@author: jschlieffen
-
-
-"""Usage:
-    allocating_nodes.py <allocating_nodes>
-    allocating_nodes.py (-h | --help)
-
-Options:
-    -h --help  Show this message.
 """
-
+@author: jschlieffen
+"""
 import subprocess
 import sys
 import os
@@ -34,11 +25,15 @@ import numpy as np
 #       Thus for debugging purposes it is recommended to look at this file
 # =============================================================================
 
-# =============================================================================
-# This class deals with the reading of the ips of a node. May be extended in 
-# furture
-# =============================================================================
 
+# =============================================================================
+# TODOs: 1. implement overlapping nodes timeslice-forwarding
+#        2. implement nodelist timeslice-forwarding
+#        3. implement set kill list timeslice-forwarding
+#        4. collectl for monotoring
+#        5. check if weird signal handler behavior still appears now for mon.
+#        6. check for bottleneck(Performance for flesnet is bad...) 
+# =============================================================================
 
 def ethernet_ip(node_id):
     command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
@@ -144,11 +139,11 @@ class Entry_nodes:
     def kill_process(self, kill_node):
         logger.info(f"Killing entry node: {kill_node}")
         with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"{kill_node}: kill")
+            f.write(f"Entry {kill_node}: kill")
             f.flush()
             os.fsync(f.fileno())
         msg = ""
-        while msg != f"{kill_node}: done killing":
+        while msg != f"Entry {kill_node}: done killing":
             try:
                 with open("tmp/nodes_response.txt", "r") as f:
                     msg = f.read().strip()
@@ -171,11 +166,11 @@ class Entry_nodes:
     def revieve_process(self, revive_node):
         logger.info(f"revive entry node: {revive_node}")
         with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"{revive_node}: revive")
+            f.write(f"Entry {revive_node}: revive")
             f.flush()
             os.fsync(f.fileno())
         msg = ""
-        while msg != f"{revive_node}: done reviving":
+        while msg != f"Entry {revive_node}: done reviving":
             try:
                 with open("tmp/nodes_response.txt", "r") as f:
                     msg = f.read().strip()
@@ -198,7 +193,7 @@ class Entry_nodes:
         for node in self.node_list.keys():
             logger.info(f"stopping entry node: {node}")
             with open("tmp/central_manager.txt", "w") as f:
-                f.write(f"{node}: stop")
+                f.write(f"Entry {node}: stop")
                 f.flush()
                 os.fsync(f.fileno())
             stdout, stderr = self.pids[node].communicate()
@@ -283,15 +278,14 @@ class Build_nodes:
             node_cnt += 1
         return None
 
-    #TODO: super nodes
     def kill_process(self, kill_node):
         logger.info(f"Killing build node: {kill_node}")
         with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"{kill_node}: kill")
+            f.write(f"Build {kill_node}: kill")
             f.flush()
             os.fsync(f.fileno())
         msg = ""
-        while msg != f"{kill_node}: done killing":
+        while msg != f"Build {kill_node}: done killing":
             try:
                 with open("tmp/nodes_response.txt", "r") as f:
                     msg = f.read().strip()
@@ -300,7 +294,6 @@ class Build_nodes:
             time.sleep(0.5)
         logger.success(f"Build node: {kill_node} killed")
 
-    #TODO: Communication via file not via terminal.
     def kill_process_V2(self, kill_node):
         logger.info(f"Killing entry node: {kill_node}")
         self.pids[kill_node].stdin.write('kill')
@@ -315,11 +308,11 @@ class Build_nodes:
     def revieve_process(self, revive_node):
         logger.info(f"revive build node: {revive_node}")
         with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"{revive_node}: revive")
+            f.write(f"Build {revive_node}: revive")
             f.flush()
             os.fsync(f.fileno())
         msg = ""
-        while msg != f"{revive_node}: done reviving":
+        while msg != f"Build {revive_node}: done reviving":
             try:
                 with open("tmp/nodes_response.txt", "r") as f:
                     msg = f.read().strip()
@@ -341,7 +334,7 @@ class Build_nodes:
         for node in self.node_list.keys():
             logger.info(f"stopping build node: {node}")
             with open("tmp/central_manager.txt", "w") as f:
-                f.write(f"{node}: stop")
+                f.write(f"Build {node}: stop")
                 f.flush()
                 os.fsync(f.fileno())
             stdout, stderr = self.pids[node].communicate()
@@ -374,7 +367,7 @@ class Super_nodes:
         self.build_nodes_ips = build_nodes_ips
         self.build_nodes_eth_ips = build_nodes_eth_ips
         self.Par_ = parameters
-        self.pids = []
+        self.pids = {}
         
     
     def write_Params(self):
@@ -434,15 +427,89 @@ class Super_nodes:
                 logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
-            self.pids += [result]
+            self.pids[node] = result
             logger.success('start successful')
             node_cnt += 1
         return None
-
-
-
     
+    
+    def kill_process_entry(self, kill_node):
+        logger.info(f"Killing entry node: {kill_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"Entry {kill_node}: kill")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"Entry {kill_node}: done killing":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.success(f"Entry node: {kill_node} killed")
+
+    def kill_process_build(self, kill_node):
+        logger.info(f"Killing build node: {kill_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"Build {kill_node}: kill")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"Build {kill_node}: done killing":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.success(f"Build node: {kill_node} killed")
+
+    def revieve_process_entry(self, revive_node):
+        logger.info(f"revive entry node: {revive_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"Entry {revive_node}: revive")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"Entry {revive_node}: done reviving":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.success(f"Entry node: {revive_node} revive")
+        
+    def revieve_process_build(self, revive_node):
+        logger.info(f"revive build node: {revive_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"Build {revive_node}: revive")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"Build {revive_node}: done reviving":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.success(f"build node: {revive_node} revive")     
+        
     def stop_flesnet(self):
+        for node in self.node_list.keys():
+            logger.info(f"stopping entry node: {node}")
+            with open("tmp/central_manager.txt", "w") as f:
+                f.write(f"Entry {node}: stop")
+                f.flush()
+                os.fsync(f.fileno())
+            stdout, stderr = self.pids[node].communicate()
+            print('Output: ',stdout)
+            print('Error: ', stderr)
+            print('\n')
+            
+    def stop_flesnet_V2(self):
         for pid in self.pids:
             pid.stdin.write('stop')
             stdout, stderr = pid.communicate()
@@ -458,7 +525,7 @@ class Timeslice_forwarding:
         super().__init__()
         self.rec2build = rec2build
         self.Par_ = parameters
-        self.pids = []
+        self.pids = {}
 
 
     def write_Params(self):
@@ -503,14 +570,58 @@ class Timeslice_forwarding:
                 logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
-            self.pids += [result]
+            self.pids[receiving_node] = result
             logger.success('start successful')
             node_cnt += 1
             
         logger.success('start of timeslice receivers successful')
         return None
     
+    def kill_process(self, kill_node):
+        logger.info(f"Killing Receiver node: {kill_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"Receiver {kill_node}: kill")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"Receiver {kill_node}: done killing":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.success(f"Receiver node: {kill_node} killed")
+    
+    def revieve_process(self, revive_node):
+        logger.info(f"revive Receiver node: {revive_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"Receiver {revive_node}: revive")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"Receiver {revive_node}: done reviving":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.success(f"Receiver node: {revive_node} revive")
+        
     def stop_timeslice_forwarding(self):
+        for node, build_node in self.rec2build:
+            logger.info(f"stopping Receiver node: {node}")
+            with open("tmp/central_manager.txt", "w") as f:
+                f.write(f"Receiver {node}: stop")
+                f.flush()
+                os.fsync(f.fileno())
+            stdout, stderr = self.pids[node].communicate()
+            print('Output: ',stdout)
+            print('Error: ', stderr)
+            print('\n')
+    
+    def stop_timeslice_forwarding_V2(self):
         for pid in self.pids:
             pid.stdin.write('stop')
             stdout, stderr = pid.communicate()
@@ -641,6 +752,7 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
+                print(node)
                 
                 if entry_nodes_cnt < self.Par_.num_entrynodes and build_nodes_cnt < self.Par_.num_buildnodes:
                     self.overlap_nodes[node] = {
@@ -652,6 +764,7 @@ class execution:
                     entry_nodes_cnt += 1
                     build_nodes_cnt += 1
                 elif entry_nodes_cnt < self.Par_.num_entrynodes:
+                    print('test')
                     self.entry_nodes[node] = {
                         'node' : node,
                         'entry_node_idx' : entry_nodes_cnt,
@@ -665,6 +778,7 @@ class execution:
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip}
                     build_nodes_cnt += 1
+            print(self.entry_nodes)
         else:
             if len(node_list) < (self.Par_.num_entrynodes - entry_nodes_cnt) + (self.Par_.num_buildnodes - build_nodes_cnt):
                 logger.critical(f'Incorrect Number of nodes, expected:'
@@ -690,6 +804,7 @@ class execution:
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip}
                     build_nodes_cnt += 1
+            
             
     # =============================================================================
     # Help function for schedule nodes. Used if the user wants to set the
@@ -742,7 +857,7 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
-                if node in self.entry_nodes_list:
+                if node in self.Par_.entry_nodes_list:
                     #print(node)
                     self.entry_nodes[node] = {
                         'node' : node,
@@ -751,7 +866,7 @@ class execution:
                         'eth_ip' : node_eth_ip}
                     entry_nodes_cnt += 1
                     node_list_remaining.remove(node)
-                elif node in self.build_nodes_list:
+                elif node in self.Par_.build_nodes_list:
                     self.build_nodes[node] = {
                         'node' : node,
                         'build_node_idx' : build_nodes_cnt,
@@ -766,6 +881,8 @@ class execution:
                 f'entry nodes. Expected {self.Par_.num_buildnodes}, got {build_nodes_cnt} for the '
                 f'build nodes. Proceed by assembling the missing entry/build nodes randomly'
             )
+            print(node_list_remaining)
+            print(self.overlap_nodes)
             self.schedule_nodes_randomly(node_list_remaining, entry_nodes_cnt, build_nodes_cnt)
     
     # =============================================================================
@@ -812,21 +929,21 @@ class execution:
                     self.timeslice_forwarding_cls.stop_timeslice_forwarding()
                 self.super_nodes_cls.stop_flesnet()
                 sys.exit(1)
-        else:
-            res = self.entry_nodes_cls.start_flesnet()
+
+        res = self.entry_nodes_cls.start_flesnet()
+        if res == 'shutdown':
+            if self.Par_.activate_timesliceforwarding:
+                self.timeslice_forwarding_cls.stop_timeslice_forwarding()
+            self.entry_nodes_cls.stop_flesnet()
+            sys.exit(1)
+        else:    
+            res = self.build_nodes_cls.start_flesnet()
             if res == 'shutdown':
                 if self.Par_.activate_timesliceforwarding:
                     self.timeslice_forwarding_cls.stop_timeslice_forwarding()
                 self.entry_nodes_cls.stop_flesnet()
+                self.build_nodes_cls.stop_flesnet()
                 sys.exit(1)
-            else:    
-                res = self.build_nodes_cls.start_flesnet()
-                if res == 'shutdown':
-                    if self.Par_.activate_timesliceforwarding:
-                        self.timeslice_forwarding_cls.stop_timeslice_forwarding()
-                    self.entry_nodes_cls.stop_flesnet()
-                    self.build_nodes_cls.stop_flesnet()
-                    sys.exit(1)
 
         
                 
@@ -838,20 +955,28 @@ class execution:
         time.sleep(2)
         logger.success('flesnet launched successfully')
         if self.Par_.show_total_data:
+            #TODO: check if signal handling error still appears.
             try: 
                 self.monitoring()
+                while True:
+                    time.sleep(1)
             except Exception as e:
                 logger.critical(f'Error {e} occured during monotoring. Terminating')
         if self.Par_.kill_nodes:
             try:
                 self.kill_nodes_fct()
+                logger.success("Robustness test finished") 
+                while True:
+                    time.sleep(1)
             except Exception as e:
                 logger.critical(f'Error {e} occured during robustness test. Terminating')
                 self.stop_program()
-                
-        while True:
-            time.sleep(1)
+               
+        else:
+            while True:
+                time.sleep(1)
     
+    #TODO:clean up this mess
     def kill_nodes_fct(self):
         kill_dict = {}
         revieve_dict = {
@@ -864,17 +989,21 @@ class execution:
         if self.Par_.activate_timesliceforwarding:
             num_kills += self.Par_.num_processnodes_kills
         if self.Par_.set_kill_list == 1:
-            kill_dict["Entry nodes"] = self.Par_.entry_node_kill_list
-            kill_dict["Build nodes"] = self.Par_.build_node_kill_list
-            if self.Par_.activate_timesliceforwarding:
-                kill_dict["Processing nodes"] = self.Par_.process_node_kill_list
+            kill_dict["Entry nodes"] = [(node, "Entry") for node in self.Par_.entry_node_kill_list]
+            kill_dict["Build nodes"] = [(node, "Build") for node in self.Par_.build_node_kill_list]
+            #if self.Par_.activate_timesliceforwarding:
+            #    kill_dict["Process nodes"] = self.Par_.process_node_kill_list
+        if len(kill_dict["Entry nodes"]) < self.Par_.num_entrynodes_kills:
+            entry_nodes = [(entry_node, "Entry") for entry_node in self.entry_nodes.keys()] + [(entry_node, "Super") for entry_node in self.overlap_nodes.keys()]
+            kill_dict["Entry nodes"] += random.sample(entry_nodes, self.Par_.num_entrynodes_kills-len(kill_dict["Entry nodes"]) )
+        if len(kill_dict["Build nodes"]) < self.Par_.num_buildnodes_kills:
+            build_nodes = [(build_node, "Build") for build_node in self.build_nodes.keys()] + [(build_node, "Super") for build_node in self.overlap_nodes.keys()]
+            kill_dict["Build nodes"] += random.sample(build_nodes, self.Par_.num_buildnodes_kills-len(kill_dict["Build nodes"]))
+        if self.Par_.activate_timesliceforwarding:
+            kill_dict["Process nodes"] = random.sample([receiving_node for receiving_node, build_node in self.rec2build], self.Par_.num_processnodes_kills)
         else:
-            kill_dict["Entry nodes"] = random.sample([entry_node for entry_node in self.entry_nodes.keys()], self.Par_.num_entrynodes_kills)
-            kill_dict["Build nodes"] = random.sample([build_node for build_node in self.build_nodes.keys()],self.Par_.num_buildnodes_kills)
-            if self.Par_.activate_timesliceforwarding:
-                kill_dict["Processing nodes"] = random.sample([receiving_node for receiving_node, build_node in self.rec2build], self.Par_.num_processnodes_kills)
-            else:
-                kill_dict["Processing nodes"] = []
+            kill_dict["Process nodes"] = []
+        print(kill_dict)
         while num_kills != revieve_count:
             td = self.Par_.timer_for_kill.total_seconds()
             sleep_val = np.random.poisson(td)
@@ -892,18 +1021,25 @@ class execution:
                 print('test weights 2')
                 if node_type == "Entry":
                     to_kill_node = random.choice(kill_dict["Entry nodes"])
-                    self.entry_nodes_cls.kill_process(to_kill_node)
+                    if to_kill_node[1] == "Entry":
+                        self.entry_nodes_cls.kill_process(to_kill_node[0])
+                    elif to_kill_node[1] == "Super":
+                        print('test super')
+                        self.super_nodes_cls.kill_process_entry(to_kill_node[0])
                     kill_dict["Entry nodes"].remove(to_kill_node)
                     revieve_dict["Entry nodes"].append(to_kill_node)
                 elif node_type == "Build":
                     to_kill_node = random.choice(kill_dict["Build nodes"])
-                    self.build_nodes_cls.kill_process(to_kill_node)
+                    if to_kill_node[1] == "Build":
+                        self.build_nodes_cls.kill_process(to_kill_node[0])
+                    elif to_kill_node[1] == "Super":
+                        self.super_nodes_cls.kill_process_build(to_kill_node[0])
                     kill_dict["Build nodes"].remove(to_kill_node)
                     revieve_dict["Build nodes"].append(to_kill_node)
                 #Baustelle
                 elif node_type == "Process":
                     to_kill_node = random.choice(kill_dict["Process nodes"])
-                    self.process_nodes_cls.kill_process(to_kill_node)
+                    self.timeslice_forwarding_cls.kill_process(to_kill_node)
                     kill_dict["Process nodes"].remove(to_kill_node)
                     revieve_dict["Process nodes"].append(to_kill_node)
             else: 
@@ -911,17 +1047,23 @@ class execution:
                 node_type = random.choices(["Entry", "Build", "Process"], weights_rc_2, k=1)[0]
                 if node_type == "Entry":
                     to_revieve_node = random.choice(revieve_dict["Entry nodes"])
-                    self.entry_nodes_cls.revieve_process(to_revieve_node)
+                    if to_revieve_node[1] == "Entry":
+                        self.entry_nodes_cls.revieve_process(to_revieve_node[0])
+                    elif to_revieve_node[1] == "Super":
+                        self.super_nodes_cls.revieve_process_entry(to_revieve_node[0])
                     revieve_dict["Entry nodes"].remove(to_revieve_node)
                 elif node_type == "Build":
                     to_revieve_node = random.choice(revieve_dict["Build nodes"])
-                    self.build_nodes_cls.revieve_process(to_revieve_node)
+                    if to_revieve_node[1] == "Build":
+                        self.build_nodes_cls.revieve_process(to_revieve_node[0])
+                    elif to_revieve_node[1] == "Super":
+                        self.super_nodes_cls.revieve_process_build(to_revieve_node[0])
                     revieve_dict["Build nodes"].remove(to_revieve_node)
                 #Baustelle
                 elif node_type == "Process":
                     to_revieve_node = random.choice(revieve_dict["Process nodes"])
-                    self.process_nodes_cls.revieve_process(to_revieve_node)
-                    revieve_dict["Build nodes"].remove(to_revieve_node)
+                    self.timeslice_forwarding_cls.revieve_process(to_revieve_node)
+                    revieve_dict["Process nodes"].remove(to_revieve_node)
                 revieve_count += 1
                 
                 
@@ -934,9 +1076,9 @@ class execution:
         total_data, avg_data_rate = 0,0
         if self.overlap_nodes:
             self.super_nodes_cls.stop_flesnet()
-        else:
-            self.build_nodes_cls.stop_flesnet()
-            self.entry_nodes_cls.stop_flesnet()
+
+        self.build_nodes_cls.stop_flesnet()
+        self.entry_nodes_cls.stop_flesnet()
         #print(self.activate_timesliceforwarding)
         if self.Par_.activate_timesliceforwarding:
             #print('test')
@@ -949,6 +1091,7 @@ class execution:
     # =============================================================================
     # Starts the monotoring. 
     # not used. outdated code snipped. For new one see monitoring function.
+    # TODO: use collectl rather than flesnet logs
     # =============================================================================
     def monitoring_v2(self):
         file_names = []
@@ -1004,6 +1147,7 @@ class execution:
     #   tmux attach-session -t monitoring
     # If the session is no longer needed, execute 
     #   tmux kill-session -t monitoring
+    # TODO: use collectl rather than flesnet logs...
     # =============================================================================
     def monitoring(self):
         file_names = []

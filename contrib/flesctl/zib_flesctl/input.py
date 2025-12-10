@@ -112,7 +112,7 @@ def start_mstool(path,dmsa_file, entry_node_idx, D_flag, mstool_communicater):
     
 def write_response(node_name, msg):
     with open("tmp/nodes_response.txt", "w") as f:
-        f.write(f"{node_name}: done {msg}")
+        f.write(f"Entry {node_name}: done {msg}")
         f.flush()
         os.fsync(f.fileno())
 
@@ -179,7 +179,7 @@ def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_no
             msg = ""
         #print(msg)
         #print(node_name)
-        if node_name in msg:
+        if f"Entry {node_name}" in msg:
             #print('test')
             #print(action)
             node, action = msg.split(": ")

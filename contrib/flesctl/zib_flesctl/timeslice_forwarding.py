@@ -22,6 +22,7 @@ import sys
 import os
 import threading 
 import queue
+import signal
 
 # =============================================================================
 # This file starts the tsclient on a given node to a given build node 
@@ -94,7 +95,14 @@ def get_alloc_cpus(filename):
         for cpu in alloc_cpus:
             file.write(f"{cpu}\n")
 
+def write_response(node_name, msg):
+    with open("tmp/nodes_response.txt", "w") as f:
+        f.write(f"Receiver {node_name}: done {msg}")
+        f.flush()
+        os.fsync(f.fileno())
+
 def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_data_to_file, analyze_data, use_infiniband, use_collectl, logfile_collectl):
+    node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     ip_string,output_file_string,analyze_data_string = calc_ip_str(ip, port, write_data_to_file, path, analyze_data)
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile_collectl))[0]
@@ -115,10 +123,49 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
             % (path,logfile,ip_string, analyze_data_string, output_file_string, grafana_string)
         )
     print(tsclient_commands)
-    result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
     input_data = ''
+    """
     while input_data == '':
         input_data = sys.stdin.read().strip()
+    """
+    msg,action = "", ""
+    prev_action = ""
+    while True:
+        time.sleep(0.5)
+        try:
+            with open("tmp/central_manager.txt", "r") as f:
+                msg = f.read().strip()
+                #ode, action = line.split(": ")
+                f.close()
+
+        except FileNotFoundError:
+            msg = ""
+        #print(msg)
+        #print(node_name)
+        if f"Receiver {node_name}" in msg:
+            #print('test')
+            #print(action)
+            node, action = msg.split(": ")
+            #print(node)
+            #print('action ' + action)
+            if action == prev_action: 
+                continue
+            if action == "kill":
+                print('test kill')
+                #result_flesnet.terminate()
+                #result_flesnet.wait()
+                os.killpg(os.getpgid(result_tsclient.pid), signal.SIGKILL)
+                print('test kill 1')
+                write_response(node_name, "killing")
+                prev_action = action
+            elif action == "revive":
+                result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
+                write_response(node_name, "reviving")
+                prev_action = action
+            elif action == "stop":
+                print('test action')
+                break
     if use_collectl == 1:
         #result_collectl.terminate()
         #result_collectl.wait()

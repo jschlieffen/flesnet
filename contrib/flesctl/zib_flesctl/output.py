@@ -92,7 +92,7 @@ def get_alloc_cpus(filename):
 
 def write_response(node_name, msg):
     with open("tmp/nodes_response.txt", "w") as f:
-        f.write(f"{node_name}: done {msg}")
+        f.write(f"Build {node_name}: done {msg}")
         f.flush()
         os.fsync(f.fileno())
         
@@ -152,7 +152,7 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
             msg = ""
         #print(type(msg))
         #print('htc-cmp506' in msg)
-        if node_name in msg:
+        if f"Build {node_name}" in msg:
             #print('test')
             #print(action)
             node, action = msg.split(": ")
@@ -161,12 +161,12 @@ def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, inf
             if action == prev_action: 
                 continue
             elif action == "kill":
-                print('test kill')
+                #print('test kill')
                 #result_flesnet.terminate()
                 #result_flesnet.wait()
                 os.killpg(os.getpgid(result_flesnet.pid), signal.SIGKILL)
 
-                print('test kill 1')
+                #print('test kill 1')
                 write_response(node_name, "killing")
                 prev_action = action
             elif action == "revive":

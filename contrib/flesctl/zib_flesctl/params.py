@@ -283,7 +283,7 @@ class params_checker:
 
     def check_num_nodes(self):
         if self.Par_.overlap_usage_of_nodes == 1:
-            num_tot_nodes_req = max(self.Par_.num_buildnodes, self.Par_.entry_nodes) 
+            num_tot_nodes_req = max(self.Par_.num_buildnodes, self.Par_.num_entrynodes) 
 
             if self.Par_.set_node_list:
                 num_nodes_req_list = max(len(self.Par_.entry_nodes_list), len(self.Par_.build_nodes_list))
