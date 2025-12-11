@@ -108,9 +108,7 @@ class Entry_nodes:
         self.write_Params()
         file = 'input.py'
         node_cnt = 0
-        print('test')
         for node in self.node_list.keys():
-            print('test ' +node )
             input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(node_cnt))), None)
             if input_file is None:
                 input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == 'e_remaining'), None)
@@ -267,7 +265,6 @@ class Build_nodes:
                 % (node, self.Par_.num_cpus ,file,logfile, self.node_list[node]['build_node_idx'], logfile_collectl)
             )
             try:
-                #print(command)
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
                 logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
@@ -421,7 +418,6 @@ class Super_nodes:
                    self.node_list[node]['build_node_idx'], logfile_collectl_entry_node, logfile_collectl_build_node)
             )
             try:
-                #print(command)
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
                 logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
@@ -752,7 +748,6 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
-                print(node)
                 
                 if entry_nodes_cnt < self.Par_.num_entrynodes and build_nodes_cnt < self.Par_.num_buildnodes:
                     self.overlap_nodes[node] = {
@@ -764,7 +759,6 @@ class execution:
                     entry_nodes_cnt += 1
                     build_nodes_cnt += 1
                 elif entry_nodes_cnt < self.Par_.num_entrynodes:
-                    print('test')
                     self.entry_nodes[node] = {
                         'node' : node,
                         'entry_node_idx' : entry_nodes_cnt,
@@ -778,7 +772,6 @@ class execution:
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip}
                     build_nodes_cnt += 1
-            print(self.entry_nodes)
         else:
             if len(node_list) < (self.Par_.num_entrynodes - entry_nodes_cnt) + (self.Par_.num_buildnodes - build_nodes_cnt):
                 logger.critical(f'Incorrect Number of nodes, expected:'
@@ -811,7 +804,6 @@ class execution:
     # entry nodes and build nodes manually
     # =============================================================================
     def schedule_nodes_customized(self,node_list,entry_nodes_cnt, build_nodes_cnt):
-        #print(node_list)
         node_list_remaining = node_list[: ]
         if self.Par_.overlap_usage_of_nodes:
         
@@ -858,7 +850,6 @@ class execution:
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
                 if node in self.Par_.entry_nodes_list:
-                    #print(node)
                     self.entry_nodes[node] = {
                         'node' : node,
                         'entry_node_idx' : entry_nodes_cnt,
@@ -881,8 +872,6 @@ class execution:
                 f'entry nodes. Expected {self.Par_.num_buildnodes}, got {build_nodes_cnt} for the '
                 f'build nodes. Proceed by assembling the missing entry/build nodes randomly'
             )
-            print(node_list_remaining)
-            print(self.overlap_nodes)
             self.schedule_nodes_randomly(node_list_remaining, entry_nodes_cnt, build_nodes_cnt)
     
     # =============================================================================
@@ -998,37 +987,32 @@ class execution:
             #if self.Par_.activate_timesliceforwarding:
             #    kill_dict["Process nodes"] = self.Par_.process_node_kill_list
         if len(kill_dict["Entry nodes"]) < self.Par_.num_entrynodes_kills:
-            entry_nodes = [(entry_node, "Entry") for entry_node in self.entry_nodes.keys()] + [(entry_node, "Super") for entry_node in self.overlap_nodes.keys()]
+            entry_nodes = [(entry_node, "Entry") for entry_node in self.entry_nodes.keys() if entry_node not in self.Par_.entry_node_kill_list]
+            entry_nodes += [(entry_node, "Super") for entry_node in self.overlap_nodes.keys() if entry_node not in self.Par_.entry_node_kill_list]
             kill_dict["Entry nodes"] += random.sample(entry_nodes, self.Par_.num_entrynodes_kills-len(kill_dict["Entry nodes"]) )
         if len(kill_dict["Build nodes"]) < self.Par_.num_buildnodes_kills:
-            build_nodes = [(build_node, "Build") for build_node in self.build_nodes.keys()] + [(build_node, "Super") for build_node in self.overlap_nodes.keys()]
+            build_nodes = [(build_node, "Build") for build_node in self.build_nodes.keys() if build_node not in self.Par_.build_node_kill_list] 
+            build_nodes += [(build_node, "Super") for build_node in self.overlap_nodes.keys() if build_node not in self.Par_.build_node_kill_list]
             kill_dict["Build nodes"] += random.sample(build_nodes, self.Par_.num_buildnodes_kills-len(kill_dict["Build nodes"]))
         if self.Par_.activate_timesliceforwarding:
             kill_dict["Process nodes"] = random.sample([receiving_node for receiving_node, build_node in self.rec2build], self.Par_.num_processnodes_kills)
         else:
             kill_dict["Process nodes"] = []
-        print(kill_dict)
         while num_kills != revieve_count:
             td = self.Par_.timer_for_kill.total_seconds()
             sleep_val = np.random.poisson(td)
             time.sleep(sleep_val)
             #Params mehr mit einbeziehen 
-            print('test')
             weights_rc_1 = [sum(len(kill_nodes) for kill_nodes in kill_dict.values()), sum(len(revive_nodes) for revive_nodes in revieve_dict.values())]
-            
             kill_or_revieve = random.choices(["Kill", "Revieve"], weights=weights_rc_1, k=1)[0]
-            print('test weights 1')
             if kill_or_revieve == "Kill":
                 weights_rc_2 = [len(kill_node) for kill_node in kill_dict.values()]
-                print(weights_rc_2)
                 node_type = random.choices(["Entry", "Build", "Process"], weights=weights_rc_2, k=1)[0]
-                print('test weights 2')
                 if node_type == "Entry":
                     to_kill_node = random.choice(kill_dict["Entry nodes"])
                     if to_kill_node[1] == "Entry":
                         self.entry_nodes_cls.kill_process(to_kill_node[0])
                     elif to_kill_node[1] == "Super":
-                        print('test super')
                         self.super_nodes_cls.kill_process_entry(to_kill_node[0])
                     kill_dict["Entry nodes"].remove(to_kill_node)
                     revieve_dict["Entry nodes"].append(to_kill_node)
@@ -1233,7 +1217,6 @@ class execution:
     # killed. So one can stay inside the session for future test runs.
     # =============================================================================
     def stop_monitoring(self):
-        print('test')
         try:
             logger.info(f"killing monitoring process")
             session_name = 'monitoring'
