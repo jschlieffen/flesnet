@@ -27,12 +27,15 @@ import numpy as np
 
 
 # =============================================================================
-# TODOs: 1. implement overlapping nodes timeslice-forwarding
-#        2. implement nodelist timeslice-forwarding
+# TODOs:                                                                            STATUS:
+#        1. implement overlapping nodes timeslice-forwarding                        Prob. will not be implemented
+#        2. implement nodelist timeslice-forwarding                                 DONE
 #        3. implement set kill list timeslice-forwarding
 #        4. collectl for monotoring
 #        5. check if weird signal handler behavior still appears now for mon.
 #        6. check for bottleneck(Performance for flesnet is bad...) 
+#        7. Make the node output Debug output
+#        8. Add log level
 # =============================================================================
 
 def ethernet_ip(node_id):
@@ -748,7 +751,8 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
-                
+                if node in self.Par_.process_nodes_list:
+                    continue
                 if entry_nodes_cnt < self.Par_.num_entrynodes and build_nodes_cnt < self.Par_.num_buildnodes:
                     self.overlap_nodes[node] = {
                         'node' : node,
@@ -780,6 +784,8 @@ class execution:
                                 )
                 sys.exit(1)
             for node in node_list:
+                if node in self.Par_.process_nodes_list:
+                    continue
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
@@ -882,23 +888,53 @@ class execution:
             self.entry_nodes[entry_node]['allocated_build_node'] = build_node
             self.build_nodes[build_node]['allocated_entry_node'] = entry_node
     
-    
+# =============================================================================
+# =============================================================================
+# #     Baustelle
+# =============================================================================
+# =============================================================================
     def assemble_receiving_nodes2build_nodes(self):
         node_list = self.get_node_list()
         unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
+        used_build_nodes = []
         if len(unused_nodes) < self.Par_.num_buildnodes:
             logger.critical(f"Number of nodes are not sufficient for the Timeslice-forwarding. Number of nodes remaining {len(unused_nodes)}, expected: {self.Par_.num_buildnodes} Shutting down")
             sys.exit(1)
+        if self.Par_.set_node_list:
+            unused_nodes, used_build_nodes = self.assemble_receiving_nodes2build_nodes_customized(unused_nodes)
+    
         cnt = 0
         if self.Par_.overlap_usage_of_nodes:
             for build_node_id,build_node in self.overlap_nodes.items():
-                self.rec2build.append((unused_nodes[cnt],build_node))
-                cnt += 1
+                if build_node_id not in used_build_nodes:
+                    self.rec2build.append((unused_nodes[cnt],build_node))
+                    cnt += 1
         else:
             for build_node_id,build_node in self.build_nodes.items():
-                self.rec2build.append((unused_nodes[cnt],build_node))
-                cnt += 1
+                if build_node_id not in used_build_nodes:
+                    self.rec2build.append((unused_nodes[cnt],build_node))
+                    cnt += 1
         Logfile.logfile.receiving_node_list = self.rec2build
+        if cnt > len(unused_nodes):
+            logger.warning(f"There are {len(unused_nodes) - cnt} nodes without any task.")
+        
+    def assemble_receiving_nodes2build_nodes_customized(self,unused_nodes):
+        build_nodes_list = list(self.build_nodes.items())
+        used_build_nodes = []
+        unused_nodes_iter = unused_nodes[ :]
+        for node in unused_nodes_iter:
+            if node not in self.Par_.process_nodes_list:
+                continue
+            idx = self.Par_.process_nodes_list.index(node)
+            self.rec2build.append((node, build_nodes_list[idx][1]) )
+            used_build_nodes.append(build_nodes_list[idx][0])
+            unused_nodes.remove(node)
+        if len(unused_nodes) > 0:
+            logger.warning(
+                f"They are still remaining build nodes with no receivers. Assign the missing nodes radomly"
+            )
+        return unused_nodes, used_build_nodes    
+            
         
         
     # =============================================================================

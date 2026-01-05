@@ -41,6 +41,7 @@ class Params:
         self.set_node_list=0
         self.entry_nodes_list=[]
         self.build_nodes_list=[]
+        self.process_nodes_list=[]
         self.path = ""
         self.transport_method = ""
         self.use_infiniband = 1
@@ -104,9 +105,10 @@ class Params:
         self.num_processnodes_kills = self.get_value('robustness_test', 'num_process_nodes_kills', 'int' , self.num_processnodes_kills, required=False)
         self.revive_nodes=self.get_value('robustness_test', 'revive_nodes', 'int' , self.revive_nodes, required=False)
         self.set_kill_list = self.get_value('robustness_test', 'set_kill_list', 'int' , self.set_kill_list, required=False)
-        self.entry_node_kill_list = self.get_node_list('robustness_test', 'entry_node_kill_list', self.entry_node_kill_list, False)
-        self.build_node_kill_list = self.get_node_list('robustness_test', 'build_node_kill_list', self.build_node_kill_list, False)
-        self.process_node_kill_list = self.get_node_list('robustness_test', 'process_node_kill_list', self.process_node_kill_list, False)
+        if self.set_kill_list:
+            self.entry_node_kill_list = self.get_node_list('robustness_test', 'entry_node_kill_list', self.entry_node_kill_list, False)
+            self.build_node_kill_list = self.get_node_list('robustness_test', 'build_node_kill_list', self.build_node_kill_list, False)
+            self.process_node_kill_list = self.get_node_list('robustness_test', 'process_node_kill_list', self.process_node_kill_list, False)
     
     
 # =============================================================================
@@ -116,6 +118,7 @@ class Params:
         self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
         self.entry_nodes_list = self.get_node_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)
         self.build_nodes_list = self.get_node_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)
+        self.process_nodes_list = self.get_node_list('set_node_list', 'process_nodes_list', self.process_nodes_list, False)
         
     def get_flesnet_par(self):
         self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', required=True)
@@ -249,6 +252,10 @@ class Params:
 # This class checks the different parameters from the config file. Is currently
 # used in before the start of flesctrl and in the setup checker .
 # Might be extended in the future.
+# =============================================================================
+
+# =============================================================================
+# TODO:new param process nodes list
 # =============================================================================
 class params_checker:
     

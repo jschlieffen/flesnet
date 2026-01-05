@@ -15,14 +15,16 @@ if [ "$SET_NODE_LIST" -eq 1 ]; then
     ACTIVATE_TIMESLICEFORWARDING=$(grep "^activate_timesliceforwarding" config.cfg | cut -d'=' -f2)
     if  [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         NODES=$((ENTRY_NODES_CNT + 2*PROCESSING_NODES_CNT))
+	PROCESS_NODES_LIST=$(grep "^process_nodes_list" config.cfg | cut -d'=' -f2)
+    	NODELIST="$ENTRY_NODES_LIST,$BUILD_NODES_LIST,$PROCESS_NODES_LIST"
     else
         NODES=$((ENTRY_NODES_CNT + PROCESSING_NODES_CNT))
+	NODELIST="$ENTRY_NODES_LIST,$BUILD_NODES_LIST"
     fi
     NTASKS=4
     MEM=16G
     p="big"
     TIME=$TIME_ALLOC
-    NODELIST="$ENTRY_NODES_LIST,$BUILD_NODES_LIST"
 
     salloc --mem=$MEM --ntasks-per-node=1 -c $NUM_CPUS -p $p --nodes=$NODES --nodelist=$NODELIST --constraint=Infiniband --time=$TIME 
 else
