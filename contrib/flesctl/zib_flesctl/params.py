@@ -28,6 +28,7 @@ class Params:
         self.num_buildnodes = 0
         self.use_collectl = 0
         self.num_cpus = 2
+        self.loglevel="DEBUG"
         self.kill_nodes = 0
         self.timer_for_kill = timedelta(minutes=1)
         self.num_entrynodes_kills = 1 
@@ -95,6 +96,7 @@ class Params:
     def get_general_par(self):
         self.use_collectl = self.get_value('general', 'use_collectl','int',required=True)
         self.num_cpus = self.get_value('general', 'num_cpus', 'int', required=False)
+        self.loglevel = self.get_value('general','loglevel','str',required=True)
         self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', self.overlap_usage_of_nodes, False)
         
     def get_kill_par(self):
@@ -240,6 +242,7 @@ class Params:
             Params_check.check_num_nodes()
             if self.set_node_list:
                 Params_check.check_req_nodes_alloc
+        Params_check.check_log_lvl()
         if self.kill_nodes:
             Params_check.check_kill_par()
         self.show_only_entry_nodes = Params_check.check_transport_method()
@@ -380,6 +383,12 @@ class params_checker:
                 logger.critical(f"required build node: {build_node} not allocated")
                 self.exit_program()
                 
+                
+    def check_log_lvl(self):
+        if self.Par_.loglevel not in ["DEBUG","CRITICAL","ERROR","WARNING","INFO","SUCCESS"]:
+            logger.critical("log level not defined")
+            self.exit_program()
+            
     def check_kill_par(self):
         if self.Par_.timer_for_kill == timedelta(seconds=0):
             logger.critical("Cannot kill programs immediatly")

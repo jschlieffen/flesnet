@@ -34,6 +34,7 @@ class exec_:
         self.clean_files()
         self.Par_ = par.Params('config.cfg')
         foobar = self.Par_.validation_params(False)
+        set_loglvl(self.Par_.loglevel, logger)
         logger.success('Params valid and successfully set')
         self.execution_cls = None
         self.running = True

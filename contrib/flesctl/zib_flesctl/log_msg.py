@@ -80,6 +80,20 @@ def setup_logger(write_logfile):
     return logger
 
 
+def set_loglvl(level, logger=None):
+    if logger is None:
+        logger = logging.getLogger()
+
+    if not isinstance(level, str):
+        raise ValueError("Log level must be a string")
+
+    level = level.upper()
+    if hasattr(logging, level):
+        level = getattr(logging, level)
+    else:
+        raise ValueError(f"Unknown log level: {level}")
+
+    logger.setLevel(level)
 
 write_logfile = os.getenv('write_logfile')
 logger = setup_logger(write_logfile)

@@ -35,7 +35,7 @@ import numpy as np
 #        5. check if weird signal handler behavior still appears now for mon.
 #        6. check for bottleneck(Performance for flesnet is bad...) 
 #        7. Make the node output Debug output
-#        8. Add log level
+#        8. Add log level                                                           DONE
 # =============================================================================
 
 def ethernet_ip(node_id):
@@ -198,9 +198,8 @@ class Entry_nodes:
                 f.flush()
                 os.fsync(f.fileno())
             stdout, stderr = self.pids[node].communicate()
-            print('Output: ',stdout)
-            print('Error: ', stderr)
-            print('\n')
+            logger.debug(f"Output from entry node: {node} \n {stdout}")
+            logger.debug(f"Error from entry node: {node} \n {stderr}")
         
     
     def stop_flesnet_V2(self):
@@ -338,9 +337,8 @@ class Build_nodes:
                 f.flush()
                 os.fsync(f.fileno())
             stdout, stderr = self.pids[node].communicate()
-            print('Output: ',stdout)
-            print('Error: ', stderr)
-            print('\n')
+            logger.debug(f"Output from build node: {node} \n {stdout}")
+            logger.debug(f"Error from build node: {node} \n {stderr}")
     
     def stop_flesnet_V2(self):
         for pid in self.pids.values():
@@ -504,9 +502,8 @@ class Super_nodes:
                 f.flush()
                 os.fsync(f.fileno())
             stdout, stderr = self.pids[node].communicate()
-            print('Output: ',stdout)
-            print('Error: ', stderr)
-            print('\n')
+            logger.debug(f"Output from super node: {node} \n {stdout}")
+            logger.debug(f"Error from super node: {node} \n {stderr}")
             
     def stop_flesnet_V2(self):
         for pid in self.pids:
@@ -616,10 +613,9 @@ class Timeslice_forwarding:
                 f.flush()
                 os.fsync(f.fileno())
             stdout, stderr = self.pids[node].communicate()
-            print('Output: ',stdout)
-            print('Error: ', stderr)
-            print('\n')
-    
+            logger.debug(f"Output from receiver node: {node} \n {stdout}")
+            logger.debug(f"Error from receiver node: {node} \n {stderr}")
+
     def stop_timeslice_forwarding_V2(self):
         for pid in self.pids:
             pid.stdin.write('stop')
