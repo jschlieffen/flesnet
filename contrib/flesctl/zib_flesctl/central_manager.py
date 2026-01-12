@@ -34,8 +34,9 @@ import numpy as np
 #        4. collectl for monotoring
 #        5. check if weird signal handler behavior still appears now for mon.
 #        6. check for bottleneck(Performance for flesnet is bad...) 
-#        7. Make the node output Debug output
+#        7. Make the node output Debug output                                       DONE
 #        8. Add log level                                                           DONE
+#        9. restructer input output to make it complained with libfabric
 # =============================================================================
 
 def ethernet_ip(node_id):
@@ -883,12 +884,7 @@ class execution:
         for entry_node, build_node in zip(self.entry_nodes.keys(), self.build_nodes.keys()):
             self.entry_nodes[entry_node]['allocated_build_node'] = build_node
             self.build_nodes[build_node]['allocated_entry_node'] = entry_node
-    
-# =============================================================================
-# =============================================================================
-# #     Baustelle
-# =============================================================================
-# =============================================================================
+
     def assemble_receiving_nodes2build_nodes(self):
         node_list = self.get_node_list()
         unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
@@ -1016,6 +1012,8 @@ class execution:
         if self.Par_.set_kill_list == 1:
             kill_dict["Entry nodes"] = [(node, "Entry") for node in self.Par_.entry_node_kill_list]
             kill_dict["Build nodes"] = [(node, "Build") for node in self.Par_.build_node_kill_list]
+            kill_dict["Process nodes"] = [(node) for node in self.Par_.process_node_kill_list]
+            #logger.debug(f"Kill dict: {kill_dict}")
             #if self.Par_.activate_timesliceforwarding:
             #    kill_dict["Process nodes"] = self.Par_.process_node_kill_list
         if len(kill_dict["Entry nodes"]) < self.Par_.num_entrynodes_kills:
@@ -1027,14 +1025,18 @@ class execution:
             build_nodes += [(build_node, "Super") for build_node in self.overlap_nodes.keys() if build_node not in self.Par_.build_node_kill_list]
             kill_dict["Build nodes"] += random.sample(build_nodes, self.Par_.num_buildnodes_kills-len(kill_dict["Build nodes"]))
         if self.Par_.activate_timesliceforwarding:
-            kill_dict["Process nodes"] = random.sample([receiving_node for receiving_node, build_node in self.rec2build], self.Par_.num_processnodes_kills)
+            if len(kill_dict["Process nodes"]) < self.Par_.num_processnodes_kills:
+                process_nodes = [receiving_node for receiving_node, build_node in self.rec2build if receiving_node not in self.Par_.process_node_kill_list]
+                kill_dict["Process nodes"] = random.sample(process_nodes, self.Par_.num_processnodes_kills)
         else:
             kill_dict["Process nodes"] = []
+        logger.debug("entry nodes to kill: " + "".join(f"{val[0]}; " for val in kill_dict["Entry nodes"]))
+        logger.debug("build nodes to kill: " + "".join(f"{val[0]}; " for val in kill_dict["Build nodes"]))
+        logger.debug("Process nodes to kill: " + "".join(f"{val}; " for val in kill_dict["Process nodes"]))
         while num_kills != revieve_count:
             td = self.Par_.timer_for_kill.total_seconds()
             sleep_val = np.random.poisson(td)
             time.sleep(sleep_val)
-            #Params mehr mit einbeziehen 
             weights_rc_1 = [sum(len(kill_nodes) for kill_nodes in kill_dict.values()), sum(len(revive_nodes) for revive_nodes in revieve_dict.values())]
             kill_or_revieve = random.choices(["Kill", "Revieve"], weights=weights_rc_1, k=1)[0]
             if kill_or_revieve == "Kill":
@@ -1079,7 +1081,6 @@ class execution:
                     elif to_revieve_node[1] == "Super":
                         self.super_nodes_cls.revieve_process_build(to_revieve_node[0])
                     revieve_dict["Build nodes"].remove(to_revieve_node)
-                #Baustelle
                 elif node_type == "Process":
                     to_revieve_node = random.choice(revieve_dict["Process nodes"])
                     self.timeslice_forwarding_cls.revieve_process(to_revieve_node)
