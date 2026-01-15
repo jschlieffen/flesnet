@@ -17,9 +17,7 @@ function create_venv() {
 }
 
 function create_config() {
-
-    cp config_example.cfg config.cfg
-
+    cp setup/config_example.cfg setup/config.cfg
 }
 
 function create_folders() {
