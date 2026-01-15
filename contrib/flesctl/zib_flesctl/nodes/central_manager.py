@@ -13,8 +13,8 @@ import re
 import monitoring as mon
 import curses
 import signal
-from log_msg import *
-import logfile_gen as Logfile
+from logging_lib.log_msg import *
+from logging_lib import logfile_gen as Logfile
 import random
 import numpy as np
 
@@ -30,13 +30,14 @@ import numpy as np
 # TODOs:                                                                            STATUS:
 #        1. implement overlapping nodes timeslice-forwarding                        Prob. will not be implemented
 #        2. implement nodelist timeslice-forwarding                                 DONE
-#        3. implement set kill list timeslice-forwarding
+#        3. implement set kill list timeslice-forwarding                            DONE
 #        4. collectl for monotoring
 #        5. check if weird signal handler behavior still appears now for mon.
-#        6. check for bottleneck(Performance for flesnet is bad...) 
+#        6. check for bottleneck(Performance for flesnet is bad...)                 only seems to appear, when timeslice-forwarding is active. Check if there is a better way ... it is not ...
 #        7. Make the node output Debug output                                       DONE
 #        8. Add log level                                                           DONE
 #        9. restructer input output to make it complained with libfabric
+#        10. clean up
 # =============================================================================
 
 def ethernet_ip(node_id):
@@ -110,7 +111,7 @@ class Entry_nodes:
     
     def start_flesnet(self):
         self.write_Params()
-        file = 'input.py'
+        file = 'nodes/input.py'
         node_cnt = 0
         for node in self.node_list.keys():
             input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(node_cnt))), None)
@@ -257,7 +258,7 @@ class Build_nodes:
 
     def start_flesnet(self):
         self.write_Params()
-        file = 'output.py'
+        file = 'nodes/output.py'
         node_cnt = 0
         for node in self.node_list.keys():
             logger.info(f'start build node: {node}')
@@ -399,7 +400,7 @@ class Super_nodes:
     
     def start_flesnet(self):
         self.write_Params()
-        file = 'super_nodes.py'
+        file = 'nodes/super_nodes.py'
         node_cnt = 0
         for node in self.node_list.keys():
             input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(node_cnt))), None)
@@ -545,7 +546,7 @@ class Timeslice_forwarding:
         
     def start_receivers(self):
         self.write_Params()
-        file = 'timeslice_forwarding.py'
+        file = 'nodes/timeslice_forwarding.py'
         node_cnt = 0
         for receiving_node,build_node in self.rec2build:
             logger.info(f"start timeslice forwarding node {receiving_node} for build node {build_node['node']}")
@@ -1027,7 +1028,7 @@ class execution:
         if self.Par_.activate_timesliceforwarding:
             if len(kill_dict["Process nodes"]) < self.Par_.num_processnodes_kills:
                 process_nodes = [receiving_node for receiving_node, build_node in self.rec2build if receiving_node not in self.Par_.process_node_kill_list]
-                kill_dict["Process nodes"] = random.sample(process_nodes, self.Par_.num_processnodes_kills)
+                kill_dict["Process nodes"] += random.sample(process_nodes, self.Par_.num_processnodes_kills -len(kill_dict["Process nodes"]))
         else:
             kill_dict["Process nodes"] = []
         logger.debug("entry nodes to kill: " + "".join(f"{val[0]}; " for val in kill_dict["Entry nodes"]))

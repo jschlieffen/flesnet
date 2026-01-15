@@ -9,11 +9,21 @@ Created on Mon Mar 17 15:48:03 2025
 import configparser as cfg
 import os
 import sys
-from log_msg import *
+
 import re
 import subprocess
 from datetime import datetime, timedelta
-
+'''
+if os.environ('setup_check') == 1:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.append(os.path.join(script_dir, '..'))
+    os.environ['write_logfile'] = '0'
+    from log_msg import *
+    script_dir = Path(__file__).resolve().parent
+    os.chdir(script_dir)
+'''
+#else:
+from logging_lib.log_msg import *
 # =============================================================================
 # This file reads the params from the config file and checks the validation
 # =============================================================================

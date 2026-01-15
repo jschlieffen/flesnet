@@ -254,7 +254,7 @@ entry_node_idx = arg["<entry_node_idx>"]
 logfile_collectl = arg['<logfile_collectl>']
 #customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
 print('test')
-
+print('num_entrynodes: ',num_entrynodes)
 
 entry_nodes(input_file,ip, logfile,num_entrynodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
             transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl,

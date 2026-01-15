@@ -6,41 +6,46 @@ Created on Wed Oct  1 17:37:38 2025
 @author: jschlieffen
 """
 
-
-from log_msg import *
 import os
 import importlib
 import stat
 import subprocess
 import sys
 from pathlib import Path
+
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(script_dir, '..'))
+os.environ['write_logfile'] = '0'
+from logging_lib.log_msg import *
+script_dir = Path(__file__).resolve().parent
+os.chdir(script_dir)
 import params as par
 
 class system_checker:
     
     def __init__(self):
-        venv_path = Path("flesctrl_venv")
+        venv_path = Path("../flesctrl_venv")
         self.python_exec = venv_path / 'bin' / 'python'
         self.required_libaries = [
                 'docopt' , 'plotext' , 'matplotlib', 'seaborn' , 'deepdiff'
             ]
         self.required_files = [
-                'central_manager.py',
-                'execution.py',
-                'input.py',
-                'logfile_gen.py',
-                'log_msg.py',
-                'monitoring.py',
-                'output.py',
+                '../nodes/central_manager.py',
+                '../execution.py',
+                '../nodes/input.py',
+                '../logging_lib/logfile_gen.py',
+                '../logging_lib/log_msg.py',
+                '../monitoring/monitoring.py',
+                '../nodes/output.py',
                 'params.py',
-                'super_nodes.py',
-                'timeslice_forwarding.py'
+                '../nodes/super_nodes.py',
+                '../nodes/timeslice_forwarding.py'
             ]
         self.files_with_perm = [
-                ('input.py',0o755),
-                ('output.py',0o755),
-                ('super_nodes.py', 0o755),
-                ('timeslice_forwarding.py', 0o755)
+                ('../nodes/input.py',0o755),
+                ('../nodes/output.py',0o755),
+                ('../nodes/super_nodes.py', 0o755),
+                ('../nodes/timeslice_forwarding.py', 0o755)
             ]
         self.setup_ready = True
     

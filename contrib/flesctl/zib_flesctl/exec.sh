@@ -1,21 +1,21 @@
 #!/bin/bash
 
-ENTRY_NODES_CNT=$(grep -E '^entry_nodes=' config.cfg | cut -d'=' -f2)
-PROCESSING_NODES_CNT=$(grep -E '^build_nodes=' config.cfg | cut -d'=' -f2)
-TIME_ALLOC=$(grep -E '^time=' config.cfg | cut -d'=' -f2)
-SET_NODE_LIST=$(grep -E '^set_node_list=' config.cfg | cut -d'=' -f2)
-NUM_CPUS=$(grep -E '^num_cpus=' config.cfg | cut -d'=' -f2)
+ENTRY_NODES_CNT=$(grep -E '^entry_nodes=' setup/config.cfg | cut -d'=' -f2)
+PROCESSING_NODES_CNT=$(grep -E '^build_nodes=' setup/config.cfg | cut -d'=' -f2)
+TIME_ALLOC=$(grep -E '^time=' setup/config.cfg | cut -d'=' -f2)
+SET_NODE_LIST=$(grep -E '^set_node_list=' setup/config.cfg | cut -d'=' -f2)
+NUM_CPUS=$(grep -E '^num_cpus=' setup/config.cfg | cut -d'=' -f2)
 
 if [ "$SET_NODE_LIST" -eq 1 ]; then
-    ENTRY_NODES_LIST=$(grep "^entry_nodes_list" config.cfg | cut -d'=' -f2)
-    BUILD_NODES_LIST=$(grep "^build_nodes_list" config.cfg | cut -d'=' -f2)
+    ENTRY_NODES_LIST=$(grep "^entry_nodes_list" setup/config.cfg | cut -d'=' -f2)
+    BUILD_NODES_LIST=$(grep "^build_nodes_list" setup/config.cfg | cut -d'=' -f2)
 
     source flesctrl_venv/bin/activate
 
-    ACTIVATE_TIMESLICEFORWARDING=$(grep "^activate_timesliceforwarding" config.cfg | cut -d'=' -f2)
+    ACTIVATE_TIMESLICEFORWARDING=$(grep "^activate_timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
     if  [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         NODES=$((ENTRY_NODES_CNT + 2*PROCESSING_NODES_CNT))
-	PROCESS_NODES_LIST=$(grep "^process_nodes_list" config.cfg | cut -d'=' -f2)
+	PROCESS_NODES_LIST=$(grep "^process_nodes_list" setup/config.cfg | cut -d'=' -f2)
     	NODELIST="$ENTRY_NODES_LIST,$BUILD_NODES_LIST,$PROCESS_NODES_LIST"
     else
         NODES=$((ENTRY_NODES_CNT + PROCESSING_NODES_CNT))
@@ -30,7 +30,7 @@ if [ "$SET_NODE_LIST" -eq 1 ]; then
 else
     source flesctrl_venv/bin/activate
 
-    ACTIVATE_TIMESLICEFORWARDING=$(grep "^activate_timesliceforwarding" config.cfg | cut -d'=' -f2)
+    ACTIVATE_TIMESLICEFORWARDING=$(grep "^activate_timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
 
     echo $ACTIVATE_TIMESLICEFORWARDING
     if  [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then

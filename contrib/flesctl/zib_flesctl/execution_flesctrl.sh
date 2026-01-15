@@ -45,7 +45,7 @@ function create_output_folder() {
 
     cp -r $logfolder $foldername
     
-    cp -r collectl $foldername
+    #cp -r collectl $foldername
 
     cp -r tmp $foldername
 

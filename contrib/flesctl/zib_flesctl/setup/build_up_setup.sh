@@ -41,6 +41,8 @@ function create_folders() {
     mkdir Runs
 }
 
+cd ..
 create_venv
 create_config
 create_folders
+cd setup

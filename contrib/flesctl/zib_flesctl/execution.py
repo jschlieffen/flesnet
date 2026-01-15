@@ -5,16 +5,16 @@ Created on Mon Mar 17 16:28:18 2025
 
 @author: jschlieffen
 """
-
-import params as par
-import central_manager as cm
-import time
 import sys
+from setup import params as par
+from nodes import central_manager as cm
+import time
+
 import signal
 import os
 os.environ['write_logfile'] = '1'
-from log_msg import *
-import logfile_gen as Logfile
+from logging_lib.log_msg import *
+from logging_lib import logfile_gen as Logfile
 
 #TODO: make timeslice-forwarding cpu ids 
 # =============================================================================
@@ -32,7 +32,7 @@ class exec_:
     
     def __init__(self):
         self.clean_files()
-        self.Par_ = par.Params('config.cfg')
+        self.Par_ = par.Params('setup/config.cfg')
         foobar = self.Par_.validation_params(False)
         set_loglvl(self.Par_.loglevel, logger)
         logger.success('Params valid and successfully set')

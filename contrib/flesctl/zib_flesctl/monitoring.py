@@ -15,7 +15,7 @@ import plotext as plt
 import io
 from contextlib import redirect_stdout
 import signal
-from log_msg import *
+from logging_lib.log_msg import *
 
 # =============================================================================
 # This file deals with the monotoring by using a mixture of curses for the 

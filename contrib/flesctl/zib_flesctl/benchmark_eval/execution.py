@@ -35,7 +35,7 @@ from pathlib import Path
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(script_dir, '..'))
 os.environ['write_logfile'] = '0'
-from log_msg import *
+from logging_lib.log_msg import *
 script_dir = Path(__file__).resolve().parent
 os.chdir(script_dir)
 #sys.path.append(os.path.abspath('../'))

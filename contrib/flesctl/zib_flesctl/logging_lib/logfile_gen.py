@@ -29,15 +29,15 @@ class Logfile:
         
     def write(self):
         config = configparser.ConfigParser()
-        config.read('config.cfg')
+        config.read('setup/config.cfg')
         run_id = config.getint('general', 'run_id')
         config['general']['run_id'] = str(run_id+1)
-        with open('config.cfg', 'w') as configfile:
+        with open('setup/config.cfg', 'w') as configfile:
             config.write(configfile, space_around_delimiters=False)
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         logfile_name = f'logs/general/Run_{str(run_id+1)}_{timestamp}.log'
         dir = os.path.dirname(__file__)
-        path = os.path.join(dir,'tmp')
+        path = os.path.join(dir,'../tmp')
         if not os.path.exists(path):
             os.makedirs(path)
         #os.environ['flesctl_logfile_name'] = logfile_name
