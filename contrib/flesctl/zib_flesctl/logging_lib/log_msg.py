@@ -24,14 +24,24 @@ class LogColors:
     RED = "\033[31m"
     MAGENTA = "\033[35m"
     CYAN = "\033[36m"  
+    GRAY = "\033[90m" 
     RESET = "\033[0m"
 
 SUCCESS_LEVEL_NUM = 25  
 logging.addLevelName(SUCCESS_LEVEL_NUM, "SUCCESS")
+STATUS_LEVEL_NUM = 15
+logging.addLevelName(STATUS_LEVEL_NUM, "STATUS")
 
 def success(self, message, *args, **kws):
     if self.isEnabledFor(SUCCESS_LEVEL_NUM):
         self._log(SUCCESS_LEVEL_NUM, message, args, **kws)
+
+def status(self, message, *args, **kws):
+    if self.isEnabledFor(STATUS_LEVEL_NUM):
+        self._log(STATUS_LEVEL_NUM, message, args, **kws)
+
+logging.Logger.status = status
+
 
 logging.Logger.success = success
 
@@ -40,7 +50,9 @@ class BoostLogFormatter(logging.Formatter):
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         levelname = record.levelname
         if levelname == "SUCCESS":
-            color = LogColors.GREEN
+            color = LogColors.GREEN       
+        elif levelname == "STATUS":
+            color = LogColors.CYAN
         elif levelname == "INFO":
             color = LogColors.BLUE
         elif levelname == "WARNING":
@@ -50,7 +62,7 @@ class BoostLogFormatter(logging.Formatter):
         elif levelname == "CRITICAL":
             color = LogColors.MAGENTA
         elif levelname == "DEBUG":
-            color = LogColors.CYAN  
+            color = LogColors.GRAY  
         else:
             color = LogColors.RESET
         log_message = f"{LogColors.GREEN}[{timestamp}]{LogColors.RESET} {color}{levelname}{LogColors.RESET}: {record.getMessage()}"
@@ -64,8 +76,8 @@ def setup_logger(write_logfile):
     logger.addHandler(console_handler)
     # Disable matplotlib logging propagation
     matplotlib_logger = logging.getLogger('matplotlib')
-    matplotlib_logger.setLevel(logging.WARNING)  # Set the desired log level
-    matplotlib_logger.propagate = False  # Disable propagation
+    matplotlib_logger.setLevel(logging.WARNING)  
+    matplotlib_logger.propagate = False  
 
     if write_logfile == '1':
         config = configparser.ConfigParser()
@@ -88,8 +100,8 @@ def set_loglvl(level, logger=None):
         raise ValueError("Log level must be a string")
 
     level = level.upper()
-    if hasattr(logging, level):
-        level = getattr(logging, level)
+    if level in logging._nameToLevel:
+        logger.setLevel(logging._nameToLevel[level])
     else:
         raise ValueError(f"Unknown log level: {level}")
 

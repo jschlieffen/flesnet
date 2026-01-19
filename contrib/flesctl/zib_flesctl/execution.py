@@ -19,7 +19,7 @@ from logging_lib import logfile_gen as Logfile
 #TODO: make timeslice-forwarding cpu ids 
 # =============================================================================
 # TODOs:
-#       1. restructure file and folder org.                 improvement needed
+#       1. restructure file and folder org.                                Done
 #       2. make implementation for libfrabric
 # =============================================================================
 

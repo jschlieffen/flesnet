@@ -53,6 +53,10 @@ class Params:
         self.entry_nodes_list=[]
         self.build_nodes_list=[]
         self.process_nodes_list=[]
+        self.exclude_nodes=0
+        self.exclude_entry_nodes=[]
+        self.exclude_build_nodes=[]
+        self.exclude_process_nodes=[]
         self.path = ""
         self.transport_method = ""
         self.use_infiniband = 1
@@ -128,7 +132,12 @@ class Params:
         self.entry_nodes_list = self.get_node_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)
         self.build_nodes_list = self.get_node_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)
         self.process_nodes_list = self.get_node_list('set_node_list', 'process_nodes_list', self.process_nodes_list, False)
-        
+        self.exclude_nodes = self.get_value('set_node_list','exclude_nodes','int', self.exclude_nodes,False)
+        if self.exclude_nodes == 1:
+            self.exclude_entry_nodes = self.get_node_list('set_node_list', 'exclude_entry_nodes', self.exclude_entry_nodes, False)
+            self.exclude_build_nodes = self.get_node_list('set_node_list', 'exclude_build_nodes', self.exclude_build_nodes, False)
+            self.exclude_process_nodes = self.get_node_list('set_node_list', 'exclude_process_nodes', self.exclude_process_nodes, False)
+            
     def get_flesnet_par(self):
         self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', required=True)
         self.transport_method = self.get_value('flesnet_commands', 'transport_method', 'str', required=True)
@@ -245,10 +254,14 @@ class Params:
         if self.set_node_list:
             Params_check.check_nodes_exist()
             
+        if self.exclude_nodes:
+            Params_check.check_excluded_nodes_in_node_list()
         if os.getenv('SLURM_JOB_NUM_NODES'):
             Params_check.check_num_nodes()
             if self.set_node_list:
                 Params_check.check_req_nodes_alloc
+            if self.exclude_nodes:
+                Params_check.check_excluded_nodes_alloc()
         Params_check.check_log_lvl()
         if self.kill_nodes:
             Params_check.check_kill_par()
@@ -266,6 +279,10 @@ class Params:
 
 # =============================================================================
 # TODO:new param process nodes list
+# =============================================================================
+
+# =============================================================================
+# MISSING: 1. check if nodes occur multiple times in the nodelist
 # =============================================================================
 class params_checker:
     
@@ -357,6 +374,15 @@ class params_checker:
                     if "infiniband" not in features.lower():
                         logger.critical(f"Buildnode: {node} does not provide Infiniband")
                         self.exit_program()
+            for node in self.Par_.process_nodes_list:
+                if node not in node_features:
+                    logger.critical(f"Process node: {node} not found on the cluster")
+                    self.exit_program()
+                if self.Par_.use_infiniband:
+                    features = node_features[node]
+                    if "infiniband" not in features.lower():
+                        logger.critical(f"Processnode: {node} does not provide Infiniband")
+                        self.exit_program()
                         
         except subprocess.CalledProcessError as e:
             logger.error(f"[!] Error running sinfo: {e} Cannot check the validity of the given nodelist")
@@ -389,10 +415,77 @@ class params_checker:
             if build_node not in node_list:
                 logger.critical(f"required build node: {build_node} not allocated")
                 self.exit_program()
+        for process_node in self.Par_.process_nodes_list:
+            if build_node not in node_list:
+                logger.critical(f"required process node: {process_node} not allocated")
+                self.exit_program()
+                        
                 
                 
+    def check_excluded_nodes_alloc(self):
+        node_str = os.environ.get('SLURM_NODELIST')
+        node_list = []
+        if node_str is None:
+            logger.critical('SLURM_NODELIST is not set, Maybe you forget to allocate the nodes')
+            self.exit_program()
+        range_pattern = re.findall(r'(.*?)(\d+)-(\d+)', node_str)
+        list_pattern = re.findall(r'(.*?)(\d+(?:,\d+)*)', node_str)
+        for base, start, end in range_pattern:
+            start, end = int(start), int(end)
+            if start < 10:
+                node_list.extend([f"htc-cmp00{i}" for i in range(start, end + 1)])
+            elif start < 100:    
+                node_list.extend([f"htc-cmp0{i}" for i in range(start, end + 1)])
+            else:
+                node_list.extend([f"htc-cmp{i}" for i in range(start, end + 1)])
+        for base, numbers in list_pattern:
+            num_list = numbers.split(",")
+            node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
+        node_list = sorted(set(node_list))
+        for entry_node in self.Par_.exclude_entry_nodes:
+            if entry_node in node_list:
+                logger.warning(f"excluded entry node: {entry_node} is allocated. It will not be used as an entry node")
+                #self.exit_program()
+    
+        for build_node in self.Par_.exclude_build_nodes:
+            if build_node in node_list:
+                logger.warning(f"excluded build node: {build_node} is allocated. It will not be used as an build node")
+                #self.exit_program()
+        for process_node in self.Par_.exclude_process_nodes:
+            if process_node in node_list:
+                logger.warning(f"excluded process node: {process_node} is allocated. It will not be used as an process node")
+                
+    def check_excluded_nodes_in_node_list(self):
+        if not os.getenv('SLURM_JOB_NUM_NODES') and self.Par_.set_node_list:
+            node_list = self.Par_.entry_nodes_list + self.Par_.build_nodes_list 
+            if self.Par_.activate_timesliceforwarding:
+                node_list += self.Par_.process_nodes_list
+            for excluded_node in self.Par_.exclude_entry_nodes:
+                if excluded_node in node_list:
+                    logger.critical(f'excluded entry node: {excluded_node} is both excluded and explicitly set to allocate. This will lead to a conflict when trying to alloacate the nodes')
+            for excluded_node in self.Par_.exclude_build_nodes:
+                if excluded_node in node_list:
+                    logger.critical(f'excluded build node: {excluded_node} is both excluded and explicitly set to allocate. This will lead to a conflict when trying to alloacate the nodes')
+            if self.Par_.activate_timesliceforwarding:
+                for excluded_node in self.Par_.excluded_process_nodes:
+                    if excluded_node in node_list:
+                        logger.critical(f'excluded process node: {excluded_node} is both excluded and explicitly set to allocate. This will lead to a conflict when trying to alloacate the nodes')
+        if self.Par_.set_node_list:
+            for excluded_entry in self.Par_.exclude_entry_nodes:
+                if excluded_entry in self.Par_.entry_nodes_list:
+                    logger.warning(f'excluded entry node: {excluded_entry} is both excluded and wished. So it is not used as an entry node.')
+            for excluded_build in self.Par_.exclude_build_nodes:
+                if excluded_build in self.Par_.build_nodes_list:
+                    logger.warning(f'excluded build node: {excluded_build} is both excluded and wished. So it is not used as an build node.')
+            if self.Par_.activate_timesliceforwarding:
+                for excluded_process in self.Par_.exclude_process_nodes:
+                    if excluded_process in self.Par_.process_nodes_list:
+                        logger.warning(f'excluded process node: {excluded_process} is both excluded and wished. So it is not used as an process node.')
+                    
+
+
     def check_log_lvl(self):
-        if self.Par_.loglevel not in ["DEBUG","CRITICAL","ERROR","WARNING","INFO","SUCCESS"]:
+        if self.Par_.loglevel not in ["DEBUG","CRITICAL","ERROR","WARNING","INFO","SUCCESS", "STATUS"]:
             logger.critical("log level not defined")
             self.exit_program()
             

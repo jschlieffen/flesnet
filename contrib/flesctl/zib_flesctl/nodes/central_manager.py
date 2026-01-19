@@ -37,7 +37,10 @@ import numpy as np
 #        7. Make the node output Debug output                                       DONE
 #        8. Add log level                                                           DONE
 #        9. restructer input output to make it complained with libfabric
-#        10. clean up
+#        10. make a way to exclude nodes                                            DONE
+#        11. adjust setup check to new params
+#        12. clean up
+#        13. full test, that EVERYTHING works as intended
 # =============================================================================
 
 def ethernet_ip(node_id):
@@ -135,7 +138,7 @@ class Entry_nodes:
                 return 'shutdown'
             time.sleep(1)
             self.pids[node] = result
-            logger.success('start successful')
+            logger.status('start successful')
             node_cnt += 1
         return None
     
@@ -153,7 +156,7 @@ class Entry_nodes:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.success(f"Entry node: {kill_node} killed")
+        logger.status(f"Entry node: {kill_node} killed")
                 
     
     def kill_process_V2(self, kill_node):
@@ -180,7 +183,7 @@ class Entry_nodes:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.success(f"Entry node: {revive_node} revive")
+        logger.status(f"Entry node: {revive_node} revive")
         
         
     def revieve_process_V2(self, revieve_node):
@@ -275,7 +278,7 @@ class Build_nodes:
                 return 'shutdown'
             time.sleep(1)
             self.pids[node] = result
-            logger.success('start successful')
+            logger.status('start successful')
             node_cnt += 1
         return None
 
@@ -293,7 +296,7 @@ class Build_nodes:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.success(f"Build node: {kill_node} killed")
+        logger.status(f"Build node: {kill_node} killed")
 
     def kill_process_V2(self, kill_node):
         logger.info(f"Killing entry node: {kill_node}")
@@ -320,7 +323,7 @@ class Build_nodes:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.success(f"build node: {revive_node} revive") 
+        logger.status(f"build node: {revive_node} revive") 
         
         
     def revieve_process_V2(self, revieve_node):
@@ -410,7 +413,7 @@ class Super_nodes:
                 logger.info(f'start entry node: {node}, with input file {input_file}')
             else:
                 logger.info(f'start entry node: {node}, with pattern generator')
-            logger.info(f'start build node')
+            logger.status(f'start build node')
             logfile_entry_node = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
             logfile_build_node = "logs/flesnet/build_nodes/build_node_%s.log" % node
             logfile_collectl_entry_node = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
@@ -427,7 +430,7 @@ class Super_nodes:
                 return 'shutdown'
             time.sleep(1)
             self.pids[node] = result
-            logger.success('start successful')
+            logger.status('start successful')
             node_cnt += 1
         return None
     
@@ -446,7 +449,7 @@ class Super_nodes:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.success(f"Entry node: {kill_node} killed")
+        logger.status(f"Entry node: {kill_node} killed")
 
     def kill_process_build(self, kill_node):
         logger.info(f"Killing build node: {kill_node}")
@@ -462,7 +465,7 @@ class Super_nodes:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.success(f"Build node: {kill_node} killed")
+        logger.status(f"Build node: {kill_node} killed")
 
     def revieve_process_entry(self, revive_node):
         logger.info(f"revive entry node: {revive_node}")
@@ -478,7 +481,7 @@ class Super_nodes:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.success(f"Entry node: {revive_node} revive")
+        logger.status(f"Entry node: {revive_node} revive")
         
     def revieve_process_build(self, revive_node):
         logger.info(f"revive build node: {revive_node}")
@@ -494,7 +497,7 @@ class Super_nodes:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.success(f"build node: {revive_node} revive")     
+        logger.status(f"build node: {revive_node} revive")     
         
     def stop_flesnet(self):
         for node in self.node_list.keys():
@@ -569,7 +572,7 @@ class Timeslice_forwarding:
                 return 'shutdown'
             time.sleep(1)
             self.pids[receiving_node] = result
-            logger.success('start successful')
+            logger.status('start successful')
             node_cnt += 1
             
         logger.success('start of timeslice receivers successful')
@@ -589,7 +592,7 @@ class Timeslice_forwarding:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.success(f"Receiver node: {kill_node} killed")
+        logger.status(f"Receiver node: {kill_node} killed")
     
     def revieve_process(self, revive_node):
         logger.info(f"revive Receiver node: {revive_node}")
@@ -605,7 +608,7 @@ class Timeslice_forwarding:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.success(f"Receiver node: {revive_node} revive")
+        logger.status(f"Receiver node: {revive_node} revive")
         
     def stop_timeslice_forwarding(self):
         for node, build_node in self.rec2build:
@@ -751,7 +754,7 @@ class execution:
                 time.sleep(1)
                 if node in self.Par_.process_nodes_list:
                     continue
-                if entry_nodes_cnt < self.Par_.num_entrynodes and build_nodes_cnt < self.Par_.num_buildnodes:
+                if entry_nodes_cnt < self.Par_.num_entrynodes and build_nodes_cnt < self.Par_.num_buildnodes and node not in self.Par_.exclude_entry_nodes + self.Par_.exclude_build_nodes:
                     self.overlap_nodes[node] = {
                         'node' : node,
                         'entry_node_idx' : entry_nodes_cnt,
@@ -760,14 +763,14 @@ class execution:
                         'eth_ip' : node_eth_ip}
                     entry_nodes_cnt += 1
                     build_nodes_cnt += 1
-                elif entry_nodes_cnt < self.Par_.num_entrynodes:
+                elif entry_nodes_cnt < self.Par_.num_entrynodes and node not in self.Par_.exclude_entry_nodes:
                     self.entry_nodes[node] = {
                         'node' : node,
                         'entry_node_idx' : entry_nodes_cnt,
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip}
                     entry_nodes_cnt += 1
-                elif build_nodes_cnt < self.Par_.num_buildnodes:
+                elif build_nodes_cnt < self.Par_.num_buildnodes and node not in self.Par_.exclude_build_nodes:
                     self.build_nodes[node] = {
                         'node' : node,
                         'build_node_idx' : build_nodes_cnt,
@@ -776,8 +779,8 @@ class execution:
                     build_nodes_cnt += 1
         else:
             if len(node_list) < (self.Par_.num_entrynodes - entry_nodes_cnt) + (self.Par_.num_buildnodes - build_nodes_cnt):
-                logger.critical(f'Incorrect Number of nodes, expected:'
-                                f'{(self.Par_.num_entrynodes - entry_nodes_cnt) + (self.Par_.num_buildnodes - build_nodes_cnt)}'
+                logger.critical(f'Incorrect Number of nodes, expected: '
+                                f'{(self.Par_.num_entrynodes - entry_nodes_cnt) + (self.Par_.num_buildnodes - build_nodes_cnt)} '
                                 f', got: {len(node_list)} '
                                 )
                 sys.exit(1)
@@ -787,20 +790,25 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
-                if entry_nodes_cnt < self.Par_.num_entrynodes:
+                if entry_nodes_cnt < self.Par_.num_entrynodes and node not in self.Par_.exclude_entry_nodes:
                     self.entry_nodes[node] = {
                         'node' : node,
                         'entry_node_idx' : entry_nodes_cnt,
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip}
                     entry_nodes_cnt += 1
-                elif build_nodes_cnt < self.Par_.num_buildnodes:
+                elif build_nodes_cnt < self.Par_.num_buildnodes and node not in self.Par_.exclude_build_nodes:
                     self.build_nodes[node] = {
                         'node' : node,
                         'build_node_idx' : build_nodes_cnt,
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip}
                     build_nodes_cnt += 1
+            if entry_nodes_cnt < self.Par_.num_entrynodes or build_nodes_cnt < self.Par_.num_buildnodes:
+                logger.critical(f'Could not assemble enough entry/build nodes: '
+                                f'Expected num. build nodes: {self.Par_.num_buildnodes} got: {build_nodes_cnt} '
+                                f'Expected num. entry nodes: {self.Par_.num_entrynodes} got : {entry_nodes_cnt} ' )
+                sys.exit(1)
             
             
     # =============================================================================
@@ -811,7 +819,7 @@ class execution:
         node_list_remaining = node_list[: ]
         if self.Par_.overlap_usage_of_nodes:
         
-            if len(node_list) < max(self.Par_.num_entrynodes, self.Par_.num_buildnodes):
+            if len(node_list) < max(self.Par_.num_entrynodes, self.Par_.num_buildnodes) :
                 logger.critical(f'Incorrect Number of nodes, expected: {self.Par_.num_entrynodes + self.Par_.num_buildnodes}, got: {len(node_list)} ')
                 sys.exit(1)
             for node in node_list:
@@ -819,7 +827,7 @@ class execution:
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
                 
-                if node in self.Par_.entry_nodes_list and node in self.Par_.build_nodes_list:
+                if node in self.Par_.entry_nodes_list and node in self.Par_.build_nodes_list and node not in self.Par_.exclude_entry_nodes + self.Par_.exclude_build_nodes:
                     self.overlap_nodes[node] = {
                         'node' : node,
                         'entry_node_idx' : entry_nodes_cnt,
@@ -829,7 +837,7 @@ class execution:
                     entry_nodes_cnt += 1
                     build_nodes_cnt += 1
                     node_list_remaining.remove(node)
-                elif node in self.Par_.entry_nodes_list:
+                elif node in self.Par_.entry_nodes_list and node not in self.Par_.exclude_entry_nodes:
                     self.entry_nodes[node] = {
                         'node' : node,
                         'entry_node_idx' : entry_nodes_cnt,
@@ -837,7 +845,7 @@ class execution:
                         'eth_ip' : node_eth_ip}
                     entry_nodes_cnt += 1
                     node_list_remaining.remove(node)
-                elif node in self.Par_.build_nodes_list:
+                elif node in self.Par_.build_nodes_list and node not in self.Par_.exclude_build_nodes:
                     self.build_nodes[node] = {
                         'node' : node,
                         'build_node_idx' : build_nodes_cnt,
@@ -853,7 +861,7 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
-                if node in self.Par_.entry_nodes_list:
+                if node in self.Par_.entry_nodes_list and node not in self.Par_.exclude_entry_nodes:
                     self.entry_nodes[node] = {
                         'node' : node,
                         'entry_node_idx' : entry_nodes_cnt,
@@ -861,7 +869,7 @@ class execution:
                         'eth_ip' : node_eth_ip}
                     entry_nodes_cnt += 1
                     node_list_remaining.remove(node)
-                elif node in self.Par_.build_nodes_list:
+                elif node in self.Par_.build_nodes_list and node not in self.Par_.exclude_build_nodes:
                     self.build_nodes[node] = {
                         'node' : node,
                         'build_node_idx' : build_nodes_cnt,
@@ -890,6 +898,7 @@ class execution:
         node_list = self.get_node_list()
         unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
         used_build_nodes = []
+        
         if len(unused_nodes) < self.Par_.num_buildnodes:
             logger.critical(f"Number of nodes are not sufficient for the Timeslice-forwarding. Number of nodes remaining {len(unused_nodes)}, expected: {self.Par_.num_buildnodes} Shutting down")
             sys.exit(1)
@@ -900,23 +909,37 @@ class execution:
         if self.Par_.overlap_usage_of_nodes:
             for build_node_id,build_node in self.overlap_nodes.items():
                 if build_node_id not in used_build_nodes:
-                    self.rec2build.append((unused_nodes[cnt],build_node))
+                    
+                    if unused_nodes[cnt] not in self.Par_.exclude_process_nodes:
+                        self.rec2build.append((unused_nodes[cnt],build_node))
                     cnt += 1
-        else:
+                    if cnt > len(unused_nodes):
+                        logger.critical(f'Could not assemble enough receiver nodes'
+                                        f'Expected: {self.Par_.num_buildnodes}, got: {len(self.rec2build)}')
+                        sys.exit(1)
+        else:          
             for build_node_id,build_node in self.build_nodes.items():
                 if build_node_id not in used_build_nodes:
-                    self.rec2build.append((unused_nodes[cnt],build_node))
+                    if unused_nodes[cnt] not in self.Par_.exclude_process_nodes:
+                        self.rec2build.append((unused_nodes[cnt],build_node))
                     cnt += 1
+                    if cnt > len(unused_nodes):
+                        logger.critical(f'Could not assemble enough receiver nodes '
+                                        f'Expected: {self.Par_.num_buildnodes}, got: {len(self.rec2build)} ')
+                        sys.exit(1)
         Logfile.logfile.receiving_node_list = self.rec2build
-        if cnt > len(unused_nodes):
+        if cnt < len(unused_nodes):
             logger.warning(f"There are {len(unused_nodes) - cnt} nodes without any task.")
-        
+        if len(self.rec2build) < self.Par_.num_buildnodes:
+            logger.critical(f'Could not assemble enough receiver nodes '
+                            f'Expected: {self.Par_.num_buildnodes}, got: {len(self.rec2build)} ')
+            sys.exit(1)
     def assemble_receiving_nodes2build_nodes_customized(self,unused_nodes):
         build_nodes_list = list(self.build_nodes.items())
         used_build_nodes = []
         unused_nodes_iter = unused_nodes[ :]
         for node in unused_nodes_iter:
-            if node not in self.Par_.process_nodes_list:
+            if node not in self.Par_.process_nodes_list or node in self.Par_.exclude_process_nodes:
                 continue
             idx = self.Par_.process_nodes_list.index(node)
             self.rec2build.append((node, build_nodes_list[idx][1]) )
