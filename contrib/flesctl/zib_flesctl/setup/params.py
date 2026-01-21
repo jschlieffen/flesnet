@@ -10,6 +10,9 @@ import configparser as cfg
 import os
 import sys
 
+from influxdb_client import InfluxDBClient
+from influxdb_client.rest import ApiException
+
 import re
 import subprocess
 from datetime import datetime, timedelta
@@ -129,9 +132,9 @@ class Params:
 
     def get_node_list_par(self):
         self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
-        self.entry_nodes_list = self.get_node_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)
-        self.build_nodes_list = self.get_node_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)
-        self.process_nodes_list = self.get_node_list('set_node_list', 'process_nodes_list', self.process_nodes_list, False)
+        self.entry_nodes_list = list(set(self.get_node_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)))
+        self.build_nodes_list = list(set(self.get_node_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)))
+        self.process_nodes_list = list(set(self.get_node_list('set_node_list', 'process_nodes_list', self.process_nodes_list, False)))
         self.exclude_nodes = self.get_value('set_node_list','exclude_nodes','int', self.exclude_nodes,False)
         if self.exclude_nodes == 1:
             self.exclude_entry_nodes = self.get_node_list('set_node_list', 'exclude_entry_nodes', self.exclude_entry_nodes, False)
@@ -253,6 +256,7 @@ class Params:
             
         if self.set_node_list:
             Params_check.check_nodes_exist()
+            Params_check.check_for_duplicates()
             
         if self.exclude_nodes:
             Params_check.check_excluded_nodes_in_node_list()
@@ -262,12 +266,15 @@ class Params:
                 Params_check.check_req_nodes_alloc
             if self.exclude_nodes:
                 Params_check.check_excluded_nodes_alloc()
+        
         Params_check.check_log_lvl()
         if self.kill_nodes:
             Params_check.check_kill_par()
         self.show_only_entry_nodes = Params_check.check_transport_method()
         self.enable_progress_bar = Params_check.monitoring_check()
         Params_check.check_timeslice_forwarding()
+        if self.use_grafana:
+            Params_check.check_influxdb2_access()
         return Params_check.Params_valid
 
 
@@ -277,13 +284,6 @@ class Params:
 # Might be extended in the future.
 # =============================================================================
 
-# =============================================================================
-# TODO:new param process nodes list
-# =============================================================================
-
-# =============================================================================
-# MISSING: 1. check if nodes occur multiple times in the nodelist
-# =============================================================================
 class params_checker:
     
     def __init__(self, params, system_check):
@@ -298,6 +298,7 @@ class params_checker:
         self.Params_valid = False
     
     def check_validity_of_files(self):
+        logger.debug('check if the input files exist')
         if self.Par_.use_pattern_gen != 1:
             if not self.Par_.input_files:
                 logger.critical('no input files and no usage of the pattern generator')
@@ -309,13 +310,30 @@ class params_checker:
                         self.exit_program()
     
     def check_program_exists(self):
+        logger.debug('check if the path to flesnet is correct')
         for program in ['./mstool', './flesnet']:
             program_path = self.Par_.path + program
             if not (os.path.isfile(program_path) and os.access(program_path, os.X_OK)):
                 logger.critical(f'Program {program} does not exist')
                 self.exit_program()
 
+    def check_for_duplicates(self):
+        if self.Par_.activate_timesliceforwarding:
+            for receiver_node in self.Par_.process_nodes_list:
+                if receiver_node in self.Par_.entry_nodes_list:
+                    logger.critical(f'receiving node: {receiver_node} is also an entry node. This is not allowed')
+                    self.exit_program()
+                if receiver_node in self.Par_.build_nodes_list:
+                    logger.critical(f'receiving node: {receiver_node} is also an build node. This is not allowed')
+                    self.exit_program()
+        if not self.Par_.overlap_usage_of_nodes:
+            for entry_node in self.Par_.entry_nodes_list:
+                if entry_node in self.Par_.build_nodes_list:
+                    logger.critical(f'entry node: {entry_node} is also a Build node, while the overlap usage of nodes is deactivated')
+                    self.exit_program()
+        
     def check_num_nodes(self):
+        logger.debug('check the number of nodes')
         if self.Par_.overlap_usage_of_nodes == 1:
             num_tot_nodes_req = max(self.Par_.num_buildnodes, self.Par_.num_entrynodes) 
 
@@ -344,6 +362,7 @@ class params_checker:
     
         
     def check_nodes_exist(self):
+        logger.debug('check if all nodes that are wished actually exist')
         try:
             cmd = ["sinfo", "-N", "-h", "-o", "%N %f"]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
@@ -388,6 +407,7 @@ class params_checker:
             logger.error(f"[!] Error running sinfo: {e} Cannot check the validity of the given nodelist")
 
     def check_req_nodes_alloc(self):
+        logger.debug('check if all nodes that are wished via the list are allocated')
         node_str = os.environ.get('SLURM_NODELIST')
         node_list = []
         if node_str is None:
@@ -423,6 +443,7 @@ class params_checker:
                 
                 
     def check_excluded_nodes_alloc(self):
+        logger.debug('check if nodes are allocated')
         node_str = os.environ.get('SLURM_NODELIST')
         node_list = []
         if node_str is None:
@@ -456,6 +477,7 @@ class params_checker:
                 logger.warning(f"excluded process node: {process_node} is allocated. It will not be used as an process node")
                 
     def check_excluded_nodes_in_node_list(self):
+        logger.debug('check excluded nodes')
         if not os.getenv('SLURM_JOB_NUM_NODES') and self.Par_.set_node_list:
             node_list = self.Par_.entry_nodes_list + self.Par_.build_nodes_list 
             if self.Par_.activate_timesliceforwarding:
@@ -490,6 +512,7 @@ class params_checker:
             self.exit_program()
             
     def check_kill_par(self):
+        logger.debug('check robustness test')
         if self.Par_.timer_for_kill == timedelta(seconds=0):
             logger.critical("Cannot kill programs immediatly")
             self.exit_program()
@@ -516,11 +539,17 @@ class params_checker:
                 if kill_build not in self.Par_.build_nodes_list:
                     logger.critical(f"Supposed to kill build node: {kill_build}. But this is not contained in the build nodes list")
                     self.exit_program()
-                        
+            for kill_process in self.Par_.process_node_kill_list:
+                if kill_process not in self.Par_.process_nodes_list:
+                    logger.critical(f"Supposed to kill process node: {kill_process}. But this is not contained in the process nodes list")
+                    self.exit_program()
+                    
+            
             #TODO: Repeat for process nodes once implemented
                 
 
     def check_transport_method(self):
+        logger.debug('check transport method')
         if self.Par_.transport_method not in ['zeromq', 'rdma']:
             if self.Par_.transport_method == 'libfabric':
                 logger.critical("Transport method libfabric is currently not working.")
@@ -536,6 +565,7 @@ class params_checker:
         return 0
 
     def monitoring_check(self):
+        logger.debug('check monitoring params')
         if self.Par_.enable_progress_bar:
             if self.Par_.use_pattern_gen == 1:
                 logger.warning('Pattern Generator is used, thus there is no limit for the total data. Therefore progress bar is disabled')
@@ -543,6 +573,7 @@ class params_checker:
         return 1
     
     def check_timeslice_forwarding(self):
+        logger.debug('check for timesliceforwarding params')
         if self.Par_.activate_timesliceforwarding == 1:
             if int(self.Par_.port) < 1023:
                 logger.critical(f"used port for timeslice-forwarding: {self.Par_.port} is privileged, thus cannot be used")
@@ -552,5 +583,22 @@ class params_checker:
                 self.exit_program()
             if self.Par_.write_data_to_file != '0':
                 logger.warning(f"The .tsa file is written in {self.Par_.path} unless you gave a path to the output file")
-    
-
+                
+    def check_influxdb2_access(self):
+        logger.debug('check influxdb access')
+        url = f"http://{self.Par_.influx_node_ip}:8086"
+        try:
+            with InfluxDBClient(url=url, token=self.Par_.influx_token, org="CBM") as client:
+                buckets_api = client.buckets_api()
+                buckets = buckets_api.find_buckets().buckets
+                if not any(b.name == "flesnet_status" for b in buckets):
+                    logger.critical("bucket flesnet_status not found in influxdb")
+                    self.exit_program()
+                if not any(b.name == "tsclient_status" for b in buckets):
+                    logger.critical("bucket flesnet_status not found in influxdb")
+        except ApiException as e:
+            if e.status == 401:
+                logger.critical("Influxdb token invalid")
+                self.exit_program()
+            else:
+                logger.critical(f"Access to the influxdb failed:, {e.status}, {e.reason}")

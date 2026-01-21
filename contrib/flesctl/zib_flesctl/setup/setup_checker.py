@@ -50,6 +50,7 @@ class system_checker:
         self.setup_ready = True
     
     def check_venv_exists(self):
+        logger.debug('check if the venv exist')
         if self.python_exec.exists():
             logger.info('venv exists')
         else:
@@ -57,6 +58,7 @@ class system_checker:
             self.setup_ready = False
     
     def check_libraries(self):
+        logger.debug('check if all req. libs. are installed')
         for lib in self.required_libaries:
             try:
                 result = subprocess.run(
@@ -73,12 +75,14 @@ class system_checker:
                 self.setup_ready = False
     
     def check_files_exist(self):
+        logger.debug('check if the flesctrl files exists')
         for file in self.required_files:
             if not Path(file).is_file():
                 logger.critical(f"file is missing: {file}")
                 self.setup_ready = False
                 
     def check_file_permissions(self):
+        logger.debug('check if the flesctrl files have the right permission')
         for file, permission in self.files_with_perm:
             file_path = Path(file)
             if not file_path.exists():
