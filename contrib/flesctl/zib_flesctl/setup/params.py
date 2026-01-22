@@ -114,6 +114,7 @@ class Params:
         self.use_collectl = self.get_value('general', 'use_collectl','int',required=True)
         self.num_cpus = self.get_value('general', 'num_cpus', 'int', required=False)
         self.loglevel = self.get_value('general','loglevel','str',required=True)
+        self.check_log_lvl()
         self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', self.overlap_usage_of_nodes, False)
         
     def get_kill_par(self):
@@ -248,6 +249,10 @@ class Params:
         node_list = sorted(set(node_list))
         return node_list
 
+    def check_log_lvl(self):
+        if self.loglevel not in ["DEBUG","CRITICAL","ERROR","WARNING","INFO","SUCCESS", "STATUS"]:
+            logger.critical("log level not defined")
+            self.exit_program()
         
 
     def validation_params(self, system_check):
@@ -267,7 +272,7 @@ class Params:
             if self.exclude_nodes:
                 Params_check.check_excluded_nodes_alloc()
         
-        Params_check.check_log_lvl()
+        #Params_check.check_log_lvl()
         if self.kill_nodes:
             Params_check.check_kill_par()
         self.show_only_entry_nodes = Params_check.check_transport_method()
@@ -506,10 +511,7 @@ class params_checker:
                     
 
 
-    def check_log_lvl(self):
-        if self.Par_.loglevel not in ["DEBUG","CRITICAL","ERROR","WARNING","INFO","SUCCESS", "STATUS"]:
-            logger.critical("log level not defined")
-            self.exit_program()
+
             
     def check_kill_par(self):
         logger.debug('check robustness test')

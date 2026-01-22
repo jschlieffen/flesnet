@@ -35,19 +35,20 @@ import signal
 #       flesnet manually
 # =============================================================================
 
-def calc_str(ip,num_entry_nodes, use_pattern_gen):
+def calc_str(ip, entry_nodes_ip ,num_entry_nodes, use_pattern_gen):
     ip_string = ""
     parts = ip.split('sep')
     for part in parts:
         if part != "":
             ip_string += "tcp://" + part + '/0 '
+    parts_entry = entry_nodes_ips.split('sep')
     shm_string = ""
     if use_pattern_gen == 1:
         for i in range(0,int(num_entry_nodes)):
-            shm_string += "pgen:/fles_in_e%s/0 " % (str(i))
+            shm_string += "pgen://%s/fles_in_e%s/0 " % (parts_entry[i],str(i))
     else: 
         for i in range(0,int(num_entry_nodes)):
-            shm_string += "shm:/fles_in_e%s/0 " % (str(i))
+            shm_string += "shm://%s/fles_in_e%s/0 " % (parts_entry[i],str(i))
     return ip_string, shm_string
 
 def start_collectl(use_infiniband, csvfile_name):
@@ -116,9 +117,9 @@ def write_response(node_name, msg):
         f.flush()
         os.fsync(f.fileno())
 
-def entry_nodes(dmsa_file,ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
+def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
                 transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl, logfile_collectl):
-    ip_string, shm_string = calc_str(ip, num_entry_nodes, use_pattern_gen)
+    ip_string, shm_string = calc_str(ip, entry_nodes_ip, num_entry_nodes, use_pattern_gen)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
@@ -246,6 +247,8 @@ with open('tmp/entry_nodes_params.txt', 'r') as f:
 for key, value in params.items():
     globals()[key] = value
 
+entry_nodes_ips = params.get('entry node ips')
+#print(entry_nodes_ips)
 ip = params.get('build node ips')
 arg = docopt.docopt(__doc__, version='0.2')
 input_file = arg["<input_file>"]
@@ -253,10 +256,8 @@ logfile = arg["<logfile>"]
 entry_node_idx = arg["<entry_node_idx>"]
 logfile_collectl = arg['<logfile_collectl>']
 #customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
-print('test')
-print('num_entrynodes: ',num_entrynodes)
 
-entry_nodes(input_file,ip, logfile,num_entrynodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
+entry_nodes(input_file,ip, entry_nodes_ips, logfile,num_entrynodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
             transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl,
             logfile_collectl)
 

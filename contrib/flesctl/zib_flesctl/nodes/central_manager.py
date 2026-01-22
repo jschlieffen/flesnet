@@ -79,9 +79,11 @@ def infiniband_ip(node_id):
 # attributes for the start of flesnet (e.g. rmda/zeromq)
 # =============================================================================
 class Entry_nodes:
-    def __init__(self, node_list,build_nodes_ips,build_nodes_eth_ips,parameters):
+    def __init__(self, node_list,entry_nodes_ips, entry_nodes_eth_ips,build_nodes_ips,build_nodes_eth_ips,parameters):
         super().__init__()
         self.node_list = node_list
+        self.entry_nodes_ips = entry_nodes_ips
+        self.entry_node_eth_ips = entry_nodes_eth_ips
         self.build_nodes_ips = build_nodes_ips
         self.build_nodes_eth_ips = build_nodes_eth_ips
         self.Par_ = parameters
@@ -104,9 +106,12 @@ class Entry_nodes:
         ]
         with open('tmp/entry_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
+                Params_file.write(f"entry node ips: {self.entry_nodes_ips} \n")
                 Params_file.write(f"build node ips: {self.build_nodes_ips} \n")
             else:
+                Params_file.write(f"entry node ips: {self.entry_nodes_eth_ips} \n")
                 Params_file.write(f"build node ips: {self.build_nodes_eth_ips} \n")
+
             for name in param_names:
                 value = getattr(self.Par_, name, None)
                 Params_file.write(f"{name}: {value} \n")
@@ -224,12 +229,14 @@ class Entry_nodes:
 # =============================================================================
 class Build_nodes:
     
-    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips,parameters):
+    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, build_nodes_ips, build_nodes_eth_ips,parameters):
         super().__init__()
         self.node_list = node_list
         #self.num_build_nodes = num_build_nodes
         self.entry_node_ips = entry_nodes_ips
         self.entry_node_eth_ips = entry_nodes_eth_ips
+        self.build_node_ips = build_nodes_ips
+        self.build_nodes_eth_ips = build_nodes_eth_ips
         self.Par_ = parameters
         self.pids = {}
     
@@ -252,8 +259,10 @@ class Build_nodes:
         with open('tmp/build_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
                 Params_file.write(f"entry node ips: {self.entry_node_ips} \n")
+                Params_file.write(f"build node ips: {self.build_node_ips} \n")
             else:
                 Params_file.write(f"entry node ips: {self.entry_node_eth_ips} \n")
+                Params_file.write(f"build node ips: {self.build_node_eth_ips} \n")
             for name in param_names:
                 value = getattr(self.Par_, name, None)
                 Params_file.write(f"{name}: {value} \n")
@@ -655,8 +664,8 @@ class execution:
         if self.Par_.activate_timesliceforwarding:
             self.rec2build = []
             self.assemble_receiving_nodes2build_nodes()
-        self.entry_nodes_cls = Entry_nodes(self.entry_nodes,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
-        self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips, self.Par_)
+        self.entry_nodes_cls = Entry_nodes(self.entry_nodes, self.entry_nodes_ips, self.entry_nodes_eth_ips ,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
+        self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
         self.super_nodes_cls = Super_nodes(self.overlap_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
     
         if self.Par_.activate_timesliceforwarding:

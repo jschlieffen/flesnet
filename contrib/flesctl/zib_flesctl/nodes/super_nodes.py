@@ -69,19 +69,20 @@ def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicate
             result_collectl_cpu.wait()
             break
 
-def calc_str(ip,num_entry_nodes, use_pattern_gen):
+def calc_str(ip, entry_nodes_ip,num_entry_nodes, use_pattern_gen):
     ip_string = ""
     parts = ip.split('sep')
     for part in parts:
         if part != "":
             ip_string += "tcp://" + part + '/0 '
     shm_string = ""
+    parts_entry = entry_nodes_ip.split("sep")
     if use_pattern_gen == 1:
         for i in range(0,int(num_entry_nodes)):
-            shm_string += "pgen:/fles_in_e%s/0 " % (str(i))
+            shm_string += "pgen://%s/fles_in_e%s/0 " % (parts_entry[i],str(i))
     else: 
         for i in range(0,int(num_entry_nodes)):
-            shm_string += "shm:/fles_in_e%s/0 " % (str(i))
+            shm_string += "shm://%s/fles_in_e%s/0 " % (parts_entry[i],str(i))
     return ip_string, shm_string
 
 def get_alloc_cpus(filename):
@@ -124,7 +125,7 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
                 influx_node_ip, influx_token, use_grafana ,path, transport_method, customize_string, use_pattern_gen, use_dmsa_files,use_infiniband, use_collectl, 
                 logfile_collectl, logfile_collectl_build_nodes):
 
-    ip_string, shm_string = calc_str(build_nodes_ip, num_entry_nodes, use_pattern_gen)
+    ip_string, shm_string = calc_str(build_nodes_ip, entry_nodes_ip, num_entry_nodes, use_pattern_gen)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile_entry_node))[0]
@@ -159,7 +160,7 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
     time.sleep(1)
     build_nodes_communicater = queue.Queue()
-    build_nodes_thread = threading.Thread(target=build_nodes, args=(entry_nodes_ip,logfile_build_nodes, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
+    build_nodes_thread = threading.Thread(target=build_nodes, args=(entry_nodes_ip, build_nodes_ip,logfile_build_nodes, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
                                                                     transport_method, customize_string, use_collectl, logfile_collectl_build_nodes, use_infiniband ,build_nodes_communicater))
 
     build_nodes_thread.start()
@@ -248,23 +249,24 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
     result_flesnet.wait()
     
 
-def calc_str_output(ip,num_build_nodes):
+def calc_str_output(ip, build_nodes_ip,num_build_nodes):
     ip_string = ""
     parts = ip.split('sep')
     for part in parts:
         if part != "":
             ip_string += "tcp://" + part + '/0 '
     shm_string = ""
+    parts_build = build_nodes_ip.split('sep')
     for i in range(0,int(num_build_nodes)):
-        shm_string += "shm:/fles_out_b%s/0 " % (str(i))
+        shm_string += "shm://%s/fles_out_b%s/0 " % (parts_build[i],str(i))
     return ip_string, shm_string
 
 
 
 
-def build_nodes(entry_nodes_ip,logfile_build_nodes, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana, path, 
+def build_nodes(entry_nodes_ip, build_nodes_ip,logfile_build_nodes, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana, path, 
                 transport_method, customize_string, use_collectl, logfile_collectl, use_infiniband, build_nodes_communicater):
-    ip_string, shm_string = calc_str_output(entry_nodes_ip, num_build_nodes)
+    ip_string, shm_string = calc_str_output(entry_nodes_ip, build_nodes_ip, num_build_nodes)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile_build_node))[0]

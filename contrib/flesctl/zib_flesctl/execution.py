@@ -33,8 +33,8 @@ class exec_:
     def __init__(self):
         self.clean_files()
         self.Par_ = par.Params('setup/config.cfg')
-        foobar = self.Par_.validation_params(False)
         set_loglvl(self.Par_.loglevel, logger)
+        foobar = self.Par_.validation_params(False)
         logger.success('Params valid and successfully set')
         self.execution_cls = None
         self.running = True

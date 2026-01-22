@@ -32,15 +32,16 @@ import signal
 #       to just kill the srun process. One does not have to kill  flesnet manually
 # =============================================================================
 
-def calc_str(ip,num_build_nodes):
+def calc_str(ip, build_nodes_ip,num_build_nodes):
     ip_string = ""
     parts = ip.split('sep')
     for part in parts:
         if part != "":
             ip_string += "tcp://" + part + '/0 '
+    parts_build = build_nodes_ip.split('sep')
     shm_string = ""
     for i in range(0,int(num_build_nodes)):
-        shm_string += "shm:/fles_out_b%s/0 " % (str(i))
+        shm_string += "shm://%s/fles_out_b%s/0 " % (parts_build[i],str(i))
     return ip_string, shm_string
 
 def start_collectl(use_infiniband, csvfile_name):
@@ -97,9 +98,9 @@ def write_response(node_name, msg):
         os.fsync(f.fileno())
         
         
-def build_nodes(ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
+def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
                 transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl):
-    ip_string, shm_string = calc_str(ip, num_build_nodes)
+    ip_string, shm_string = calc_str(ip, build_nodes_ip, num_build_nodes)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
@@ -211,12 +212,12 @@ for key, value in params.items():
     globals()[key] = value
 
 ip = params.get('entry node ips')
-
+build_nodes_ip = params.get('build node ips')
 arg = docopt.docopt(__doc__, version='0.2')
 
 logfile = arg["<logfile>"]
 build_node_idx = arg["<build_node_idx>"]
 logfile_collectl = arg['<logfile_collectl>']
 
-build_nodes(ip,logfile, num_buildnodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
+build_nodes(ip, build_nodes_ip,logfile, num_buildnodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
             transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl)
