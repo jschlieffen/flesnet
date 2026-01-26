@@ -67,6 +67,12 @@ class Params:
         self.use_pattern_gen = 0
         self.use_dmsa_files = 0
         self.input_files = []
+        self.mean = 124000
+        self.size_var = 0
+        self.pattern = 1
+        self.overlap = 1
+        self.desc_size = 19
+        self.data_size = 27
         self.activate_timesliceforwarding = 0
         self.write_data_to_file = ""
         self.analyze_data = 0
@@ -102,6 +108,8 @@ class Params:
         self.get_node_list_par()
         self.get_flesnet_par()
         self.get_mstool_par()
+        self.get_pgen_commands()
+        self.get_shm_commands()
         self.get_tsclient_par()
         self.get_mon_par()
         self.get_influx_par()
@@ -153,6 +161,16 @@ class Params:
         self.use_dmsa_files = self.get_value('mstool_commands', 'use_dmsa_files', 'int', self.use_dmsa_files, False)
         self.input_files = self.get_input_file_list('input_file')
     
+    def get_pgen_commands(self):
+        self.mean = self.get_value('pgen_commands','mean','int', self.mean, required=False)
+        self.size_var = self.get_value('pgen_commands','size_var','int',self.size_var, False)
+        self.pattern = self.get_value('pgen_commands', 'pattern', 'int', self.pattern,False)
+        self.overlap = self.get_value('pgen_commands','overlap','int',self.overlap,False)
+        
+    def get_shm_commands(self):
+        self.desc_size = self.get_value('shm_commands','desc_size','int',self.desc_size,False)
+        self.data_size = self.get_value('shm_commands','data_size','int', self.data_size, False)
+    
     def get_tsclient_par(self):
         self.activate_timesliceforwarding = self.get_value('tsclient_commands', 'activate_timesliceforwarding','int', True)
         self.write_data_to_file = self.get_value('tsclient_commands', 'write_data_to_file', 'str', self.write_data_to_file, False)
@@ -195,6 +213,7 @@ class Params:
             logger.critical(f'required Param not set: {param}')
             sys.exit(1)
         else:
+            
             logger.warning(f'not required Param not set: {param}')
             return var
         
@@ -280,6 +299,9 @@ class Params:
         Params_check.check_timeslice_forwarding()
         if self.use_grafana:
             Params_check.check_influxdb2_access()
+        if self.use_pattern_gen:
+            Params_check.check_pgen_commands()
+        Params_check.check_shm_commands()
         return Params_check.Params_valid
 
 
@@ -566,6 +588,39 @@ class params_checker:
             return 1
         return 0
 
+    def check_pgen_commands(self):
+        def exp_to_mib(exp: int) -> float:
+            bytes_size = 2 ** exp
+            mib = bytes_size / (2 ** 20)
+            return mib
+        logger.debug('check pgen params')
+        match = re.search(r'--timeslice-size\s+(\d+)', self.Par_.customize_string)
+        timeslice_size = int(match.group(1)) if match else None
+        if timeslice_size is not None:
+            if self.Par_.mean*timeslice_size >= 2**self.Par_.data_size:
+                logger.critical(f'size of microslices are too large for the shm. Flesnet will not be able to transmit any data: \n'
+                                f'mean: {self.Par_.mean} * timeslice-size: {timeslice_size} = {self.Par_.mean*timeslice_size/1000000} MB > shm data size: {exp_to_mib(self.Par_.data_size)} MB')
+                self.exit_program()
+        else:
+            print('titten')
+        if self.Par_.pattern != 0 and self.Par_.pattern != 1:
+            logger.critical(f'unknown value for pattern : {self.Par_.pattern}')
+            self.exit_program()
+            
+    #TODO: make Param mem
+    def check_shm_commands(self):
+        logger.debug('check shm params')
+        def exp_to_gib(exp: int) -> float:
+            bytes_size = 2 ** exp
+            gib = bytes_size / (2 ** 30)
+            return gib
+        
+        if exp_to_gib(self.Par_.desc_size) >= 16:
+            logger.critical(f'desc size is too big: {self.Par_.desc_size} would create a shm of size: {exp_to_gib(self.Par_.desc_size)} GB')
+            self.exit_program()
+        if exp_to_gib(self.Par_.data_size) >= 16:
+            logger.critical(f'data size is too big: {self.Par_.data_size} would create a shm of size: {exp_to_gib(self.Par_.data_size)} GB')
+            
     def monitoring_check(self):
         logger.debug('check monitoring params')
         if self.Par_.enable_progress_bar:

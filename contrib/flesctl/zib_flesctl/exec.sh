@@ -27,7 +27,7 @@ if [ "$SET_NODE_LIST" -eq 1 ]; then
         EXCLUDE_NODE_LIST="$EXCLUDE_ENTRY_NODES,$EXCLUDE_BUILD_NODES" 
     fi
     NTASKS=4
-    MEM=16G
+    MEM=16GB
     p="big"
     TIME=$TIME_ALLOC
     EXCLUDE_NODES=$(grep -E '^exclude_nodes=' setup/config.cfg | cut -d'=' -f2)
@@ -54,7 +54,7 @@ else
     fi
     #echo $((NODES+1))
     NTASKS=4
-    MEM=16G
+    MEM=16GB
     p="big"
     TIME=$TIME_ALLOC
     EXCLUDE_NODES=$(grep -E '^exclude_nodes=' setup/config.cfg | cut -d'=' -f2)

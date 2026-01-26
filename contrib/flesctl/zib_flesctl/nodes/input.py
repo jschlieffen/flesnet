@@ -35,7 +35,7 @@ import signal
 #       flesnet manually
 # =============================================================================
 
-def calc_str(ip, entry_nodes_ip ,num_entry_nodes, use_pattern_gen):
+def calc_str(ip, entry_nodes_ip ,num_entry_nodes, use_pattern_gen,mean,size_var,pattern,overlap):
     ip_string = ""
     parts = ip.split('sep')
     for part in parts:
@@ -45,7 +45,7 @@ def calc_str(ip, entry_nodes_ip ,num_entry_nodes, use_pattern_gen):
     shm_string = ""
     if use_pattern_gen == 1:
         for i in range(0,int(num_entry_nodes)):
-            shm_string += "pgen://%s/fles_in_e%s/0 " % (parts_entry[i],str(i))
+            shm_string += "pgen://%s/fles_in_e%s?mean=%s\&size_var=%s\&overlap=%s\&pattern=%s " % (parts_entry[i],str(i),mean, size_var,overlap,pattern)
     else: 
         for i in range(0,int(num_entry_nodes)):
             shm_string += "shm://%s/fles_in_e%s/0 " % (parts_entry[i],str(i))
@@ -118,8 +118,9 @@ def write_response(node_name, msg):
         os.fsync(f.fileno())
 
 def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-                transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl, logfile_collectl):
-    ip_string, shm_string = calc_str(ip, entry_nodes_ip, num_entry_nodes, use_pattern_gen)
+                transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl, logfile_collectl,
+                mean,size_var,pattern,overlap):
+    ip_string, shm_string = calc_str(ip, entry_nodes_ip, num_entry_nodes, use_pattern_gen, mean,size_var,pattern,overlap)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
@@ -259,7 +260,7 @@ logfile_collectl = arg['<logfile_collectl>']
 
 entry_nodes(input_file,ip, entry_nodes_ips, logfile,num_entrynodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
             transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl,
-            logfile_collectl)
+            logfile_collectl, mean, size_var,pattern,overlap)
 
 
 

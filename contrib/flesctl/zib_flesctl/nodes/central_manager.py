@@ -102,7 +102,11 @@ class Entry_nodes:
             "use_pattern_gen",
             "use_dmsa_files",
             "use_infiniband",
-            "use_collectl"
+            "use_collectl",
+            "mean",
+            "size_var",
+            "pattern",
+            "overlap"
         ]
         with open('tmp/entry_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
@@ -254,7 +258,9 @@ class Build_nodes:
             "use_pattern_gen",
             "use_dmsa_files",
             "use_infiniband",
-            "use_collectl"
+            "use_collectl",
+            "desc_size",
+            "data_size"
         ]
         with open('tmp/build_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
@@ -395,7 +401,13 @@ class Super_nodes:
             "use_pattern_gen",
             "use_dmsa_files",
             "use_infiniband",
-            "use_collectl"
+            "use_collectl",  
+            "mean",
+            "size_var",
+            "pattern",
+            "overlap",
+            "desc_size",
+            "data_size"
         ]
         with open('tmp/super_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
@@ -419,10 +431,10 @@ class Super_nodes:
             if input_file is None:
                 input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == 'e_remaining'), None)
             if not self.Par_.use_pattern_gen:
-                logger.info(f'start entry node: {node}, with input file {input_file}')
+                logger.info(f'start super node: {node}, with input file {input_file}')
             else:
-                logger.info(f'start entry node: {node}, with pattern generator')
-            logger.status(f'start build node')
+                logger.info(f'start super node: {node}, with pattern generator')
+            logger.status(f'start super node')
             logfile_entry_node = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
             logfile_build_node = "logs/flesnet/build_nodes/build_node_%s.log" % node
             logfile_collectl_entry_node = "logs/collectl/entry_nodes/entry_node_%s.csv" % node

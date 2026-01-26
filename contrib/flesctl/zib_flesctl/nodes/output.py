@@ -32,7 +32,7 @@ import signal
 #       to just kill the srun process. One does not have to kill  flesnet manually
 # =============================================================================
 
-def calc_str(ip, build_nodes_ip,num_build_nodes):
+def calc_str(ip, build_nodes_ip,num_build_nodes,desc_size,data_size):
     ip_string = ""
     parts = ip.split('sep')
     for part in parts:
@@ -41,7 +41,7 @@ def calc_str(ip, build_nodes_ip,num_build_nodes):
     parts_build = build_nodes_ip.split('sep')
     shm_string = ""
     for i in range(0,int(num_build_nodes)):
-        shm_string += "shm://%s/fles_out_b%s/0 " % (parts_build[i],str(i))
+        shm_string += "shm://%s/fles_out_b%s?desc_size=%s\&data_size=%s " % (parts_build[i],str(i),desc_size,data_size)
     return ip_string, shm_string
 
 def start_collectl(use_infiniband, csvfile_name):
@@ -99,8 +99,8 @@ def write_response(node_name, msg):
         
         
 def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-                transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl):
-    ip_string, shm_string = calc_str(ip, build_nodes_ip, num_build_nodes)
+                transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl, desc_size,data_size):
+    ip_string, shm_string = calc_str(ip, build_nodes_ip, num_build_nodes,desc_size,data_size)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
@@ -220,4 +220,4 @@ build_node_idx = arg["<build_node_idx>"]
 logfile_collectl = arg['<logfile_collectl>']
 
 build_nodes(ip, build_nodes_ip,logfile, num_buildnodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-            transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl)
+            transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl,desc_size,data_size)
