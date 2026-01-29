@@ -5,12 +5,13 @@
 
 #@author: jschlieffen
 """
-Usage: output.py <logfile> <build_node_idx> <logfile_collectl>
+Usage: output.py <logfile> <build_node_idx> <logfile_collectl> <logfile_tf>
 
 Arguments: 
     <logfile> The Logfile to use
     <build_node_idx> The index of the current build node
     <logfile_collectl> The csv-file which collectl should use
+    <logfile_tf> The logfile for the timeslice-forwarding
 """
 
 
@@ -22,6 +23,7 @@ import os
 import threading
 import queue
 import signal
+import re
 
 # =============================================================================
 # This file starts flesnet on a build node. It is started with 
@@ -97,9 +99,49 @@ def write_response(node_name, msg):
         f.flush()
         os.fsync(f.fileno())
         
+def ethernet_ip():
+    command = 'ip a' 
+    try:
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)    
+        stdout,stderr = result.communicate()
+    except subprocess.CalledProcessError as e:
+        print(e)
+    match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
+    content = match.group(1)
+    match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
+    content2 = match2.group(1)
+    return content2
+    
+def infiniband_ip():
+    #print(node_id)
+    command = 'ip a' 
+    try:
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout,stderr = result.communicate()
+    except subprocess.CalledProcessError as e:
+        print(e)
+    match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
+    content = match.group(1)
+    match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
+    content2 = match2.group(1)
+    return content2   
+     
+def get_node_ip(use_infiniband):
+    if use_infiniband == 1:
+        return infiniband_ip()
+    else:
+        return ethernet_ip()         
         
+def start_timeslice_forwarded_input(logfile_tf,build_node_idx,use_infiniband):
+    logfile_collectl="dwd"
+    input_file="efdf"
+    node_ip = get_node_ip(use_infiniband)
+    tf_input_command = "./tf_input_node_py %s %s %s %s %s" % (input_file,logfile_tf,build_node_idx,node_ip,logfile_collectl)
+    result_tf_input = subprocess.run(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
+    return result_tf_input
+    
 def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-                transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl, desc_size,data_size):
+                transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl, desc_size,data_size,logfile_tf, use_tf_zib):
     ip_string, shm_string = calc_str(ip, build_nodes_ip, num_build_nodes,desc_size,data_size)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
@@ -141,6 +183,8 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
     """
     msg,action = "", ""
     prev_action = ""
+    if use_tf_zib == 1:
+        result_tf_input = start_timeslice_forwarded_input(logfile_tf, build_node_idx, use_infiniband)
     while True:
         time.sleep(0.5)
         try:
@@ -187,6 +231,10 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
         thread_collectl.join()
     result_flesnet.terminate()
     result_flesnet.wait()
+    if use_tf_zib == 1:
+        stdout, stderr = result_tf_input.communicate()
+        print(f"Output tf input: {stdout}")
+        print(f"Error tf input: {stderr}")
     write_response(node_name, "terminating")
 
 params = {}
@@ -218,6 +266,7 @@ arg = docopt.docopt(__doc__, version='0.2')
 logfile = arg["<logfile>"]
 build_node_idx = arg["<build_node_idx>"]
 logfile_collectl = arg['<logfile_collectl>']
+logfile_tf = arg["<logfile_tf>"]
 
 build_nodes(ip, build_nodes_ip,logfile, num_buildnodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-            transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl,desc_size,data_size)
+            transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl,desc_size,data_size, logfile_tf, ZIB_timesliceforwarding)

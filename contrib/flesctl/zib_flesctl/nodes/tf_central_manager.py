@@ -34,21 +34,6 @@ import signal
 #       flesnet manually
 # =============================================================================
 
-def calc_str_v2(ip, entry_nodes_ip ,num_entry_nodes, use_pattern_gen,mean,size_var,pattern,overlap):
-    ip_string = ""
-    parts = ip.split('sep')
-    for part in parts:
-        if part != "":
-            ip_string += "tcp://" + part + '/0 '
-    parts_entry = entry_nodes_ips.split('sep')
-    shm_string = ""
-    if use_pattern_gen == 1:
-        for i in range(0,int(num_entry_nodes)):
-            shm_string += "pgen://%s/fles_in_e%s?mean=%s\&size_var=%s\&overlap=%s\&pattern=%s " % (parts_entry[i],str(i),mean, size_var,overlap,pattern)
-    else: 
-        for i in range(0,int(num_entry_nodes)):
-            shm_string += "shm://%s/fles_in_e%s/0 " % (parts_entry[i],str(i))
-    return ip_string, shm_string
 
 def calc_str(ip,port):
     return f"-m {ip}:{port}"

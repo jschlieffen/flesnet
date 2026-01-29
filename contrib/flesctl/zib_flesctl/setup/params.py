@@ -77,6 +77,9 @@ class Params:
         self.write_data_to_file = ""
         self.analyze_data = 0
         self.port = 0
+        self.ZIB_timesliceforwarding = 1
+        self.use_flesnet = 1
+        self.input_tsa_files = []
         self.show_total_data = 0
         self.enable_graph = 0
         self.enable_progress_bar = 0
@@ -111,6 +114,7 @@ class Params:
         self.get_pgen_commands()
         self.get_shm_commands()
         self.get_tsclient_par()
+        self.get_ts_forwarding_par()
         self.get_mon_par()
         self.get_influx_par()
 
@@ -176,6 +180,11 @@ class Params:
         self.write_data_to_file = self.get_value('tsclient_commands', 'write_data_to_file', 'str', self.write_data_to_file, False)
         self.analyze_data = self.get_value('tsclient_commands', 'analyze_data', 'str', self.analyze_data, False)
         self.port = self.get_value('tsclient_commands', 'port', 'str', self.port, False)
+        
+    def get_ts_forwarding_par(self):
+        self.ZIB_timesliceforwarding = self.get_value('ZIB_timesliceforwarding', 'ZIB_timesliceforwarding','int',True)
+        self.use_flesnet = self.get_value('ZIB_timesliceforwarding','use_flesnet' 'int', True)
+        self.input_tsa_files = self.get_input_file_list('ts_input_files')
         
     def get_mon_par(self):
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)

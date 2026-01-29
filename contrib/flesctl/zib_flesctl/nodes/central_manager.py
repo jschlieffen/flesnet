@@ -260,7 +260,8 @@ class Build_nodes:
             "use_infiniband",
             "use_collectl",
             "desc_size",
-            "data_size"
+            "data_size",
+            "ZIB_timesliceforawrding"
         ]
         with open('tmp/build_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
@@ -274,17 +275,34 @@ class Build_nodes:
                 Params_file.write(f"{name}: {value} \n")
         Params_file.close()
 
+    def write_Params_tf(self):
+        param_names =[
+                "port",
+                "cm_node_ip",
+                "use_infiniband",
+                "path"
+            ]
+        with open('tmp/tf_input_nodes_params.txt','w') as Params_file:
+            for name in param_names:
+                value = getattr(self.Par_, name, None)
+                Params_file.write(f"{name}: {value} \n")
+            Params_file.write("use_collectl: 0 \n")
+        Params_file.close()
+
     def start_flesnet(self):
         self.write_Params()
+        if self.Par_.use_tf_zib:
+            self.write_Params_tf()
         file = 'nodes/output.py'
         node_cnt = 0
         for node in self.node_list.keys():
             logger.info(f'start build node: {node}')
             logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (node)
+            logfile_tf = 'logs/timeslice_forwarding/input_nodes/input_node_%s.log' % (node)
             logfile_collectl = 'logs/collectl/build_nodes/build_node_%s.csv' % (node)
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s'
-                % (node, self.Par_.num_cpus ,file,logfile, self.node_list[node]['build_node_idx'], logfile_collectl)
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
+                % (node, self.Par_.num_cpus ,file,logfile, self.node_list[node]['build_node_idx'], logfile_collectl, logfile_tf)
             )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
@@ -649,8 +667,180 @@ class Timeslice_forwarding:
             print('Output: ',stdout)
             print('Error: ', stderr)
             print('\n')
-
-
+            
+            
+class Timeslice_forwarding_ZIB:
+    
+    def __init__(self,central_manager, central_manager_ips, central_manager_eth_ips, output_nodes,input_nodes, parameters):
+        self.central_manager = central_manager
+        self.central_manager_ips = central_manager_ips
+        self.central_manager_eth_ips = central_manager_eth_ips
+        self.output_nodes = output_nodes
+        
+        self.input_nodes = input_nodes
+        self.pids_cm = {}
+        self.pids_o = {}
+        self.pids_i = {}
+        self.Par_ = parameters
+        
+    
+    def write_params_cm(self):
+        param_names = [
+            "path",
+            "use_infiniband",
+            "use_collectl",
+        ]
+        with open('tmp/tf_cm_nodes_params.txt', 'w') as Params_file:
+            if self.Par_.use_infiniband:
+                Params_file.write(f"cm node ips: {self.central_nodes_ips} \n")
+            else:
+                Params_file.write(f"cm node ips: {self.central_nodes_eth_ips} \n")
+            for name in param_names:
+                value = getattr(self.Par_, name, None)
+                Params_file.write(f"{name}: {value} \n")
+        Params_file.close()
+        
+    def write_params_output(self):
+        param_names = [
+                "path",
+                "use_infiniband",
+                "use_collectl"
+            ]   
+        with open('tmp/tf_output_nodes_params.txt', 'w') as Params_file:
+            if self.Par_.use_infiniband:
+                Params_file.write(f"cm node ips: {self.central_nodes_ips} \n")
+            else:
+                Params_file.write(f"cm node ips: {self.central_nodes_eth_ips} \n")
+            for name in param_names:
+                value = getattr(self.Par_, name, None)
+                Params_file.write(f"{name}: {value} \n")
+        Params_file.close()
+        
+    def write_params_input(self):
+        param_names = [
+                "path",
+                "use_infiniband",
+                "use_collectl"
+            ]   
+        with open('tmp/tf_input_nodes_params.txt', 'w') as Params_file:
+            if self.Par_.use_infiniband:
+                Params_file.write(f"cm node ips: {self.central_nodes_ips} \n")
+            else:
+                Params_file.write(f"cm node ips: {self.central_nodes_eth_ips} \n")
+            for name in param_names:
+                value = getattr(self.Par_, name, None)
+                Params_file.write(f"{name}: {value} \n")
+        Params_file.close()
+        
+    def start_cm(self):
+        file = 'nodes/tf_central_manager.py'
+        node_cnt = 0
+        for node in self.central_manager.keys():
+            logger.info(f'start central manager for timeslice-forwarding: {node}')
+            logfile = "logs/timeslice_forwarding/central_manager/central_manager_%s.log" % node
+            logfile_collectl = "logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % node
+            command = (
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s'
+                % (node, self.Par_.num_cpus ,file,logfile, logfile_collectl)
+            )
+            try:
+                #print(command)
+                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
+            except subprocess.CalledProcessError as e:
+                logger.error(f'ERROR {e} occurried in central manager: {node}. Shutdown flesnet')
+                return 'shutdown'
+            time.sleep(1)
+            self.pids_cm[node] = result
+            logger.status('start successful')
+            node_cnt += 1
+        return None
+     
+    def start_output_nodes(self):
+        file = 'nodes/tf_output_node.py'
+        nodes_cnt = 0
+        for node in self.output_nodes.keys():
+            logger.info(f'start output node for timeslice-forwarding: {node}')
+            logfile = "logs/timeslice_forwarding/central_manager/central_manager_%s.log" % node
+            logfile_collectl = "logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % node
+            if use_infiniband:
+                ip = self.output_nodes[node]['inf_ip']
+            else:
+                ip = self.output_nodes[node]['eth_ip']
+            command = (
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
+                % (node, self.Par_.num_cpus ,file,logfile, self.output_nodes[node]['output_node_idx'], ip, logfile_collectl)
+            )
+            try:
+                #print(command)
+                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
+            except subprocess.CalledProcessError as e:
+                logger.error(f'ERROR {e} occurried in tf output node: {node}. Shutdown flesnet')
+                return 'shutdown'
+            time.sleep(1)
+            self.pids_o[node] = result
+            nodes_cnt += 1
+        return None
+        
+    def start_input_nodes(self):
+        file = 'nodes/tf_input_node.py'
+        nodes_cnt = 0 
+        for node in self.input_nodes.keys():
+            logger.info(f'start input node for timeslice-forwarding: {node}')
+            logfile = "logs/timeslice_forwarding/central_manager/central_manager_%s.log" % node
+            logfile_collectl = "logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % node
+            if use_infiniband:
+                ip = self.input_nodes[node]['inf_ip']
+            else:
+                ip = self.input_nodes[node]['eth_ip']
+            command = (
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
+                % (node, self.Par_.num_cpus ,file,logfile, self.input_nodes[node]['input_node_idx'], ip, logfile_collectl)
+            )
+            try:
+                #print(command)
+                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
+            except subprocess.CalledProcessError as e:
+                logger.error(f'ERROR {e} occurried in tf input node: {node}. Shutdown flesnet')
+                return 'shutdown'
+            time.sleep(1)
+            self.pids_o[node] = result
+            nodes_cnt += 1
+        return None
+        
+    def stop_central_manager(self):
+        for node in self.central_manager.keys():
+            logger.info(f"stopping central manager: {node}")
+            with open("tmp/central_manager.txt", "w") as f:
+                f.write(f"TF Central Manager {node}: stop")
+                f.flush()
+                os.fsync(f.fileno())
+            stdout, stderr = self.pids_cm[node].communicate()
+            logger.debug(f"Output from central manager: {node} \n {stdout}")
+            logger.debug(f"Error from central manager: {node} \n {stderr}")
+            
+    def stop_input_nodes(self):
+        for node in self.input_nodes.keys():
+            logger.info(f"stopping TF input node: {node}")
+            with open("tmp/central_manager.txt", "w") as f:
+                f.write(f"TF Input {node}: stop")
+                f.flush()
+                os.fsync(f.fileno())
+            stdout, stderr = self.pids_i[node].communicate()
+            logger.debug(f"Output from TF input node: {node} \n {stdout}")
+            logger.debug(f"Error from TF input node: {node} \n {stderr}")
+            
+    def stop_output_nodes(self):
+        for node in self.input_nodes.keys():
+            logger.info(f"stopping TF output node: {node}")
+            with open("tmp/central_manager.txt", "w") as f:
+                f.write(f"TF Output {node}: stop")
+                f.flush()
+                os.fsync(f.fileno())
+            stdout, stderr = self.pids_o[node].communicate()
+            logger.debug(f"Output from TF output node: {node} \n {stdout}")
+            logger.debug(f"Error from TF output node: {node} \n {stderr}")
+            
+            
 # =============================================================================
 # This class is used to firstly schedule the nodes into entry/build nodes, read 
 # the ips and then start flesnet on the entry/build nodes via the classes 
@@ -665,21 +855,31 @@ class execution:
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.overlap_nodes = {}
-        self.schedule_nodes()
-
+        self.central_manager = {}
+        self.input_nodes = {}
+        self.output_nodes = {}
+        if self.Par_.use_flesnet:
+            self.schedule_nodes()
+        if self.Par_.ZIB_timesliceforwarding:
+            self.assemble_timeslice_forwarding_nodes()
         self.entry_nodes_ips = ""
         self.build_nodes_ips = ""
+        self.central_manager_ips = ""
         self.get_ips()
         self.entry_nodes_eth_ips = ""
         self.build_nodes_eth_ips = ""
+        self.central_manager_eth_ips = ""
         self.get_eth_ips()
         if self.Par_.activate_timesliceforwarding:
             self.rec2build = []
             self.assemble_receiving_nodes2build_nodes()
-        self.entry_nodes_cls = Entry_nodes(self.entry_nodes, self.entry_nodes_ips, self.entry_nodes_eth_ips ,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
-        self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
-        self.super_nodes_cls = Super_nodes(self.overlap_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
-    
+        if self.Par_.use_flesnet:
+            self.entry_nodes_cls = Entry_nodes(self.entry_nodes, self.entry_nodes_ips, self.entry_nodes_eth_ips ,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
+            self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
+            self.super_nodes_cls = Super_nodes(self.overlap_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
+        if self.Par_.ZIB_timesliceforwarding:
+            self.ZIB_timeslice_forwardin_cls = Timeslice_forwarding_ZIB(self.central_manager, self.central_manager_ips, self.central_manager_eth_ips, 
+                                                                        self.output_nodes, self.input_nodes, self.Par_)
         if self.Par_.activate_timesliceforwarding:
             self.timeslice_forwarding_cls = Timeslice_forwarding(self.rec2build, self.Par_)
     # =============================================================================
@@ -722,7 +922,8 @@ class execution:
             self.entry_nodes_eth_ips += val['eth_ip'] + "sep"
         for key,val in self.build_nodes.items():
             self.build_nodes_eth_ips += val['eth_ip'] + "sep"
-            
+        for key, val in self.central_manager.items():
+            self.central_manager_eth_ips += val['eth_ip']
         
     def get_ips(self):
         if self.Par_.overlap_usage_of_nodes:
@@ -733,7 +934,10 @@ class execution:
             self.entry_nodes_ips += val['inf_ip'] + "sep"
         for key,val in self.build_nodes.items():
             self.build_nodes_ips += val['inf_ip'] + "sep"
-    
+        for key,val in self.central_manager.items():
+            self.central_manager_ips += val['inf_ip']
+            
+            
     # =============================================================================
     # This function divides the nodes into entry/build and if activated super nodes
     # Furthermore the dict consisting the nodes also contains the index, of the nodes
@@ -825,11 +1029,11 @@ class execution:
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip}
                     build_nodes_cnt += 1
-            if entry_nodes_cnt < self.Par_.num_entrynodes or build_nodes_cnt < self.Par_.num_buildnodes:
-                logger.critical(f'Could not assemble enough entry/build nodes: '
-                                f'Expected num. build nodes: {self.Par_.num_buildnodes} got: {build_nodes_cnt} '
-                                f'Expected num. entry nodes: {self.Par_.num_entrynodes} got : {entry_nodes_cnt} ' )
-                sys.exit(1)
+        if entry_nodes_cnt < self.Par_.num_entrynodes or build_nodes_cnt < self.Par_.num_buildnodes:
+            logger.critical(f'Could not assemble enough entry/build nodes: '
+                            f'Expected num. build nodes: {self.Par_.num_buildnodes} got: {build_nodes_cnt} '
+                            f'Expected num. entry nodes: {self.Par_.num_entrynodes} got : {entry_nodes_cnt} ' )
+            sys.exit(1)
             
             
     # =============================================================================
@@ -955,6 +1159,8 @@ class execution:
             logger.critical(f'Could not assemble enough receiver nodes '
                             f'Expected: {self.Par_.num_buildnodes}, got: {len(self.rec2build)} ')
             sys.exit(1)
+            
+            
     def assemble_receiving_nodes2build_nodes_customized(self,unused_nodes):
         build_nodes_list = list(self.build_nodes.items())
         used_build_nodes = []
@@ -972,8 +1178,41 @@ class execution:
             )
         return unused_nodes, used_build_nodes    
             
-        
-        
+    #TODO:expand
+    def assemble_timeslice_forwarding_nodes(self,unused_nodes):
+        node_list = self.get_node_list()
+        input_nodes_cnt = 0
+        output_nodes_cnt = 0
+        cm_nodes_cnt = 0
+        unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
+        for node in unused_nodes:
+            node_ip = infiniband_ip(node)
+            node_eth_ip = ethernet_ip(node)
+            time.sleep(1)
+            if cm_nodes_cnt < self.Par_.num_central_manager:
+                self.central_manager[node] = {
+                        'node' : node,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip
+                    }
+                cm_nodes_cnt += 1
+            elif input_nodes_cnt < self.Par_.input_nodes and not self.Par_.use_flesnet:
+                self.input_nodes[node] = {
+                        'node' : node,
+                        'input_node_idx' : input_nodes_cnt,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip
+                    }
+                input_nodes_cnt += 1
+            elif output_nodes_cnt < self.Par_.output_nodes:
+                self.output_nodes[nodes] = {
+                        'node' : node,
+                        'output_node_idx' : output_node_idx,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip
+                    }
+                
+                
     # =============================================================================
     # This function starts flesnet and partly checks if the start was successful  
     # =============================================================================
@@ -984,6 +1223,8 @@ class execution:
                 self.timeslice_forwarding_cls.stop_timeslice_forwarding()
                 time.sleep(1)
                 sys.exit()
+        elif self.Par_.ZIB_timesliceforwarding:
+            res = self.timeslice_forwarding_
         if self.Par_.overlap_usage_of_nodes:
             res = self.super_nodes_cls.start_flesnet()
             if res == 'shutdown':

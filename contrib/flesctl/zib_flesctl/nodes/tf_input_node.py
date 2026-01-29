@@ -91,7 +91,7 @@ def get_alloc_cpus(filename):
 
 def write_response(node_name, msg):
     with open("tmp/nodes_response.txt", "w") as f:
-        f.write(f"Input {node_name}: done {msg}")
+        f.write(f"TF Input {node_name}: done {msg}")
         f.flush()
         os.fsync(f.fileno())
 
@@ -135,7 +135,7 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
             msg = ""
         #print(msg)
         #print(node_name)
-        if f"Input {node_name}" in msg:
+        if f"TF Input {node_name}" in msg:
             #print('test')
             #print(action)
             node, action = msg.split(": ")
