@@ -263,11 +263,20 @@ if(CLANG_TIDY)
 endif()
 
 add_subdirectory(app/mstool)
-add_subdirectory(app/mstool_alloc)
-add_subdirectory(app/msa2dmsa)
+<<<<<<< HEAD
+
+=======
+<<<<<<< HEAD
+add_subdirectory(app/archive_validator)
+=======
+add_subdirectory(app/timeslice_forwarder)
+>>>>>>> timeslice_forwarder
+>>>>>>> forkB/timeslice_forwarder
 add_subdirectory(app/msconsumer)
 add_subdirectory(app/tsclient)
 add_subdirectory(app/flesnet)
+add_subdirectory(app/dmsa_tool)
+add_subdirectory(app/mstool_alloc)
 if (USE_PDA AND PDA_FOUND)
   add_subdirectory(app/cri_tools)
   add_subdirectory(app/cri_cfg)
