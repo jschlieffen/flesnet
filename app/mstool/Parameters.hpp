@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <stdexcept>
 #include <string>
-
 /// Run parameters exception class.
 class ParametersException : public std::runtime_error {
 public:
