@@ -79,6 +79,9 @@ class Params:
         self.port = 0
         self.ZIB_timesliceforwarding = 1
         self.use_flesnet = 1
+        self.num_central_manager = 1
+        self.num_input_nodes = 1
+        self.num_output_nodes = 1
         self.input_tsa_files = []
         self.show_total_data = 0
         self.enable_graph = 0
@@ -183,8 +186,17 @@ class Params:
         
     def get_ts_forwarding_par(self):
         self.ZIB_timesliceforwarding = self.get_value('ZIB_timesliceforwarding', 'ZIB_timesliceforwarding','int',True)
-        self.use_flesnet = self.get_value('ZIB_timesliceforwarding','use_flesnet' 'int', True)
+        self.use_flesnet = self.get_value('ZIB_timesliceforwarding','use_flesnet' ,'int', True)
+        self.num_central_manager = self.get_value('ZIB_timesliceforwarding', 'num_central_manager', 'int', True)
+        self.num_input_nodes = self.get_value('ZIB_timesliceforwarding', 'num_input_nodes', 'int', True)
+        self.num_output_nodes = self.get_value('ZIB_timesliceforwarding', 'num_output_nodes','int',True)
         self.input_tsa_files = self.get_input_file_list('ts_input_files')
+        print(self.input_tsa_files)
+        print(self.ZIB_timesliceforwarding)
+        print(self.use_flesnet)
+        print(self.num_central_manager)
+        print(self.num_input_nodes)
+        print(self.num_output_nodes)
         
     def get_mon_par(self):
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)
@@ -230,11 +242,12 @@ class Params:
         file_list = []
         
         for entry in self.config[section]:
+            print(entry)
             if '_data' not in entry:
-                path = self.config['input_file'][entry]
+                path = self.config[section][entry]
                 data_size_name = entry + '_data'
-                if self.config.has_option('input_file', data_size_name):
-                    data_size = self.config.getint('input_file', data_size_name)
+                if self.config.has_option(section, data_size_name):
+                    data_size = self.config.getint(section, data_size_name)
                     file_list.append((entry,path,data_size))
                 else:
                     file_list.append((entry, path))

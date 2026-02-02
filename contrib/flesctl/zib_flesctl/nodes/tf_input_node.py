@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 28 18:48:28 2026
 
-@author: jschlieffen
-"""
+#Created on Wed Jan 28 18:48:28 2026
+
+#@author: jschlieffen
+
 
 """
 Usage: tf_input_node.py <input_file> <logfile> <input_node_idx> <input_node_ip> <logfile_collectl>
@@ -38,8 +38,9 @@ import signal
 # =============================================================================
 
 def calc_str(input_node_ip,port,cm_node_ip,input_node_idx):
-    str_ = f"-i {input_node_ip}:{port} -m {cm_node_ip}:{port} -n {input_node_idx} -g 1 --shm-id ts_out_{input_node_idx}"
-    return str_
+    shm_str = f"ts_out_{input_node_idx}"
+    str_ = f"-i {input_node_ip}:{port} -m {cm_node_ip}:{port} -n {input_node_idx} -g 1 --shm-id {shm_str}"
+    return str_,shm_str
 
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == 1:
@@ -95,8 +96,20 @@ def write_response(node_name, msg):
         f.flush()
         os.fsync(f.fileno())
 
-def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path):
-    str_ = calc_str(input_node_ip,port,cm_node_ip,input_node_idx)
+def start_tsclient(path,input_file,shm_str,tsclient_communicater):
+    tsclient_command = f"{path}./tsclient -L test.log -i file:{input_file} -o shm:{shm_str}?n=26"
+    result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    #result_tsclient.wait()
+    while True:
+        msg = tsclient_communicater.get()
+        if msg == 'exit':
+            #print('test tsclient')
+            result_tsclient.terminate()
+            result_tsclient.wait()
+            break
+
+def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet):
+    str_,shm_str = calc_str(input_node_ip,port,cm_node_ip,input_node_idx)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
@@ -114,9 +127,16 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
     '''
+    if use_flesnet == 0:
+        #tsclient_commands = '%s./tsclient -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
+        #result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        tsclient_communicater = queue.Queue()
+        thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, shm_str, tsclient_communicater))
+        thread_tsclient.start()
+        time.sleep(1)
     input_node_commands = (
-        '%s./timeslice_forwarder %s > /dev/null 2>&1 &' 
-        % (path,str_)
+        '%s./timeslice_forwarder %s > %s 2>&1 &' 
+        % (path,str_,logfile)
     )
     print(input_node_commands)
     result_input_node = subprocess.Popen(input_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
@@ -168,6 +188,11 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
         #result_collectl_cpu.wait()
         collectl_communicater.put("exit")
         thread_collectl.join()
+    if use_flesnet == 0:
+        #result_mstool.terminate()
+        #result_mstool.wait()
+        tsclient_communicater.put("exit")
+        thread_tsclient.join()
     result_input_node.terminate()
     result_input_node.wait()
     write_response(node_name, "terminating")
@@ -193,9 +218,11 @@ with open('tmp/tf_input_nodes_params.txt', 'r') as f:
             params[key] = value
     f.close()
 
-#print(params)
+print(params)
 for key, value in params.items():
     globals()[key] = value
+
+cm_node_ip = params.get('cm node ips')
 
 arg = docopt.docopt(__doc__, version='0.2')
 input_file = arg["<input_file>"]
@@ -205,5 +232,5 @@ input_node_ip = arg["<input_node_ip>"]
 logfile_collectl = arg['<logfile_collectl>']
 #customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
 
-input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path)
+input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet)
 

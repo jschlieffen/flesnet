@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 28 16:04:43 2026
 
-@author: jschlieffen
-"""
+#Created on Wed Jan 28 16:04:43 2026
+
+#@author: jschlieffen
+
 
 """
 Usage: tf_central_manager.py <logfile> <logfile_collectl>
@@ -111,8 +111,8 @@ def central_manager(ip,port,logfile,logfile_collectl,use_collectl,use_infiniband
         grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
     '''
     cm_commands = (
-        '%s./timeslice_forwarder %s > /dev/null 2>&1 &' 
-        % (path, ip_string)
+        '%s./timeslice_forwarder %s > %s 2>&1 &' 
+        % (path, ip_string,logfile)
     )
     print(cm_commands)
     result_cm = subprocess.Popen(cm_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
@@ -171,7 +171,7 @@ def central_manager(ip,port,logfile,logfile_collectl,use_collectl,use_infiniband
 
 params = {}
 #print('test12')
-with open('tmp/central_manager_params.txt', 'r') as f:
+with open('tmp/tf_cm_nodes_params.txt', 'r') as f:
     print('test1')
     for line in f:
         if ':' in line:
@@ -189,10 +189,11 @@ with open('tmp/central_manager_params.txt', 'r') as f:
             params[key] = value
     f.close()
 
-#print(params)
+print(params)
 for key, value in params.items():
     globals()[key] = value
 
+ip = params.get('cm node ips')
 #print(entry_nodes_ips)
 arg = docopt.docopt(__doc__, version='0.2')
 logfile = arg["<logfile>"]

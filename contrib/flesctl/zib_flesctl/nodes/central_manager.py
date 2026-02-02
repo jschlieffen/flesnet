@@ -669,6 +669,9 @@ class Timeslice_forwarding:
             print('\n')
             
             
+# =============================================================================
+#      TODO:       Port is wrong, logfile names
+# =============================================================================
 class Timeslice_forwarding_ZIB:
     
     def __init__(self,central_manager, central_manager_ips, central_manager_eth_ips, output_nodes,input_nodes, parameters):
@@ -686,15 +689,16 @@ class Timeslice_forwarding_ZIB:
     
     def write_params_cm(self):
         param_names = [
+            "port",
             "path",
             "use_infiniband",
             "use_collectl",
         ]
         with open('tmp/tf_cm_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
-                Params_file.write(f"cm node ips: {self.central_nodes_ips} \n")
+                Params_file.write(f"cm node ips: {self.central_manager_ips} \n")
             else:
-                Params_file.write(f"cm node ips: {self.central_nodes_eth_ips} \n")
+                Params_file.write(f"cm node ips: {self.central_manager_eth_ips} \n")
             for name in param_names:
                 value = getattr(self.Par_, name, None)
                 Params_file.write(f"{name}: {value} \n")
@@ -702,15 +706,17 @@ class Timeslice_forwarding_ZIB:
         
     def write_params_output(self):
         param_names = [
+                "port",
                 "path",
                 "use_infiniband",
-                "use_collectl"
+                "use_collectl",
+
             ]   
         with open('tmp/tf_output_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
-                Params_file.write(f"cm node ips: {self.central_nodes_ips} \n")
+                Params_file.write(f"cm node ips: {self.central_manager_ips} \n")
             else:
-                Params_file.write(f"cm node ips: {self.central_nodes_eth_ips} \n")
+                Params_file.write(f"cm node ips: {self.central_manager_eth_ips} \n")
             for name in param_names:
                 value = getattr(self.Par_, name, None)
                 Params_file.write(f"{name}: {value} \n")
@@ -718,15 +724,17 @@ class Timeslice_forwarding_ZIB:
         
     def write_params_input(self):
         param_names = [
+                "port",
                 "path",
                 "use_infiniband",
-                "use_collectl"
+                "use_collectl",
+                "use_flesnet"
             ]   
         with open('tmp/tf_input_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
-                Params_file.write(f"cm node ips: {self.central_nodes_ips} \n")
+                Params_file.write(f"cm node ips: {self.central_manager_ips} \n")
             else:
-                Params_file.write(f"cm node ips: {self.central_nodes_eth_ips} \n")
+                Params_file.write(f"cm node ips: {self.central_manager_eth_ips} \n")
             for name in param_names:
                 value = getattr(self.Par_, name, None)
                 Params_file.write(f"{name}: {value} \n")
@@ -735,6 +743,7 @@ class Timeslice_forwarding_ZIB:
     def start_cm(self):
         file = 'nodes/tf_central_manager.py'
         node_cnt = 0
+        self.write_params_cm()
         for node in self.central_manager.keys():
             logger.info(f'start central manager for timeslice-forwarding: {node}')
             logfile = "logs/timeslice_forwarding/central_manager/central_manager_%s.log" % node
@@ -758,11 +767,12 @@ class Timeslice_forwarding_ZIB:
     def start_output_nodes(self):
         file = 'nodes/tf_output_node.py'
         nodes_cnt = 0
+        self.write_params_output()
         for node in self.output_nodes.keys():
             logger.info(f'start output node for timeslice-forwarding: {node}')
-            logfile = "logs/timeslice_forwarding/central_manager/central_manager_%s.log" % node
+            logfile = "logs/timeslice_forwarding/central_manager/output_%s.log" % node
             logfile_collectl = "logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % node
-            if use_infiniband:
+            if self.Par_.use_infiniband:
                 ip = self.output_nodes[node]['inf_ip']
             else:
                 ip = self.output_nodes[node]['eth_ip']
@@ -784,17 +794,23 @@ class Timeslice_forwarding_ZIB:
     def start_input_nodes(self):
         file = 'nodes/tf_input_node.py'
         nodes_cnt = 0 
+        self.write_params_input()
         for node in self.input_nodes.keys():
+            input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(nodes_cnt))), None)
+            print(input_file)
+            if input_file is None:
+                input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
+            
             logger.info(f'start input node for timeslice-forwarding: {node}')
-            logfile = "logs/timeslice_forwarding/central_manager/central_manager_%s.log" % node
+            logfile = "logs/timeslice_forwarding/central_manager/input_%s.log" % node
             logfile_collectl = "logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % node
-            if use_infiniband:
+            if self.Par_.use_infiniband:
                 ip = self.input_nodes[node]['inf_ip']
             else:
                 ip = self.input_nodes[node]['eth_ip']
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
-                % (node, self.Par_.num_cpus ,file,logfile, self.input_nodes[node]['input_node_idx'], ip, logfile_collectl)
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s'
+                % (node, self.Par_.num_cpus ,file,input_file ,logfile, self.input_nodes[node]['input_node_idx'], ip, logfile_collectl)
             )
             try:
                 #print(command)
@@ -803,7 +819,7 @@ class Timeslice_forwarding_ZIB:
                 logger.error(f'ERROR {e} occurried in tf input node: {node}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
-            self.pids_o[node] = result
+            self.pids_i[node] = result
             nodes_cnt += 1
         return None
         
@@ -830,7 +846,7 @@ class Timeslice_forwarding_ZIB:
             logger.debug(f"Error from TF input node: {node} \n {stderr}")
             
     def stop_output_nodes(self):
-        for node in self.input_nodes.keys():
+        for node in self.output_nodes.keys():
             logger.info(f"stopping TF output node: {node}")
             with open("tmp/central_manager.txt", "w") as f:
                 f.write(f"TF Output {node}: stop")
@@ -878,7 +894,7 @@ class execution:
             self.build_nodes_cls = Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
             self.super_nodes_cls = Super_nodes(self.overlap_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
         if self.Par_.ZIB_timesliceforwarding:
-            self.ZIB_timeslice_forwardin_cls = Timeslice_forwarding_ZIB(self.central_manager, self.central_manager_ips, self.central_manager_eth_ips, 
+            self.ZIB_timeslice_forwarding_cls = Timeslice_forwarding_ZIB(self.central_manager, self.central_manager_ips, self.central_manager_eth_ips, 
                                                                         self.output_nodes, self.input_nodes, self.Par_)
         if self.Par_.activate_timesliceforwarding:
             self.timeslice_forwarding_cls = Timeslice_forwarding(self.rec2build, self.Par_)
@@ -1179,7 +1195,7 @@ class execution:
         return unused_nodes, used_build_nodes    
             
     #TODO:expand
-    def assemble_timeslice_forwarding_nodes(self,unused_nodes):
+    def assemble_timeslice_forwarding_nodes(self):
         node_list = self.get_node_list()
         input_nodes_cnt = 0
         output_nodes_cnt = 0
@@ -1196,7 +1212,7 @@ class execution:
                         'eth_ip' : node_eth_ip
                     }
                 cm_nodes_cnt += 1
-            elif input_nodes_cnt < self.Par_.input_nodes and not self.Par_.use_flesnet:
+            elif input_nodes_cnt < self.Par_.num_input_nodes and not self.Par_.use_flesnet:
                 self.input_nodes[node] = {
                         'node' : node,
                         'input_node_idx' : input_nodes_cnt,
@@ -1204,10 +1220,10 @@ class execution:
                         'eth_ip' : node_eth_ip
                     }
                 input_nodes_cnt += 1
-            elif output_nodes_cnt < self.Par_.output_nodes:
-                self.output_nodes[nodes] = {
+            elif output_nodes_cnt < self.Par_.num_output_nodes:
+                self.output_nodes[node] = {
                         'node' : node,
-                        'output_node_idx' : output_node_idx,
+                        'output_node_idx' : output_nodes_cnt,
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip
                     }
@@ -1224,29 +1240,37 @@ class execution:
                 time.sleep(1)
                 sys.exit()
         elif self.Par_.ZIB_timesliceforwarding:
-            res = self.timeslice_forwarding_
-        if self.Par_.overlap_usage_of_nodes:
-            res = self.super_nodes_cls.start_flesnet()
-            if res == 'shutdown':
-                if self.Par_.activate_timesliceforwarding:
-                    self.timeslice_forwarding_cls.stop_timeslice_forwarding()
-                self.super_nodes_cls.stop_flesnet()
-                sys.exit(1)
+            res = self.ZIB_timeslice_forwarding_cls.start_cm()
 
-        res = self.entry_nodes_cls.start_flesnet()
-        if res == 'shutdown':
-            if self.Par_.activate_timesliceforwarding:
-                self.timeslice_forwarding_cls.stop_timeslice_forwarding()
-            self.entry_nodes_cls.stop_flesnet()
-            sys.exit(1)
-        else:    
-            res = self.build_nodes_cls.start_flesnet()
+            res = self.ZIB_timeslice_forwarding_cls.start_output_nodes()
+            res = self.ZIB_timeslice_forwarding_cls.start_input_nodes()
+            if res == 'shutdown':
+                self.ZIB_timeslice_forwarding_cls.start_cm()
+                self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
+                self.ZIB_timeslice_forwarding_cls.stop_output_nodes()
+        if self.Par_.use_flesnet:
+            if self.Par_.overlap_usage_of_nodes:
+                res = self.super_nodes_cls.start_flesnet()
+                if res == 'shutdown':
+                    if self.Par_.activate_timesliceforwarding:
+                        self.timeslice_forwarding_cls.stop_timeslice_forwarding()
+                    self.super_nodes_cls.stop_flesnet()
+                    sys.exit(1)
+    
+            res = self.entry_nodes_cls.start_flesnet()
             if res == 'shutdown':
                 if self.Par_.activate_timesliceforwarding:
                     self.timeslice_forwarding_cls.stop_timeslice_forwarding()
                 self.entry_nodes_cls.stop_flesnet()
-                self.build_nodes_cls.stop_flesnet()
                 sys.exit(1)
+            else:    
+                res = self.build_nodes_cls.start_flesnet()
+                if res == 'shutdown':
+                    if self.Par_.activate_timesliceforwarding:
+                        self.timeslice_forwarding_cls.stop_timeslice_forwarding()
+                    self.entry_nodes_cls.stop_flesnet()
+                    self.build_nodes_cls.stop_flesnet()
+                    sys.exit(1)
 
         
                 
@@ -1377,21 +1401,27 @@ class execution:
     # =============================================================================
     # Stops the experiment and kills every process connected    
     # =============================================================================
+    #TODO:adjust
     def stop_program(self):
         time.sleep(2)
         logger.info('stopping flesnet')
         total_data, avg_data_rate = 0,0
-        if self.overlap_nodes:
-            self.super_nodes_cls.stop_flesnet()
-
-        self.build_nodes_cls.stop_flesnet()
-        self.entry_nodes_cls.stop_flesnet()
-        #print(self.activate_timesliceforwarding)
-        if self.Par_.activate_timesliceforwarding:
-            #print('test')
-            self.timeslice_forwarding_cls.stop_timeslice_forwarding()
-        if self.Par_.show_total_data:
-            total_data, avg_data_rate = self.stop_monitoring()
+        if self.Par_.use_flesnet:
+            if self.overlap_nodes:
+                self.super_nodes_cls.stop_flesnet()
+    
+            self.build_nodes_cls.stop_flesnet()
+            self.entry_nodes_cls.stop_flesnet()
+            #print(self.activate_timesliceforwarding)
+            if self.Par_.activate_timesliceforwarding:
+                #print('test')
+                self.timeslice_forwarding_cls.stop_timeslice_forwarding()
+            if self.Par_.show_total_data:
+                total_data, avg_data_rate = self.stop_monitoring()
+        else:
+            self.ZIB_timeslice_forwarding_cls.stop_central_manager()
+            self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
+            self.ZIB_timeslice_forwarding_cls.stop_output_nodes()
         return total_data, avg_data_rate
             
 

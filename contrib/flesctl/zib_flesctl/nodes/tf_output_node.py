@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Wed Jan 28 19:02:26 2026
 
-@author: jschlieffen
-"""
+#Created on Wed Jan 28 19:02:26 2026
+
+#@author: jschlieffen
+
 
 
 """
@@ -38,8 +38,9 @@ import signal
 # =============================================================================
 
 def calc_str(output_node_ip,port,cm_node_ip,output_node_idx):
-    str_ = f"-o {output_node_ip}:{port} -m {cm_node_ip}:{port} -n {output_node_idx} -g 1 --shm-id ts_in_{output_node_idx}"
-    return str_
+    shm_str = f"ts_in_{output_node_idx}"
+    str_ = f"-o {output_node_ip}:{port} -m {cm_node_ip}:{port} -n {output_node_idx} -g 2 --shm-id {shm_str}"
+    return str_,shm_str
 
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == 1:
@@ -94,9 +95,22 @@ def write_response(node_name, msg):
         f.write(f"TF Output {node_name}: done {msg}")
         f.flush()
         os.fsync(f.fileno())
+        
+        
+def start_tsclient(path,shm_str,tsclient_communicater):
+    tsclient_command = f"{path}./tsclient -i shm:{shm_str} -o test.tsa"
+    result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    #result_tsclient.wait()
+    while True:
+        msg = tsclient_communicater.get()
+        if msg == 'exit':
+            #print('test tsclient')
+            result_tsclient.terminate()
+            result_tsclient.wait()
+            break
 
 def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_infiniband, path):
-    str_ = calc_str(output_node_ip,port,cm_node_ip,output_node_idx)
+    str_,shm_str = calc_str(output_node_ip,port,cm_node_ip,output_node_idx)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
@@ -114,9 +128,14 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
     '''
+        #tsclient_commands = '%s./tsclient -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
+        #result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    tsclient_communicater = queue.Queue()
+    thread_tsclient = threading.Thread(target=start_tsclient, args=(path, shm_str, tsclient_communicater))
+    thread_tsclient.start()
     output_node_commands = (
-        '%s./timeslice_forwarder %s > /dev/null 2>&1 &' 
-        % (path,str_)
+        '%s./timeslice_forwarder %s > %s 2>&1 &' 
+        % (path,str_,logfile)
     )
     print(output_node_commands)
     result_output_node = subprocess.Popen(output_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
@@ -168,6 +187,10 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
         #result_collectl_cpu.wait()
         collectl_communicater.put("exit")
         thread_collectl.join()
+        #result_mstool.terminate()
+        #result_mstool.wait()
+    tsclient_communicater.put("exit")
+    thread_tsclient.join()
     result_output_node.terminate()
     result_output_node.wait()
     write_response(node_name, "terminating")
@@ -193,9 +216,10 @@ with open('tmp/tf_output_nodes_params.txt', 'r') as f:
             params[key] = value
     f.close()
 
-#print(params)
+print(params)
 for key, value in params.items():
     globals()[key] = value
+cm_node_ip = params.get('cm node ips')
 
 arg = docopt.docopt(__doc__, version='0.2')
 logfile = arg["<logfile>"]
