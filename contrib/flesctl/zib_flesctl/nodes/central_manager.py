@@ -241,6 +241,8 @@ class Build_nodes:
         self.entry_node_eth_ips = entry_nodes_eth_ips
         self.build_node_ips = build_nodes_ips
         self.build_nodes_eth_ips = build_nodes_eth_ips
+        #self.central_manager_ips = central_manager_ips, 
+        #self.central_manager_eth_ips = central_ma´nager_eth_ips
         self.Par_ = parameters
         self.pids = {}
     
@@ -261,7 +263,7 @@ class Build_nodes:
             "use_collectl",
             "desc_size",
             "data_size",
-            "ZIB_timesliceforawrding"
+            "ZIB_timesliceforwarding"
         ]
         with open('tmp/build_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
@@ -275,24 +277,9 @@ class Build_nodes:
                 Params_file.write(f"{name}: {value} \n")
         Params_file.close()
 
-    def write_Params_tf(self):
-        param_names =[
-                "port",
-                "cm_node_ip",
-                "use_infiniband",
-                "path"
-            ]
-        with open('tmp/tf_input_nodes_params.txt','w') as Params_file:
-            for name in param_names:
-                value = getattr(self.Par_, name, None)
-                Params_file.write(f"{name}: {value} \n")
-            Params_file.write("use_collectl: 0 \n")
-        Params_file.close()
 
     def start_flesnet(self):
         self.write_Params()
-        if self.Par_.use_tf_zib:
-            self.write_Params_tf()
         file = 'nodes/output.py'
         node_cnt = 0
         for node in self.node_list.keys():
@@ -367,13 +354,24 @@ class Build_nodes:
         print('Error: ', stderr)
         print('\n')
         
+    #TODO:make synch. better
     def stop_flesnet(self):
         for node in self.node_list.keys():
+            
+            if self.Par_.ZIB_timesliceforwarding:
+                with open("tmp/central_manager.txt", "w") as f:
+                    f.write(f"TF Input {node}: stop")
+                    f.flush()
+                    os.fsync(f.fileno())
+                    f.close()
+            time.sleep(1)
             logger.info(f"stopping build node: {node}")
             with open("tmp/central_manager.txt", "w") as f:
                 f.write(f"Build {node}: stop")
                 f.flush()
                 os.fsync(f.fileno())
+                f.close()
+
             stdout, stderr = self.pids[node].communicate()
             logger.debug(f"Output from build node: {node} \n {stdout}")
             logger.debug(f"Error from build node: {node} \n {stderr}")
@@ -735,6 +733,9 @@ class Timeslice_forwarding_ZIB:
                 Params_file.write(f"cm node ips: {self.central_manager_ips} \n")
             else:
                 Params_file.write(f"cm node ips: {self.central_manager_eth_ips} \n")
+            if self.Par_.use_flesnet:
+                param_names.remove("use_collectl")
+                Params_file.write("use_collectl: 0 \n")
             for name in param_names:
                 value = getattr(self.Par_, name, None)
                 Params_file.write(f"{name}: {value} \n")
@@ -1227,7 +1228,7 @@ class execution:
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip
                     }
-                
+                output_nodes_cnt += 1
                 
     # =============================================================================
     # This function starts flesnet and partly checks if the start was successful  
@@ -1236,42 +1237,48 @@ class execution:
         if self.Par_.activate_timesliceforwarding:
             res = self.timeslice_forwarding_cls.start_receivers()
             if res == 'shutdown':
-                self.timeslice_forwarding_cls.stop_timeslice_forwarding()
-                time.sleep(1)
-                sys.exit()
+                self.shutdown()
         elif self.Par_.ZIB_timesliceforwarding:
             res = self.ZIB_timeslice_forwarding_cls.start_cm()
 
             res = self.ZIB_timeslice_forwarding_cls.start_output_nodes()
-            res = self.ZIB_timeslice_forwarding_cls.start_input_nodes()
+            if not self.Par_.use_flesnet:
+                res = self.ZIB_timeslice_forwarding_cls.start_input_nodes()
+            else:
+                self.ZIB_timeslice_forwarding_cls.write_params_input()
             if res == 'shutdown':
-                self.ZIB_timeslice_forwarding_cls.start_cm()
-                self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
-                self.ZIB_timeslice_forwarding_cls.stop_output_nodes()
+                self.shutdown()
         if self.Par_.use_flesnet:
             if self.Par_.overlap_usage_of_nodes:
                 res = self.super_nodes_cls.start_flesnet()
                 if res == 'shutdown':
-                    if self.Par_.activate_timesliceforwarding:
-                        self.timeslice_forwarding_cls.stop_timeslice_forwarding()
-                    self.super_nodes_cls.stop_flesnet()
-                    sys.exit(1)
+                    self.shutdown()
     
             res = self.entry_nodes_cls.start_flesnet()
             if res == 'shutdown':
-                if self.Par_.activate_timesliceforwarding:
-                    self.timeslice_forwarding_cls.stop_timeslice_forwarding()
-                self.entry_nodes_cls.stop_flesnet()
-                sys.exit(1)
+                self.shutdown()
             else:    
                 res = self.build_nodes_cls.start_flesnet()
                 if res == 'shutdown':
-                    if self.Par_.activate_timesliceforwarding:
-                        self.timeslice_forwarding_cls.stop_timeslice_forwarding()
-                    self.entry_nodes_cls.stop_flesnet()
-                    self.build_nodes_cls.stop_flesnet()
-                    sys.exit(1)
+                    self.shutdown()
 
+
+    def shutdown(self):
+        if self.Par_.activate_timesliceforwarding:
+            self.timeslice_forwarding_cls.stop_timeslice_forwarding()
+        if self.Par_.ZIB_timesliceforawrding:
+            self.ZIB_timeslice_forwarding_cls.start_cm()
+            
+            self.ZIB_timeslice_forwarding_cls.stop_output_nodes()
+            if self.Par_.use_flesnet:
+                self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
+        if self.Par_.use_flesnet:
+            if self.Par_.overlap_nodes:
+                self.super_nodes_cls.stop_flesnet()
+            else:
+                self.entry_nodes_cls.stop_flesnet()
+                self.build_nodes_cls.stop_flesnet()
+        sys.exit(1)
         
                 
     # =============================================================================
@@ -1402,7 +1409,7 @@ class execution:
     # Stops the experiment and kills every process connected    
     # =============================================================================
     #TODO:adjust
-    def stop_program(self):
+    def stop_program_V2(self):
         time.sleep(2)
         logger.info('stopping flesnet')
         total_data, avg_data_rate = 0,0
@@ -1425,6 +1432,27 @@ class execution:
         return total_data, avg_data_rate
             
 
+    def stop_program(self):
+        time.sleep(2)
+        logger.info('stopping flesnet')
+        total_data, avg_data_rate = 0,0
+        if self.Par_.ZIB_timesliceforwarding:
+            self.ZIB_timeslice_forwarding_cls.stop_central_manager()
+            
+            self.ZIB_timeslice_forwarding_cls.stop_output_nodes()
+            if not self.Par_.use_flesnet:
+                self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
+        elif self.Par_.activate_timesliceforwarding:
+            self.timeslice_forwarding_cls.stop_timeslice_forwarding()
+        if self.Par_.use_flesnet:
+            if self.overlap_nodes:
+                self.super_nodes_cls.stop_flesnet()
+    
+            self.build_nodes_cls.stop_flesnet()
+            self.entry_nodes_cls.stop_flesnet()
+            if self.Par_.show_total_data:
+                total_data, avg_data_rate = self.stop_monitoring()
+        return total_data, avg_data_rate
     # =============================================================================
     # Starts the monotoring. 
     # not used. outdated code snipped. For new one see monitoring function.

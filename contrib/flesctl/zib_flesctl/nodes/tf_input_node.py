@@ -25,6 +25,7 @@ import os
 import threading
 import queue
 import signal
+import re
 
 # =============================================================================
 # This file starts mstool and flesnet on an entry node. It is started with 
@@ -37,8 +38,45 @@ import signal
 #       flesnet manually
 # =============================================================================
 
+def ethernet_ip():
+    command = 'ip a' 
+    try:
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)    
+        stdout,stderr = result.communicate()
+    except subprocess.CalledProcessError as e:
+        print(e)
+    match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
+    content = match.group(1)
+    match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
+    content2 = match2.group(1)
+    return content2
+    
+def infiniband_ip():
+    #print(node_id)
+    command = 'ip a' 
+    try:
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout,stderr = result.communicate()
+    except subprocess.CalledProcessError as e:
+        print(e)
+    match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
+    content = match.group(1)
+    match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
+    content2 = match2.group(1)
+    return content2   
+     
+def get_node_ip(use_infiniband):
+    if use_infiniband == 1:
+        return infiniband_ip()
+    else:
+        return ethernet_ip()  
+
+# =============================================================================
+# TODO:use_iofniband
+# =============================================================================
 def calc_str(input_node_ip,port,cm_node_ip,input_node_idx):
-    shm_str = f"ts_out_{input_node_idx}"
+    ip = get_node_ip(1)
+    shm_str = f"fles_out_b{input_node_idx}"
     str_ = f"-i {input_node_ip}:{port} -m {cm_node_ip}:{port} -n {input_node_idx} -g 1 --shm-id {shm_str}"
     return str_,shm_str
 
@@ -109,6 +147,7 @@ def start_tsclient(path,input_file,shm_str,tsclient_communicater):
             break
 
 def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet):
+    print('input node path:', os.getcwd())
     str_,shm_str = calc_str(input_node_ip,port,cm_node_ip,input_node_idx)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
@@ -138,6 +177,12 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
         '%s./timeslice_forwarder %s > %s 2>&1 &' 
         % (path,str_,logfile)
     )
+    '''
+    input_node_commands = (
+        '%s./timeslice_forwarder %s' 
+        % (path,str_)
+    )
+    '''
     print(input_node_commands)
     result_input_node = subprocess.Popen(input_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
     input_data = ''
@@ -155,7 +200,7 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
             msg = ""
         #print(msg)
         #print(node_name)
-        if f"TF Input {node_name}" in msg:
+        if f"TF Input {node_name}" in msg or f"Build {node_name}" in msg:
             #print('test')
             #print(action)
             node, action = msg.split(": ")
@@ -195,6 +240,13 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
         thread_tsclient.join()
     result_input_node.terminate()
     result_input_node.wait()
+    #os.killpg(result_input_node.pid, signal.SIGTERM)
+    #stdout, stderr = result_input_node.communicate(timeout=5)
+    #print("STDOUT:")
+    #print(stdout)
+    
+    #print("STDERR:")
+    #print(stderr)
     write_response(node_name, "terminating")
     
 
