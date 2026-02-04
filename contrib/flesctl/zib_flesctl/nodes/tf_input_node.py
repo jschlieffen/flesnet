@@ -200,7 +200,7 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
             msg = ""
         #print(msg)
         #print(node_name)
-        if f"TF Input {node_name}" in msg or f"Build {node_name}" in msg:
+        if f"TF Input {node_name}" in msg:
             #print('test')
             #print(action)
             node, action = msg.split(": ")

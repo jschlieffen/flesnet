@@ -353,8 +353,8 @@ class Build_nodes:
         print('Output: ',stdout)
         print('Error: ', stderr)
         print('\n')
-        
-    #TODO:make synch. better
+
+
     def stop_flesnet(self):
         for node in self.node_list.keys():
             
@@ -842,9 +842,20 @@ class Timeslice_forwarding_ZIB:
                 f.write(f"TF Input {node}: stop")
                 f.flush()
                 os.fsync(f.fileno())
-            stdout, stderr = self.pids_i[node].communicate()
-            logger.debug(f"Output from TF input node: {node} \n {stdout}")
-            logger.debug(f"Error from TF input node: {node} \n {stderr}")
+            if self.Par_.use_flesnet:
+                msg = ""
+                while msg != f"TF Input {node}: done terminating":
+                    try:
+                        with open("tmp/nodes_response.txt", "r") as f:
+                            msg = f.read().strip()
+                    except FileNotFoundError:
+                        msg = ""
+                    time.sleep(0.5)
+                logger.debug(f"TF input node: {node} stopped. See build nodes for output")
+            else:
+                stdout, stderr = self.pids_i[node].communicate()
+                logger.debug(f"Output from TF input node: {node} \n {stdout}")
+                logger.debug(f"Error from TF input node: {node} \n {stderr}")
             
     def stop_output_nodes(self):
         for node in self.output_nodes.keys():
@@ -982,7 +993,15 @@ class execution:
     # to get the given number of entry and build nodes
     # =============================================================================
     def schedule_nodes_randomly(self,node_list,entry_nodes_cnt, build_nodes_cnt):
-
+        if self.Par_.set_node_list:
+            if self.Par_.activate_timesliceforwarding:
+                Timeslice_forwarding_nodes = self.Par_.process_nodes_list
+            elif self.Par_.ZIB_timesliceforwarding:
+                Timeslice_forwarding_nodes = self.Par_.input_node_list + self.Par_.central_manager_list + self.Par_.output_node_list
+            else:
+                Timeslice_forwarding_nodes = []
+        else:
+            Timeslice_forwarding_nodes = []
         if self.Par_.overlap_usage_of_nodes:
             if len(node_list) < max(self.Par_.num_entrynodes - entry_nodes_cnt, self.Par_.num_buildnodes - build_nodes_cnt):
                 logger.critical(f'Incorrect Number of nodes, expected:'
@@ -990,11 +1009,12 @@ class execution:
                                 f', got: {len(node_list)} '
                                 )
                 sys.exit(1)
+            
             for node in node_list:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
-                if node in self.Par_.process_nodes_list:
+                if node in Timeslice_forwarding_nodes:
                     continue
                 if entry_nodes_cnt < self.Par_.num_entrynodes and build_nodes_cnt < self.Par_.num_buildnodes and node not in self.Par_.exclude_entry_nodes + self.Par_.exclude_build_nodes:
                     self.overlap_nodes[node] = {
@@ -1027,7 +1047,7 @@ class execution:
                                 )
                 sys.exit(1)
             for node in node_list:
-                if node in self.Par_.process_nodes_list:
+                if node in Timeslice_forwarding_nodes:
                     continue
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
@@ -1128,13 +1148,6 @@ class execution:
             )
             self.schedule_nodes_randomly(node_list_remaining, entry_nodes_cnt, build_nodes_cnt)
     
-    # =============================================================================
-    # Currently not used  
-    # =============================================================================
-    def bijectiv_mapping(self):
-        for entry_node, build_node in zip(self.entry_nodes.keys(), self.build_nodes.keys()):
-            self.entry_nodes[entry_node]['allocated_build_node'] = build_node
-            self.build_nodes[build_node]['allocated_entry_node'] = entry_node
 
     def assemble_receiving_nodes2build_nodes(self):
         node_list = self.get_node_list()
@@ -1195,25 +1208,29 @@ class execution:
             )
         return unused_nodes, used_build_nodes    
             
-    #TODO:expand
-    def assemble_timeslice_forwarding_nodes(self):
+    def assemble_timeslice_forwarding_nodes_customized(self,unused_nodes):
+        unused_nodes_iter = unused_nodes[ :]
         node_list = self.get_node_list()
         input_nodes_cnt = 0
         output_nodes_cnt = 0
         cm_nodes_cnt = 0
-        unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
-        for node in unused_nodes:
-            node_ip = infiniband_ip(node)
-            node_eth_ip = ethernet_ip(node)
-            time.sleep(1)
-            if cm_nodes_cnt < self.Par_.num_central_manager:
+        for node in unused_nodes_iter:
+
+            if cm_nodes_cnt < self.Par_.num_central_manager and node in self.Par_.central_manager_list:            
+                node_ip = infiniband_ip(node)
+                node_eth_ip = ethernet_ip(node)
+                time.sleep(1)
                 self.central_manager[node] = {
                         'node' : node,
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip
                     }
                 cm_nodes_cnt += 1
-            elif input_nodes_cnt < self.Par_.num_input_nodes and not self.Par_.use_flesnet:
+                unused_nodes.remove(node)
+            elif input_nodes_cnt < self.Par_.num_input_nodes and not self.Par_.use_flesnet and node in self.Par_.input_node_list:
+                node_ip = infiniband_ip(node)
+                node_eth_ip = ethernet_ip(node)
+                time.sleep(1)
                 self.input_nodes[node] = {
                         'node' : node,
                         'input_node_idx' : input_nodes_cnt,
@@ -1221,7 +1238,52 @@ class execution:
                         'eth_ip' : node_eth_ip
                     }
                 input_nodes_cnt += 1
-            elif output_nodes_cnt < self.Par_.num_output_nodes:
+                unused_nodes.remove(node)
+            elif output_nodes_cnt < self.Par_.num_output_nodes and node in self.Par_.output_node_list:
+                node_ip = infiniband_ip(node)
+                node_eth_ip = ethernet_ip(node)
+                time.sleep(1)
+                self.output_nodes[node] = {
+                        'node' : node,
+                        'output_node_idx' : output_nodes_cnt,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip
+                    }
+                output_nodes_cnt += 1
+                unused_nodes.remove(node)
+        return unused_nodes,input_nodes_cnt,cm_nodes_cnt,output_nodes_cnt
+    
+    
+    def assemble_timeslice_forwarding_nodes(self):
+        node_list = self.get_node_list()
+        input_nodes_cnt = 0
+        output_nodes_cnt = 0
+        cm_nodes_cnt = 0
+        if self.Par_.use_flesnet:
+            self.input_nodes = self.build_nodes
+        unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
+        if self.Par_.set_node_list:
+            unused_nodes,input_nodes_cnt,cm_nodes_cnt,output_nodes_cnt = self.assemble_timeslice_forwarding_nodes_customized(unused_nodes)
+        for node in unused_nodes:
+            node_ip = infiniband_ip(node)
+            node_eth_ip = ethernet_ip(node)
+            time.sleep(1)
+            if cm_nodes_cnt < self.Par_.num_central_manager and node not in self.Par_.exclude_central_manager:
+                self.central_manager[node] = {
+                        'node' : node,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip
+                    }
+                cm_nodes_cnt += 1
+            elif input_nodes_cnt < self.Par_.num_input_nodes and not self.Par_.use_flesnet and node not in self.Par_.exclude_input_nodes: 
+                self.input_nodes[node] = {
+                        'node' : node,
+                        'input_node_idx' : input_nodes_cnt,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip
+                    }
+                input_nodes_cnt += 1
+            elif output_nodes_cnt < self.Par_.num_output_nodes and node not in self.Par_.exclude_output_nodes:
                 self.output_nodes[node] = {
                         'node' : node,
                         'output_node_idx' : output_nodes_cnt,
@@ -1270,8 +1332,7 @@ class execution:
             self.ZIB_timeslice_forwarding_cls.start_cm()
             
             self.ZIB_timeslice_forwarding_cls.stop_output_nodes()
-            if self.Par_.use_flesnet:
-                self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
+            self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
         if self.Par_.use_flesnet:
             if self.Par_.overlap_nodes:
                 self.super_nodes_cls.stop_flesnet()
@@ -1440,8 +1501,7 @@ class execution:
             self.ZIB_timeslice_forwarding_cls.stop_central_manager()
             
             self.ZIB_timeslice_forwarding_cls.stop_output_nodes()
-            if not self.Par_.use_flesnet:
-                self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
+            self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
         elif self.Par_.activate_timesliceforwarding:
             self.timeslice_forwarding_cls.stop_timeslice_forwarding()
         if self.Par_.use_flesnet:

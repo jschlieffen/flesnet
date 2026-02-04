@@ -56,10 +56,16 @@ class Params:
         self.entry_nodes_list=[]
         self.build_nodes_list=[]
         self.process_nodes_list=[]
+        self.input_node_list=[]
+        self.central_manager_list=[]
+        self.output_node_list=[]
         self.exclude_nodes=0
         self.exclude_entry_nodes=[]
         self.exclude_build_nodes=[]
         self.exclude_process_nodes=[]
+        self.exclude_input_nodes=[]
+        self.exclude_central_manager=[]
+        self.exclude_output_nodes=[]
         self.path = ""
         self.transport_method = ""
         self.use_infiniband = 1
@@ -124,6 +130,9 @@ class Params:
     def get_num_nodes_par(self):
         self.num_entrynodes = self.get_value('Number_of_Nodes', 'entry_nodes', 'int', required=True)
         self.num_buildnodes = self.get_value('Number_of_Nodes', 'build_nodes', 'int', required=True)
+        self.num_central_manager = self.get_value('Number_of_Nodes', 'central_manager', 'int', True)
+        self.num_input_nodes = self.get_value('Number_of_Nodes', 'input_nodes', 'int', True)
+        self.num_output_nodes = self.get_value('Number_of_Nodes', 'output_nodes','int',True)
         
     def get_general_par(self):
         self.use_collectl = self.get_value('general', 'use_collectl','int',required=True)
@@ -151,11 +160,19 @@ class Params:
         self.entry_nodes_list = list(set(self.get_node_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)))
         self.build_nodes_list = list(set(self.get_node_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)))
         self.process_nodes_list = list(set(self.get_node_list('set_node_list', 'process_nodes_list', self.process_nodes_list, False)))
+        self.input_node_list = list(set(self.get_node_list('set_node_list','input_node_list',self.input_node_list,False)))
+        self.central_manager_list = list(set(self.get_node_list('set_node_list','central_manager_node_list',self.central_manager_list,False)))
+        self.output_node_list = list(set(self.get_node_list('set_node_list','output_node_list',self.output_node_list,False)))
         self.exclude_nodes = self.get_value('set_node_list','exclude_nodes','int', self.exclude_nodes,False)
         if self.exclude_nodes == 1:
             self.exclude_entry_nodes = self.get_node_list('set_node_list', 'exclude_entry_nodes', self.exclude_entry_nodes, False)
             self.exclude_build_nodes = self.get_node_list('set_node_list', 'exclude_build_nodes', self.exclude_build_nodes, False)
             self.exclude_process_nodes = self.get_node_list('set_node_list', 'exclude_process_nodes', self.exclude_process_nodes, False)
+            self.exclude_input_nodes = self.get_node_list('set_node_list','exclude_input_nodes',self.exclude_input_nodes,False)
+            self.exclude_central_manager = self.get_node_list('set_node_list','exclude_central_manager',self.exclude_central_manager,False)
+            self.exclude_output_nodes = self.get_node_list('set_node_list','exclude_output_nodes',self.exclude_output_nodes,False)
+            #print(self.exclude_input_nodes)
+
             
     def get_flesnet_par(self):
         self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', required=True)
@@ -187,9 +204,6 @@ class Params:
     def get_ts_forwarding_par(self):
         self.ZIB_timesliceforwarding = self.get_value('ZIB_timesliceforwarding', 'ZIB_timesliceforwarding','int',True)
         self.use_flesnet = self.get_value('ZIB_timesliceforwarding','use_flesnet' ,'int', True)
-        self.num_central_manager = self.get_value('ZIB_timesliceforwarding', 'num_central_manager', 'int', True)
-        self.num_input_nodes = self.get_value('ZIB_timesliceforwarding', 'num_input_nodes', 'int', True)
-        self.num_output_nodes = self.get_value('ZIB_timesliceforwarding', 'num_output_nodes','int',True)
         self.input_tsa_files = self.get_input_file_list('ts_input_files')
         print(self.input_tsa_files)
         print(self.ZIB_timesliceforwarding)
