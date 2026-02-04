@@ -23,7 +23,6 @@
 #include "Tssink.hpp"
 #include <sys/stat.h>        /* For mode constants */
 #include "Parameters.hpp"
-#include <df/CentralManagers/CentralManager.hpp>
 #include <df/WorkItems/WiData.hpp>
 #include <df/WorkItems/WorkItem.hpp>
 #include <df/EvaluationLogic/EvaluationLogic.hpp>
@@ -31,7 +30,6 @@
 #include <df/Node.hpp>
 #include "df/BufferMap/BufferMap.hpp"
 #include "df/WorkerThread.hpp"
-#include <df/Connectors/ConnectorFile.hpp>
 #include <df/Connectors/ConnectorInterface.hpp>
 #include <df/InterfaceFactory.hpp>
 #include <df/Connectors/ConnectorInfiniband.hpp>
