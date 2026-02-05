@@ -826,6 +826,112 @@ class Timeslice_forwarding_ZIB:
             self.pids_i[node] = result
             nodes_cnt += 1
         return None
+    
+    def kill_input_node(self, kill_node):
+        logger.info(f"Killing Input node: {kill_node}")
+        with open("tmp/central_manager.txt","w") as f:
+            f.write(f"TF Input {kill_node}: kill")
+            f.flush()
+            os.fsync(f.fileno())
+            f.close()
+        msg = ""
+        while msg != f"TF Input {kill_node}: done killing":
+            try:
+                with open("tmp/nodes_response.txt","r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.status(f"Input node {kill_node}: killed")
+                      
+                      
+    def revieve_input_node(self, revieve_node):
+        logger.info(f"revieve Input node: {revieve_node}")
+        with open("tmp/central_manager.txt","w") as f:
+            f.write(f"TF Input {revieve_node}: revive")
+            f.flush()
+            os.fsync(f.fileno())
+            f.close()
+        msg = ""
+        while msg != f"TF Input {revieve_node}: done reviving":
+            try:
+                with open("tmp/nodes_response.txt","r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.status(f"Input node: {revieve_node} revieve")
+        
+    def kill_central_manager(self, kill_node):
+        logger.info(f"Killing Central Manager: {kill_node}")
+        with open("tmp/central_manager.txt","w") as f:
+            f.write(f"TF Central Manager {kill_node}: kill")
+            f.flush()
+            os.fsync(f.fileno())
+            f.close()
+        msg = ""
+        while msg != f"TF Central Manager {kill_node}: done killing":
+            try:
+                with open("tmp/nodes_response.txt","r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.status(f"Central Manager: {kill_node} killed")
+                      
+                      
+    def revieve_central_manager(self, revieve_node):
+        logger.info(f"revieve Central Manager: {revieve_node}")
+        with open("tmp/central_manager.txt","w") as f:
+            f.write(f"TF Central Manager {revieve_node}: revive")
+            f.flush()
+            os.fsync(f.fileno())
+            f.close()
+        msg = ""
+        while msg != f"TF Central Manager {revieve_node}: done reviving":
+            try:
+                with open("tmp/nodes_response.txt","r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.status(f"Central Manager: {revieve_node} revieve")
+        
+        
+    def kill_output_node(self, kill_node):
+        logger.info(f"Killing Output node: {kill_node}")
+        with open("tmp/central_manager.txt","w") as f:
+            f.write(f"TF Output {kill_node}: kill")
+            f.flush()
+            os.fsync(f.fileno())
+            f.close()
+        msg = ""
+        while msg != f"TF Output {kill_node}: done killing":
+            try:
+                with open("tmp/nodes_response.txt","r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.status(f"Output node: {kill_node} killed")
+                      
+                      
+    def revieve_output_node(self, revieve_node):
+        logger.info(f"revieve Output node: {revieve_node}")
+        with open("tmp/central_manager.txt","w") as f:
+            f.write(f"TF Output {revieve_node}: revive")
+            f.flush()
+            os.fsync(f.fileno())
+            f.close()
+        msg = ""
+        while msg != f"TF Output {revieve_node}: done reviving":
+            try:
+                with open("tmp/nodes_response.txt","r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.status(f"Output node: {revieve_node} revieve")
         
     def stop_central_manager(self):
         for node in self.central_manager.keys():
@@ -1361,7 +1467,7 @@ class execution:
                 logger.critical(f'Error {e} occured during monotoring. Terminating')
         if self.Par_.kill_nodes:
             try:
-                self.kill_nodes_fct()
+                self.robustness_test()
                 logger.success("Robustness test finished") 
                 while True:
                     time.sleep(1)
@@ -1373,26 +1479,67 @@ class execution:
             while True:
                 time.sleep(1)
     
-    #TODO:clean up this mess
-    def kill_nodes_fct(self):
-        kill_dict = {
-                "Entry nodes" : [],
-                "Build nodes" : [],
-                "Process nodes" : []
-            }
-        revieve_dict = {
-                "Entry nodes" : [],
-                "Build nodes" : [],
-                "Process nodes" : []
-            }
+    
+    def robustness_test(self):
+        kill_dict, revieve_dict = self.create_kill_dict()      
+        logger.debug("entry nodes to kill: " + "".join(f"{val[0]}; " for val in kill_dict["Entry nodes"]))
+        logger.debug("build nodes to kill: " + "".join(f"{val[0]}; " for val in kill_dict["Build nodes"]))
+        logger.debug("Process nodes to kill: " + "".join(f"{val}; " for val in kill_dict["Process nodes"]))
+        logger.debug("Input nodes to kill: " + "".join(f"{val}; " for val in kill_dict["Input nodes"]))
+        logger.debug("Central managers to kill: " + "".join(f"{val}; " for val in kill_dict["Central Manager"]))
+        logger.debug("Output nodes to kill " + "".join(f"{val}; " for val in kill_dict["Output nodes"]))
         num_kills = self.Par_.num_entrynodes_kills + self.Par_.num_buildnodes_kills
         revieve_count = 0
         if self.Par_.activate_timesliceforwarding:
             num_kills += self.Par_.num_processnodes_kills
+        elif self.Par_.ZIB_timesliceforwarding:
+            print('test')
+            num_kills += self.Par_.num_inputnodes_kills + self.Par_.num_cm_kills + self.Par_.num_outputnodes_kills
+        print(num_kills)
+        while num_kills != revieve_count:
+            td = self.Par_.timer_for_kill.total_seconds()
+            sleep_val = np.random.poisson(td)
+            time.sleep(sleep_val)
+            print(revieve_dict)
+            weights_rc_1 = [sum(len(kill_nodes) for kill_nodes in kill_dict.values()), sum(len(revive_nodes) for revive_nodes in revieve_dict.values())]
+            print(weights_rc_1)
+            kill_or_revieve = random.choices(["Kill", "Revieve"], weights=weights_rc_1, k=1)[0]
+            if kill_or_revieve == "Kill":
+                kill_dict, revieve_dict = self.kill_nodes_fct(kill_dict,revieve_dict)
+            else:
+                revieve_dict = self.revieve_nodes_fct(revieve_dict)
+                revieve_count += 1
+                
+                
+                
+    
+    def create_kill_dict(self):
+        kill_dict = {
+                "Entry nodes" : [],
+                "Build nodes" : [],
+                "Process nodes" : [],
+                "Input nodes" : [],
+                "Central Manager" : [],
+                "Output nodes" : []
+            }
+        revieve_dict = {
+                "Entry nodes" : [],
+                "Build nodes" : [],
+                "Process nodes" : [],
+                "Input nodes" : [],
+                "Central Manager" : [],
+                "Output nodes" : []
+            }
+
         if self.Par_.set_kill_list == 1:
             kill_dict["Entry nodes"] = [(node, "Entry") for node in self.Par_.entry_node_kill_list]
             kill_dict["Build nodes"] = [(node, "Build") for node in self.Par_.build_node_kill_list]
-            kill_dict["Process nodes"] = [(node) for node in self.Par_.process_node_kill_list]
+            if self.Par_.activate_timesliceforwarding:
+                kill_dict["Process nodes"] = [(node) for node in self.Par_.process_node_kill_list]
+            elif self.Par_.ZIB_timesliceforwarding:
+                kill_dict["Input nodes"] = [(node) for node in self.Par_.input_node_kill_list]
+                kill_dict["Central Manager"] = [(node) for node in self.Par_.central_manager_kill_list]
+                kill_dict["Output nodes"] = [(node) for node in self.Par_.output_node_kill_list]
             #logger.debug(f"Kill dict: {kill_dict}")
             #if self.Par_.activate_timesliceforwarding:
             #    kill_dict["Process nodes"] = self.Par_.process_node_kill_list
@@ -1408,70 +1555,103 @@ class execution:
             if len(kill_dict["Process nodes"]) < self.Par_.num_processnodes_kills:
                 process_nodes = [receiving_node for receiving_node, build_node in self.rec2build if receiving_node not in self.Par_.process_node_kill_list]
                 kill_dict["Process nodes"] += random.sample(process_nodes, self.Par_.num_processnodes_kills -len(kill_dict["Process nodes"]))
-        else:
-            kill_dict["Process nodes"] = []
-        logger.debug("entry nodes to kill: " + "".join(f"{val[0]}; " for val in kill_dict["Entry nodes"]))
-        logger.debug("build nodes to kill: " + "".join(f"{val[0]}; " for val in kill_dict["Build nodes"]))
-        logger.debug("Process nodes to kill: " + "".join(f"{val}; " for val in kill_dict["Process nodes"]))
-        while num_kills != revieve_count:
-            td = self.Par_.timer_for_kill.total_seconds()
-            sleep_val = np.random.poisson(td)
-            time.sleep(sleep_val)
-            weights_rc_1 = [sum(len(kill_nodes) for kill_nodes in kill_dict.values()), sum(len(revive_nodes) for revive_nodes in revieve_dict.values())]
-            kill_or_revieve = random.choices(["Kill", "Revieve"], weights=weights_rc_1, k=1)[0]
-            if kill_or_revieve == "Kill":
-                weights_rc_2 = [len(kill_node) for kill_node in kill_dict.values()]
-                node_type = random.choices(["Entry", "Build", "Process"], weights=weights_rc_2, k=1)[0]
-                if node_type == "Entry":
-                    to_kill_node = random.choice(kill_dict["Entry nodes"])
-                    if to_kill_node[1] == "Entry":
-                        self.entry_nodes_cls.kill_process(to_kill_node[0])
-                    elif to_kill_node[1] == "Super":
-                        self.super_nodes_cls.kill_process_entry(to_kill_node[0])
-                    kill_dict["Entry nodes"].remove(to_kill_node)
-                    revieve_dict["Entry nodes"].append(to_kill_node)
-                elif node_type == "Build":
-                    to_kill_node = random.choice(kill_dict["Build nodes"])
-                    if to_kill_node[1] == "Build":
-                        self.build_nodes_cls.kill_process(to_kill_node[0])
-                    elif to_kill_node[1] == "Super":
-                        self.super_nodes_cls.kill_process_build(to_kill_node[0])
-                    kill_dict["Build nodes"].remove(to_kill_node)
-                    revieve_dict["Build nodes"].append(to_kill_node)
-                #Baustelle
-                elif node_type == "Process":
-                    to_kill_node = random.choice(kill_dict["Process nodes"])
-                    self.timeslice_forwarding_cls.kill_process(to_kill_node)
-                    kill_dict["Process nodes"].remove(to_kill_node)
-                    revieve_dict["Process nodes"].append(to_kill_node)
-            else: 
-                weights_rc_2 = [len(revieve_node) for revieve_node in revieve_dict.values()]
-                node_type = random.choices(["Entry", "Build", "Process"], weights_rc_2, k=1)[0]
-                if node_type == "Entry":
-                    to_revieve_node = random.choice(revieve_dict["Entry nodes"])
-                    if to_revieve_node[1] == "Entry":
-                        self.entry_nodes_cls.revieve_process(to_revieve_node[0])
-                    elif to_revieve_node[1] == "Super":
-                        self.super_nodes_cls.revieve_process_entry(to_revieve_node[0])
-                    revieve_dict["Entry nodes"].remove(to_revieve_node)
-                elif node_type == "Build":
-                    to_revieve_node = random.choice(revieve_dict["Build nodes"])
-                    if to_revieve_node[1] == "Build":
-                        self.build_nodes_cls.revieve_process(to_revieve_node[0])
-                    elif to_revieve_node[1] == "Super":
-                        self.super_nodes_cls.revieve_process_build(to_revieve_node[0])
-                    revieve_dict["Build nodes"].remove(to_revieve_node)
-                elif node_type == "Process":
-                    to_revieve_node = random.choice(revieve_dict["Process nodes"])
-                    self.timeslice_forwarding_cls.revieve_process(to_revieve_node)
-                    revieve_dict["Process nodes"].remove(to_revieve_node)
-                revieve_count += 1
+        elif self.Par_.ZIB_timesliceforwarding:
+            if len(kill_dict["Input nodes"]) < self.Par_.num_inputnodes_kills:
+                input_nodes = [input_node for input_node in self.input_nodes.keys() if input_node not in self.Par_.input_node_kill_list]
+                kill_dict["Input nodes"] += random.sample(input_nodes, self.Par_.num_inputnodes_kills - len(kill_dict["Input nodes"]))
+            if len(kill_dict["Central Manager"]) < self.Par_.num_cm_kills:
+                central_manager = [cm for cm in self.central_manager.keys() if cm not in self.Par_.central_manager_kill_list]
+                kill_dict["Central Manager"] += random.sample(central_manager, self.Par_.num_cm_kills - len(kill_dict["Central Manager"]))
+            if len(kill_dict["Output nodes"]) < self.Par_.num_outputnodes_kills:
+                output_nodes = [output_node for output_node in self.output_nodes.keys() if output_node not in self.Par_.output_node_kill_list]
+                kill_dict["Output nodes"] += random.sample(output_nodes, self.Par_.num_outputnodes_kills - len(kill_dict["Output nodes"]))
+        return kill_dict, revieve_dict
+    
+    
+    def kill_nodes_fct(self,kill_dict,revieve_dict):
+        #print('test kill nodes fct')
+        weights_rc_2 = [len(kill_node) for kill_node in kill_dict.values()]
+        node_type = random.choices(["Entry", "Build", "Process","Input", "CM","Output"], weights=weights_rc_2, k=1)[0]
+        if node_type == "Entry":
+            to_kill_node = random.choice(kill_dict["Entry nodes"])
+            if to_kill_node[1] == "Entry":
+                self.entry_nodes_cls.kill_process(to_kill_node[0])
+            elif to_kill_node[1] == "Super":
+                self.super_nodes_cls.kill_process_entry(to_kill_node[0])
+            kill_dict["Entry nodes"].remove(to_kill_node)
+            revieve_dict["Entry nodes"].append(to_kill_node)
+        elif node_type == "Build":
+            to_kill_node = random.choice(kill_dict["Build nodes"])
+            if to_kill_node[1] == "Build":
+                self.build_nodes_cls.kill_process(to_kill_node[0])
+            elif to_kill_node[1] == "Super":
+                self.super_nodes_cls.kill_process_build(to_kill_node[0])
+            kill_dict["Build nodes"].remove(to_kill_node)
+            revieve_dict["Build nodes"].append(to_kill_node)
+        #Baustelle
+        elif node_type == "Process":
+            to_kill_node = random.choice(kill_dict["Process nodes"])
+            self.timeslice_forwarding_cls.kill_process(to_kill_node)
+            kill_dict["Process nodes"].remove(to_kill_node)
+            revieve_dict["Process nodes"].append(to_kill_node)
+        elif node_type == "Input":
+            to_kill_node = random.choice(kill_dict["Input nodes"])
+            self.ZIB_timeslice_forwarding_cls.kill_input_node(to_kill_node)
+            kill_dict["Input nodes"].remove(to_kill_node)
+            revieve_dict["Input nodes"].append(to_kill_node)
+        elif node_type == "CM":
+            to_kill_node = random.choice(kill_dict["Central Manager"])
+            self.ZIB_timeslice_forwarding_cls.kill_central_manager(to_kill_node)
+            kill_dict["Central Manager"].remove(to_kill_node)
+            revieve_dict["Central Manager"].append(to_kill_node)
+        elif node_type == "Output":
+            to_kill_node = random.choice(kill_dict["Output nodes"])
+            self.ZIB_timeslice_forwarding_cls.kill_output_node(to_kill_node)
+            kill_dict["Output nodes"].remove(to_kill_node)
+            revieve_dict["Output nodes"].append(to_kill_node)
+        return kill_dict,revieve_dict
                 
-                
+    def revieve_nodes_fct(self, revieve_dict):
+        print('test')
+        print(revieve_dict)
+        weights_rc_2 = [len(revieve_node) for revieve_node in revieve_dict.values()]
+        node_type = random.choices(["Entry", "Build", "Process", "Input", "CM", "Output"], weights_rc_2, k=1)[0]
+        if node_type == "Entry":
+            to_revieve_node = random.choice(revieve_dict["Entry nodes"])
+            if to_revieve_node[1] == "Entry":
+                self.entry_nodes_cls.revieve_process(to_revieve_node[0])
+            elif to_revieve_node[1] == "Super":
+                self.super_nodes_cls.revieve_process_entry(to_revieve_node[0])
+            revieve_dict["Entry nodes"].remove(to_revieve_node)
+        elif node_type == "Build":
+            to_revieve_node = random.choice(revieve_dict["Build nodes"])
+            if to_revieve_node[1] == "Build":
+                self.build_nodes_cls.revieve_process(to_revieve_node[0])
+            elif to_revieve_node[1] == "Super":
+                self.super_nodes_cls.revieve_process_build(to_revieve_node[0])
+            revieve_dict["Build nodes"].remove(to_revieve_node)
+        elif node_type == "Process":
+            to_revieve_node = random.choice(revieve_dict["Process nodes"])
+            self.timeslice_forwarding_cls.revieve_process(to_revieve_node)
+            revieve_dict["Process nodes"].remove(to_revieve_node)
+        elif node_type == "Input":
+            to_revieve_node = random.choice(revieve_dict["Input nodes"])
+            self.ZIB_timeslice_forwarding_cls.revieve_input_node(to_revieve_node)
+            revieve_dict["Input nodes"].remove(to_revieve_node)
+        elif node_type == "CM":
+            to_revieve_node = random.choice(revieve_dict["Central Manager"])
+            self.ZIB_timeslice_forwarding_cls.revieve_central_manager(to_revieve_node)
+            revieve_dict["Central Manager"].remove(to_revieve_node)
+        elif node_type == "Output":
+            to_revieve_node = random.choice(revieve_dict["Output nodes"])
+            self.ZIB_timeslice_forwarding_cls.revieve_output_node(to_revieve_node)
+            revieve_dict["Output nodes"].remove(to_revieve_node)
+        return revieve_dict
+    
+    
     # =============================================================================
     # Stops the experiment and kills every process connected    
     # =============================================================================
-    #TODO:adjust
     def stop_program_V2(self):
         time.sleep(2)
         logger.info('stopping flesnet')

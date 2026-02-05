@@ -24,6 +24,7 @@ import threading
 import queue
 import signal
 import re
+from datetime import datetime
 
 # =============================================================================
 # This file starts flesnet on a build node. It is started with 
@@ -141,7 +142,8 @@ def start_timeslice_forwarded_input(logfile_tf,build_node_idx,use_infiniband):
     tf_input_command = "nodes/./tf_input_node.py %s %s %s %s %s %s" % (input_file,logfile_tf,build_node_idx,node_ip,logfile_collectl, logfile_tsclient)
     print(os.getcwd())
     print(tf_input_command)
-    result_tf_input = subprocess.run(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
+    result_tf_input = subprocess.Popen(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
+    #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     return result_tf_input
     
 def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
@@ -191,20 +193,22 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
     if use_tf_zib == 1:
         result_tf_input = start_timeslice_forwarded_input(logfile_tf, build_node_idx, use_infiniband)
     while True:
+        #print(msg)
         time.sleep(0.5)
         try:
             with open("tmp/central_manager.txt", "r") as f:
                 msg = f.read().strip()
                 #ode, action = line.split(": ")
-                f.close()
 
         except FileNotFoundError:
             msg = ""
         #print(type(msg))
         #print('htc-cmp506' in msg)
+        #print('test')
         if f"Build {node_name}" in msg:
             #print('test')
             #print(action)
+            #print(msg)
             node, action = msg.split(": ")
             #print(node)
             #print('action ' + action)
@@ -216,7 +220,7 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
                 #result_flesnet.wait()
                 os.killpg(os.getpgid(result_flesnet.pid), signal.SIGKILL)
 
-                #print('test kill 1')
+                print('test kill 1')
                 write_response(node_name, "killing")
                 prev_action = action
             elif action == "revive":
@@ -237,7 +241,7 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
     result_flesnet.terminate()
     result_flesnet.wait()
     if use_tf_zib == 1:
-        stdout, stderr = result_tf_input.stdout, result_tf_input.stderr
+        stdout, stderr = result_tf_input.communicate()
         print(f"Output tf input: {stdout}")
         print(f"Error tf input: {stderr}")
     write_response(node_name, "terminating")

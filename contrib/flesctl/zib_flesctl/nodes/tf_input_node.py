@@ -195,13 +195,13 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
             with open("tmp/central_manager.txt", "r") as f:
                 msg = f.read().strip()
                 #ode, action = line.split(": ")
-                f.close()
 
         except FileNotFoundError:
             msg = ""
         #print(msg)
         #print(node_name)
         if f"TF Input {node_name}" in msg:
+            #print(msg)
             #print('test')
             #print(action)
             node, action = msg.split(": ")

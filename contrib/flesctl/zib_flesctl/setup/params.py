@@ -47,11 +47,17 @@ class Params:
         self.num_entrynodes_kills = 1 
         self.num_buildnodes_kills = 1
         self.num_processnodes_kills = 1
+        self.num_inputnodes_kills = 1
+        self.num_cm_kills = 1
+        self.num_outputnodes_kills = 1
         self.revive_nodes=1
         self.set_kill_list = 0
         self.entry_node_kill_list = []
         self.build_node_kill_list = []
         self.process_node_kill_list = []
+        self.input_node_kill_list = []
+        self.central_manager_kill_list = []
+        self.output_node_kill_list = []
         self.set_node_list=0
         self.entry_nodes_list=[]
         self.build_nodes_list=[]
@@ -148,12 +154,18 @@ class Params:
         self.num_entrynodes_kills = self.get_value('robustness_test', 'num_entry_nodes_kills', 'int' , self.num_entrynodes_kills, required=False)
         self.num_buildnodes_kills = self.get_value('robustness_test', 'num_build_nodes_kills', 'int' , self.num_buildnodes_kills, required=False)
         self.num_processnodes_kills = self.get_value('robustness_test', 'num_process_nodes_kills', 'int' , self.num_processnodes_kills, required=False)
+        self.num_inputnodes_kills = self.get_value('robustness_test', 'num_input_nodes_kills','int',self.num_inputnodes_kills, required=False)
+        self.num_cm_kills = self.get_value('robustness_test','num_central_manager_kills','int',self.num_cm_kills,required=False)
+        self.num_outputnodes_kills = self.get_value('robustness_test','num_output_nodes_kills','int',self.num_outputnodes_kills,required=False)
         self.revive_nodes=self.get_value('robustness_test', 'revive_nodes', 'int' , self.revive_nodes, required=False)
         self.set_kill_list = self.get_value('robustness_test', 'set_kill_list', 'int' , self.set_kill_list, required=False)
         if self.set_kill_list:
             self.entry_node_kill_list = self.get_node_list('robustness_test', 'entry_node_kill_list', self.entry_node_kill_list, False)
             self.build_node_kill_list = self.get_node_list('robustness_test', 'build_node_kill_list', self.build_node_kill_list, False)
             self.process_node_kill_list = self.get_node_list('robustness_test', 'process_node_kill_list', self.process_node_kill_list, False)
+            self.input_node_kill_list = self.get_node_list('robustness_test','input_node_kill_list', self.input_node_kill_list, False)
+            self.central_manager_kill_list = self.get_node_list('robustness_test','central_manager_kill_list', self.central_manager_kill_list, False)
+            self.output_node_kill_list = self.get_node_list('robustness_test','output_node_kill_list',self.output_node_kill_list,False)
     
 
     def get_node_list_par(self):
@@ -573,7 +585,7 @@ class params_checker:
 
 
 
-            
+    #TODO: wenn flesnet aktiv input nodes == build nodes !!!
     def check_kill_par(self):
         logger.debug('check robustness test')
         if self.Par_.timer_for_kill == timedelta(seconds=0):
