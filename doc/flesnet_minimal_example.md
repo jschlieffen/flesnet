@@ -43,7 +43,7 @@ Build nodes will build timeslices out of the received microslices.
 	- `-i` The source from which the `tsclient` will collect the built timeslices. Here, a template parameter (`%s`) is used. This will be replaced with the respective name of the shared memory, defined in the `-O` list of this `flesnet`  instance; in this case `%s` will be replaced with `fles_out_shared_memory`.
 	-  `-o`: Output path of the generated timeslice archive file.
 
-The fact that we provide a value for `-o` makes this a build node. 
+The fact that we provide a value for `-o` makes this a build node.
 
 ### Start The Entry Node
 First, we will use the `mstool` again to provide microslices using a named shared memory region, and our previously generated microslice archive. Open a terminal and run:
@@ -57,26 +57,17 @@ First, we will use the `mstool` again to provide microslices using a named share
 ```
 Keep this terminal open.
 
-<<<<<<< HEAD
-With our shared memory microslice input source ready, we can start a Flesnet entry node.
-=======
 With our shared memory microslice input source ready, we can start Flesnet. In this most simple example, we will start Flesnet so that one entry node and one build node is represented using one Flesnet process.
->>>>>>> timeslice_forwarder
+
 
 ```
 ./flesnet -t zeromq --timeslice-size 20 -n 15 -i 0 -I shm:/fles_in_shared_memory/0 -O shm:/fles_out_shared_memory/0 --processor-instances 1 -e "./tsclient -i shm:%s -o file:timeslice_archive.tsa"
 ```
 
-<<<<<<< HEAD
-- `-i`: The input index of this `flesnet` instance. Example: When `-i` is set to 2, this entry node will read from the 3rd (indexing starts at 0) input source, defined with the `-I` flag.
-- `-I`: List of input sources. See use of `-i` flag.
-
-The fact that we provide a value for `-i` makes this an entry node. Using `-i` and `-o` together is also possible but will not be explained in this manual.   
-=======
 - `-t`: We are using the ZeroMQ transport layer to exchange information between entry and build nodes. This makes more sense when we use separate Flesnet instances for entry and build nodes. Here, this single process will do the work of both.
 - `-i`: The input index of this `flesnet` instance. Example: When `-i` is set to 2, this entry node will read from the 3rd (indexing starts at 0) input source, defined with the `-I` flag. Again, this makes more sense when having separate entry and build nodes.
 - `I`: List of input sources. See use of `-i` flag.
-- `-o`: Output index. Similar to the `-i` flag, but refers to the output sink of this Flesnet instance. Example: When `-o` is set to 1, this build node will write the built timeslices into the 2nd (indexing starts at 0) output sink, defined with the `-O` flag. Again, this makes more sense, when having separate entry and build nodes. 
+- `-o`: Output index. Similar to the `-i` flag, but refers to the output sink of this Flesnet instance. Example: When `-o` is set to 1, this build node will write the built timeslices into the 2nd (indexing starts at 0) output sink, defined with the `-O` flag. Again, this makes more sense, when having separate entry and build nodes.
 - `-O`: List of output sinks. See use of `-o` flag.
 - `--timeslice-size`: Defines how many microslices will make up one timeslice (This does not include overlap. The overlap concept will be explained within a dedicated section).
 - `--processor-instances`: The amount of `-e` executions.
@@ -84,7 +75,6 @@ The fact that we provide a value for `-i` makes this an entry node. Using `-i` a
 	- `-i` The source from which the `tsclient` will collect the built timeslices. Here, a template parameter (`%s`) is used. This will be replaced with the respective name of the shared memory, defined in the `-O` list of this `flesnet`  instance; in this case `%s` will be replaced with `flesnet_out_shared_memory`.
 	-  `-o`: Output path of the generated timeslice archive file.
 	-  `-n`: After this amount of build timeslices, the `tsclient` will stop processing timeslices.
->>>>>>> timeslice_forwarder
 
 Open a terminal and run the shown command.
 
@@ -92,7 +82,7 @@ As soon as the entry node has started the transmission of microslices from the e
 
 After processing the `-n` amount of timeslices (here 15) build and entry node will terminate.
 
-Entry node output: 
+Entry node output:
 ```
 ./flesnet -n 15 -t zeromq -i 0 -I shm:/fles_in_shared_memory/0 -O shm:/fles_out_shared_memory0/0 --processor-instances 1 -e "./tsclient -i shm:%s -o file:timeslice_archive.tsa"
 [09:16:52] INFO: this is input 0 (of 1)
@@ -106,12 +96,12 @@ Entry node output:
 
 Build node output:
 ```
-./flesnet -n 15 -t zeromq -o 0 -I shm://127.0.0.1/0 -O shm:/fles_out_shared_memory/0  --processor-instances 1 -e "./tsclient -i shm:%s -o file:timeslice_archive.tsa" 
+./flesnet -n 15 -t zeromq -o 0 -I shm://127.0.0.1/0 -O shm:/fles_out_shared_memory/0  --processor-instances 1 -e "./tsclient -i shm:%s -o file:timeslice_archive.tsa"
 [09:16:50] INFO: this is output 0 (of 1)
 [09:16:50] INFO: timeslice buffer 0: fles_out_shared_memory {43c35bdf-03ab-42a9-ba13-5800a8f6786a}, size: 1 * (128 MiB + 16 MiB) = 144 MiB
-[09:16:50] INFO: [c0] |____________________|__________| 
+[09:16:50] INFO: [c0] |____________________|__________|
 [09:16:50] INFO: worker connected: TimesliceAutoSource at PID 12311 (s1/o0/p0/g0)
-[09:16:52] INFO: [c0] |____________________|__________| 
+[09:16:52] INFO: [c0] |____________________|__________|
 TimesliceReceiver: opened shared memory fles_out_shared_memory {43c35bdf-03ab-42a9-ba13-5800a8f6786a}
 [09:16:52] INFO: exiting
 [09:16:52] ERROR: ZMQ: Interrupted system call
@@ -133,16 +123,31 @@ Based on the parameters used in the `Running Flesnet` section you can validate t
 ./archive_validator -I ms_archive.msa -O timeslice_archive.tsa --timeslice-size 20 --overlap 1 --timeslice-cnt 15
 ```
 
-- `--timeslice-size`: The expected (core) size of timeslices in the *.tsa file(s) 
+<<<<<<< HEAD
+- `--timeslice-size`: The expected (core) size of timeslices in the *.tsa file(s)
+- `--timeslice-cnt`: The expected summed up amount of timeslices accross all given timeslice archive files.
+=======
+- `--timeslice-size`: The expected (core) size of timeslices in the *.tsa file(s)
 - `--timeslice-cnt`: (Optional) The expected summed up amount of timeslices accross all given timeslice archive files. If the given value does not meet the found timeslices count verification fails. Don't set it, for a more relaxed verification.
+>>>>>>> 0ea4c2037ca92b16d162a188e67a84e5887eade2
 - `--overlap`: Size of overlap between timeslices. In the `Running Flesnet` example did not explicitly set this parameter, therefore the default value of 1 was used.
-- `-I`: Space-seperated list of filepaths pointing to the used microslice archive files. 
+- `-I`: Space-seperated list of filepaths pointing to the used microslice archive files.
 - `-O`: Space-seperated list of filepaths pointing to the created timeslice archive files created by Flesnet and its build nodes.
 - `-l`: Log level (lower value results in more verbose output)
 
 In case of valid archives, the output will look similar to:
 ```
 ./archive_validator -I ms_archive.msa -O timeslice_archive.tsa --timeslice-size 20 --overlap 1 --timeslice-cnt 15
+<<<<<<< HEAD
+[10:07:46] INFO: Verifying metadata of: 'timeslice_archive.tsa' ...
+[10:07:46] INFO: Successfully verified metadata of: 'timeslice_archive.tsa'. 0 remaining ...
+[10:07:46] INFO: Verified:
+[10:07:46] INFO: overall microslices: 301
+[10:07:46] INFO: overlaps: 14
+[10:07:46] INFO: overall timeslices: 15
+[10:07:46] INFO: Success - Archives valid.
+[10:07:46] INFO: exiting
+=======
 [10:28:43] INFO: MS build offset: 0
 [10:28:43] INFO: Verified:
 [10:28:43] INFO: Time t_elapsed: 0h:00m:00s
@@ -151,4 +156,5 @@ In case of valid archives, the output will look similar to:
 [10:28:43] INFO: Overall TS components: 15
 [10:28:43] INFO: Success - Archives valid.
 [10:28:43] INFO: exiting
+>>>>>>> 0ea4c2037ca92b16d162a188e67a84e5887eade2
 ```

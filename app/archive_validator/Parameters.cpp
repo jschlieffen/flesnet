@@ -40,18 +40,24 @@ void Parameters::parse_options(int argc, char* argv[]) {
                 po::value<bool>(&skip_metadata)
                   ->implicit_value(true),
                   "Will skip timeslice archive metadata verification.");
-
+  general_add("ms-start-idx",
+                  po::value<uint64_t>(&ms_start_idx)
+                  ->default_value(0)
+                  ->value_name("<n>"),
+                  "Start verification process at microslice index n.");
+  general_add("tsa-forwarding",
+                po::value<bool>(&check_tsa_forwarding)->implicit_value(check_tsa_forwarding));
 
   po::options_description archives("Input/Output archives");
   auto archives_add = archives.add_options();
   archives_add("input-archives,I", po::value<vector<string>>(&input_archives)
                                             ->multitoken()
-                                            ->value_name("<space-separated-msa-files>"),
-          "Paths to input microslice archives (.msa).");
+                                            ->value_name("<space-separated-archive-files>"),
+          "Paths to input archives (.msa or .tsa based on use case).");
   archives_add("output-archives,O", po::value<vector<string>>(&output_archives)
                                                 ->multitoken()
                                                 ->value_name("<space-separated-tsa-files>"),
-            "Paths to output timeslice archives (.tsa).");
+            "Paths to output archives (.tsa).");
   archives_add("verify-tsa,t", po::value<vector<string>>(&tsa_archives)
                                                 ->multitoken()
                                                 ->value_name("<space-separated-tsa-files>"));
