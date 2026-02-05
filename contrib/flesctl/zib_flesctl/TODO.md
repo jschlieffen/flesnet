@@ -7,8 +7,8 @@
 | make shm size/data size etc. as a parameter | $${\color{green}Done}$$ |
 | make timeslice-forwarding implementation | $${\color{green}Done}$$ |
 | make connection between timeslice-forwarding and flesnet | $${\color{green}Done}$$ |
-| make params for tsclient in TS-forwarding | $${\color{yellow} In \space Progress}$$ |
-| robustness test timeslice-forwarding | $${\color{red}Open}$$ |
+| make params for tsclient in TS-forwarding | $${\color{green}Done}$$ |
+| robustness test timeslice-forwarding | $${\color{yellow}in /space Progess}$$ |
 | get run_id out of the config | $${\color{red}Open}$$ |
 | merge tsclient_malloc with repo and build into flesctrl | $${\color{red}Open}$$ |
 | defractor and clean up central manager | $${\color{red}Open}$$ |

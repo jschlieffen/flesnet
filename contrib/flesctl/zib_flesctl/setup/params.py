@@ -123,6 +123,7 @@ class Params:
         self.get_pgen_commands()
         self.get_shm_commands()
         self.get_tsclient_par()
+        self.get_GSI_timesliceforwarding_par()
         self.get_ts_forwarding_par()
         self.get_mon_par()
         self.get_influx_par()

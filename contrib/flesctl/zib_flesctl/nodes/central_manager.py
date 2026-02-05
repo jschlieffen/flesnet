@@ -708,7 +708,8 @@ class Timeslice_forwarding_ZIB:
                 "path",
                 "use_infiniband",
                 "use_collectl",
-
+                "write_data_to_file",
+                "analyze_data"
             ]   
         with open('tmp/tf_output_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
@@ -771,15 +772,16 @@ class Timeslice_forwarding_ZIB:
         self.write_params_output()
         for node in self.output_nodes.keys():
             logger.info(f'start output node for timeslice-forwarding: {node}')
-            logfile = "logs/timeslice_forwarding/central_manager/output_%s.log" % node
-            logfile_collectl = "logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % node
+            logfile = "logs/timeslice_forwarding/output_nodes/output_node_%s.log" % node
+            logfile_collectl = "logs/collectl/timeslice_forwarding/output_nodes/output_node_%s.csv" % node
+            logfile_tsclient = "logs/timeslice_forwarding/tsclient/output_nodes/output_node_%s.log" % node
             if self.Par_.use_infiniband:
                 ip = self.output_nodes[node]['inf_ip']
             else:
                 ip = self.output_nodes[node]['eth_ip']
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
-                % (node, self.Par_.num_cpus ,file,logfile, self.output_nodes[node]['output_node_idx'], ip, logfile_collectl)
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s'
+                % (node, self.Par_.num_cpus ,file,logfile, self.output_nodes[node]['output_node_idx'], ip, logfile_collectl, logfile_tsclient)
             )
             try:
                 #print(command)
@@ -803,15 +805,16 @@ class Timeslice_forwarding_ZIB:
                 input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
             
             logger.info(f'start input node for timeslice-forwarding: {node}')
-            logfile = "logs/timeslice_forwarding/central_manager/input_%s.log" % node
-            logfile_collectl = "logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % node
+            logfile = "logs/timeslice_forwarding/input_nodes/input_node_%s.log" % node
+            logfile_collectl = "logs/collectl/timeslice_forwarding/intput_nodes/input_node_%s.csv" % node
+            logfile_tsclient = "logs/timeslice_forwarding/tsclient/input_nodes/input_node_%s.log" % node
             if self.Par_.use_infiniband:
                 ip = self.input_nodes[node]['inf_ip']
             else:
                 ip = self.input_nodes[node]['eth_ip']
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s'
-                % (node, self.Par_.num_cpus ,file,input_file ,logfile, self.input_nodes[node]['input_node_idx'], ip, logfile_collectl)
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s %s'
+                % (node, self.Par_.num_cpus ,file,input_file ,logfile, self.input_nodes[node]['input_node_idx'], ip, logfile_collectl, logfile_tsclient)
             )
             try:
                 #print(command)
