@@ -36,6 +36,10 @@ function create_folders() {
 
     mkdir tmp
 
+    touch tmp/run_id.txt
+
+    echo '0' > tmp/run_id.txt
+
     mkdir Runs
 }
 

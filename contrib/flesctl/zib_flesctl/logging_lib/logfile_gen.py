@@ -28,12 +28,19 @@ class Logfile:
         self.infiniband_used = False
         
     def write(self):
+        '''
         config = configparser.ConfigParser()
         config.read('setup/config.cfg')
         run_id = config.getint('general', 'run_id')
         config['general']['run_id'] = str(run_id+1)
         with open('setup/config.cfg', 'w') as configfile:
             config.write(configfile, space_around_delimiters=False)
+        '''
+        with open("tmp/run_id.txt", "r") as f:
+            run_id = int(f.read().strip())
+        run_id += 1
+        with open("tmp/run_id.txt", "w") as f:
+            f.write(str(run_id))
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         logfile_name = f'logs/general/Run_{str(run_id+1)}_{timestamp}.log'
         dir = os.path.dirname(__file__)
