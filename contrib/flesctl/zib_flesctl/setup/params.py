@@ -196,10 +196,12 @@ class Params:
         self.data_size = self.get_value('shm_commands','data_size','int', self.data_size, False)
     
     def get_tsclient_par(self):
-        self.activate_timesliceforwarding = self.get_value('tsclient_commands', 'activate_timesliceforwarding','int', True)
         self.write_data_to_file = self.get_value('tsclient_commands', 'write_data_to_file', 'str', self.write_data_to_file, False)
         self.analyze_data = self.get_value('tsclient_commands', 'analyze_data', 'str', self.analyze_data, False)
-        self.port = self.get_value('tsclient_commands', 'port', 'str', self.port, False)
+        
+    def get_GSI_timesliceforwarding_par(self):
+        self.activate_timesliceforwarding = self.get_value('GSI_timesliceforwarding', 'activate_timesliceforwarding','int', True)
+        self.port = self.get_value('GSI_timesliceforwarding', 'port', 'str', self.port, False)
         
     def get_ts_forwarding_par(self):
         self.ZIB_timesliceforwarding = self.get_value('ZIB_timesliceforwarding', 'ZIB_timesliceforwarding','int',True)

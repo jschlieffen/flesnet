@@ -1252,8 +1252,7 @@ class execution:
                 output_nodes_cnt += 1
                 unused_nodes.remove(node)
         return unused_nodes,input_nodes_cnt,cm_nodes_cnt,output_nodes_cnt
-    
-    
+        
     def assemble_timeslice_forwarding_nodes(self):
         node_list = self.get_node_list()
         input_nodes_cnt = 0
