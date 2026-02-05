@@ -26,21 +26,33 @@ public:
 };
 
 class Microslice;
+class MicrosliceDescriptor;
 class Timeslice;
+<<<<<<< HEAD
 class MicrosliceDescriptor;
 
+=======
+class TDescriptor;
+>>>>>>> origin/tsclient
 /**
  * \brief The MicrosliceSink base class implements the generic
  * microslice-based output interface.
  */
 using MicrosliceSink = Sink<Microslice>;
 
+<<<<<<< HEAD
 using MicrosliceDescriptorSink = Sink<MicrosliceDescriptor>;
 
+=======
+
+using MicrosliceDescriptorSink = Sink<MicrosliceDescriptor>;
+>>>>>>> origin/tsclient
 /**
  * \brief The TimesliceSink base class implements the generic
  * timeslice-based output interface.
  */
 using TimesliceSink = Sink<Timeslice>;
 
+
+using TimesliceDescriptorSink = Sink<TDescriptor>;
 } // namespace fles

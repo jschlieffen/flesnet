@@ -4,15 +4,21 @@
 #include "ArchiveDescriptor.hpp"
 #include "Benchmark.hpp"
 #include "ManagedTimesliceBuffer.hpp"
+#include "ManagedTDescriptorBuffer.hpp"
 #include "Monitor.hpp"
 #include "Parameters.hpp"
 #include "Sink.hpp"                     // TimesliceSink
 #include "StorableTimeslice.hpp"
+#include "StorableTimesliceDescriptor.hpp"
+#include "TimesliceBuilder.hpp"
 #include "Timeslice.hpp"
+#include "TDescriptor.hpp"
 #include "TimesliceAnalyzer.hpp"
 #include "TimesliceAutoSource.hpp"
+#include "TimesliceDescriptorAutoSource.hpp"
 #include "TimesliceDebugger.hpp"
 #include "TimesliceOutputArchive.hpp"
+#include "TimesliceDescriptorOutputArchive.hpp"
 #include "TimeslicePublisher.hpp"
 #include "Utility.hpp"
 #include "log.hpp"
@@ -26,6 +32,7 @@
 #include <string>
 #include <thread>
 #include <utility>
+#include <vector>
 
 Application::Application(Parameters const& par,
                          volatile sig_atomic_t* signal_status)
@@ -39,7 +46,13 @@ Application::Application(Parameters const& par,
     output_prefix_ = std::to_string(par_.client_index()) + ": ";
   }
 
-  source_ = std::make_unique<fles::TimesliceAutoSource>(par_.input_uri());
+  if (par_.descriptor_source()){
+    source_descriptors = std::make_unique<fles::TimesliceDescriptorAutoSource>(par_.input_uri());
+  }
+  else{
+    source_ = std::make_unique<fles::TimesliceAutoSource>(par_.input_uri());  
+  }
+  
 
   if (par_.analyze()) {
     if (par_.histograms()) {
@@ -64,6 +77,7 @@ Application::Application(Parameters const& par,
     UriComponents uri{output_uri};
 
     if (uri.scheme == "file" || uri.scheme.empty()) {
+      only_shm_outputschemes = false;
       size_t items = SIZE_MAX;
       size_t bytes = SIZE_MAX;
       fles::ArchiveCompression compression = fles::ArchiveCompression::None;
@@ -87,16 +101,29 @@ Application::Application(Parameters const& par,
         }
       }
       const auto file_path = uri.authority + uri.path;
-      if (items == SIZE_MAX && bytes == SIZE_MAX) {
-        sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
-            new fles::TimesliceOutputArchive(file_path, compression)));
-      } else {
-        sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
-            new fles::TimesliceOutputArchiveSequence(file_path, items, bytes,
-                                                     compression)));
+      if (par_.create_descriptor_ts()){
+        std::cout<<"test"<<std::endl;
+        if (items == SIZE_MAX && bytes == SIZE_MAX) {
+          sinks_descriptor.push_back(std::unique_ptr<fles::TimesliceDescriptorSink>(
+              new fles::TimesliceDescriptorOutputArchive(file_path, compression)));
+        } else {
+          sinks_descriptor.push_back(std::unique_ptr<fles::TimesliceDescriptorSink>(
+              new fles::TimesliceDescriptorOutputArchiveSequence(file_path, items, bytes,
+                                                                    compression)));
+        }
       }
-
+      else{
+        if (items == SIZE_MAX && bytes == SIZE_MAX) {
+          sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
+              new fles::TimesliceOutputArchive(file_path, compression)));
+        } else {
+          sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
+              new fles::TimesliceOutputArchiveSequence(file_path, items, bytes,
+                                                      compression)));
+        }
+      }
     } else if (uri.scheme == "tcp") {
+      only_shm_outputschemes = false;
       uint32_t hwm = 1;
       for (auto& [key, value] : uri.query_components) {
         if (key == "hwm") {
@@ -129,11 +156,17 @@ Application::Application(Parameters const& par,
         }
       }
       const auto shm_identifier = split(uri.path, "/").at(0);
-      sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
-          new ManagedTimesliceBuffer(zmq_context_, shm_identifier, datasize,
+      if (par_.descriptor_source()){
+      sinks_descriptor.push_back(std::unique_ptr<fles::TimesliceDescriptorSink>(
+          new ManagedTDescriptorBuffer(zmq_context_, shm_identifier, datasize,
                                      descsize, num_components)));
       has_shm_output = true;
-
+      }
+      else{     
+       sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
+          new ManagedTimesliceBuffer(zmq_context_, shm_identifier, datasize,
+                                     descsize, num_components)));
+      has_shm_output = true;}
     } else {
       throw ParametersException("invalid output scheme: " + uri.scheme);
     }
@@ -186,6 +219,71 @@ void Application::native_speed_delay(uint64_t ts_start_time) {
   }
 }
 
+
+
+std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t*& content_ptr,uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts,
+                                                                long long& acc_size){
+  size_t data_size = 1;
+
+  uint64_t ts_index = ts->index();
+  uint64_t ts_pos = ts->tpos(); //noch hinzufügen
+  uint64_t ts_num_corems = ts->num_core_microslices();
+  fles::TimesliceBuilder TSBuild(ts_num_corems, ts_index,ts_pos);
+  for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++) {
+    uint64_t num_ms = ts->num_microslices(tsc);
+    TSBuild.append_component(num_ms);
+    for (uint64_t msc = 0; msc < (ts->num_core_microslices()) + 1; msc++){ //overlap berücksichtigen
+      fles::MicrosliceDescriptor ms_desc = ts->descriptor(tsc, msc);  
+      data_size = ms_desc.size;
+      if (acc_size+data_size >= 1000000000){
+        content_ptr = original_ptr;
+        acc_size = 0;
+      }
+      std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_desc, content_ptr);
+      TSBuild.append_microslice(tsc,msc,*ms);
+      acc_size += data_size;
+      content_ptr += data_size;
+    } 
+  }
+  auto timeslice = std::shared_ptr<fles::Timeslice>(std::make_shared<fles::TimesliceBuilder>(std::move(TSBuild))); 
+  return std::static_pointer_cast<fles::Timeslice>(timeslice);
+}
+
+std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& content_ptr, uint8_t* original_ptr, 
+                                                                  std::shared_ptr<fles::TDescriptor> ts, long long& acc_size){
+  size_t data_size = 1;
+  uint64_t ts_index = ts->index();
+  uint64_t ts_pos = ts->tpos(); //noch hinzufügen
+  uint64_t ts_num_corems = ts->num_core_microslices();
+  fles::TDescriptor TSDescBuild(ts_num_corems, ts_index,ts_pos);
+  //int64_t timeslice_size = 0;
+  for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++) {
+    uint64_t num_ms = ts->num_microslices(tsc);
+    TSDescBuild.append_component(num_ms);
+    uint64_t size_component = (ts->num_microslices(tsc)*sizeof(fles::MicrosliceDescriptor));
+    for (uint64_t msc = 0; msc < (ts->num_core_microslices()) + 1; msc++){ //overlap berücksichtigen
+      fles::MicrosliceDescriptor ms_desc = ts->descriptor(tsc, msc);  
+      data_size = ms_desc.size;
+      if (acc_size+data_size >= par_.malloc_size()){
+        content_ptr = original_ptr;
+        acc_size = 0;
+      }
+      std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_desc, content_ptr);
+      TSDescBuild.append_microslice(tsc,msc,*ms);
+      size_component += data_size;
+      acc_size += data_size;
+      if (par_.jump_val() == -1){
+        content_ptr += data_size;
+      } else {
+        content_ptr += par_.jump_val();
+      }
+    TSDescBuild.set_size_component(tsc, size_component);
+    } 
+  }
+  auto TSDesc = std::make_shared<fles::TDescriptor>(std::move(TSDescBuild)); 
+  return std::static_pointer_cast<fles::TDescriptor>(TSDesc);
+}
+
 void Application::run() {
   time_begin_ = std::chrono::high_resolution_clock::now();
 
@@ -197,14 +295,15 @@ void Application::run() {
   uint64_t limit = par_.maximum_number();
 
   uint64_t index = 0;
-  while (auto timeslice = source_->get()) {
-    if (index >= par_.offset() &&
-        (index - par_.offset()) % par_.stride() == 0) {
-      ++index;
-    } else {
-      ++index;
-      continue;
+  
+  if (par_.descriptor_source()){
+    uint8_t* free_ptr = nullptr;
+    free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size()));
+    if (free_ptr == nullptr){
+        std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
+        throw std::bad_alloc();
     }
+<<<<<<< HEAD
     // std::cout << "timeslice->timeslice_descriptor_.num_core_microslices: " << timeslice->timeslice_descriptor_.num_core_microslices << std::endl;
     // std::cout << "timeslice->num_microslices(0): " << timeslice->num_microslices(0) << std::endl;
 
@@ -235,7 +334,140 @@ void Application::run() {
     // avoid unneccessary pipelining
     timeslice.reset();
   }
+=======
+    
+    for (size_t i = 0; i < 1000000000; ++i) {
+      free_ptr[i] = static_cast<uint8_t>(rand());
+    }
+    
+    long long acc_size;
+    //std::cout<<"test"<<std::endl;
+    L_(info)<<"start";
+    uint8_t* content_ptr = free_ptr;
+    if (only_shm_outputschemes){
+      std::vector<std::shared_ptr<const fles::TDescriptor>> test_vec;
+      while (auto TDesc = source_descriptors->get()) {
+        if (index >= par_.offset() &&
+            (index - par_.offset()) % par_.stride() == 0) {
+          ++index;
+        } else {
+          ++index;
+          continue;
+        }
+>>>>>>> origin/tsclient
 
+        std::shared_ptr<fles::TDescriptor> timeslice = create_ms_cpointer(content_ptr, free_ptr, 
+                                                                      std::move(TDesc), acc_size);
+        std::shared_ptr<const fles::TDescriptor> ts;
+        if (par_.release_mode()) {
+          ts = std::make_shared<const fles::StorableTimesliceDescriptor>(*timeslice);
+          timeslice.reset();
+        } else {
+          ts = std::shared_ptr<const fles::TDescriptor>(std::move(timeslice));
+        }
+        if (par_.native_speed() != 0.0) {
+          native_speed_delay(ts->start_time());
+        }
+        if (par_.rate_limit() != 0.0) {
+          rate_limit_delay();
+        }
+        
+        if (count_ == limit || *signal_status_ != 0) {
+          break;
+        }
+        // avoid unneccessary pipelining
+        timeslice.reset();
+        test_vec.push_back(ts);
+      }
+      std::cout<<"test123"<<std::endl;
+      auto t1 = std::chrono::high_resolution_clock::now();
+      for (std::shared_ptr<const fles::TDescriptor> ts : test_vec){
+        for (auto& sink : sinks_descriptor){
+          sink->put(ts);
+        ts.reset();
+        ++count_;
+        }
+      }
+      auto t2 = std::chrono::high_resolution_clock::now();
+      auto duration = std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count();
+      L_(info) << "Time needed: "<< duration;
+
+      
+
+    } else {
+      while (auto TDesc = source_descriptors->get()) {
+
+        if (index >= par_.offset() &&
+            (index - par_.offset()) % par_.stride() == 0) {
+          ++index;
+        } else {
+          ++index;
+          continue;
+        }
+        std::shared_ptr<const fles::Timeslice> timeslice = (create_microslices(content_ptr, free_ptr, std::move(TDesc), acc_size));
+        std::shared_ptr<const fles::Timeslice> ts;
+        if (par_.release_mode()) {
+          ts = std::make_shared<const fles::StorableTimeslice>(*timeslice);
+          timeslice.reset();
+        } else {
+          ts = std::shared_ptr<const fles::Timeslice>(std::move(timeslice));
+        }
+        if (par_.native_speed() != 0.0) {
+          native_speed_delay(ts->start_time());
+        }
+        if (par_.rate_limit() != 0.0) {
+          rate_limit_delay();
+        }
+        ++count_;
+        if (count_ == limit || *signal_status_ != 0) {
+          break;
+        }
+        // avoid unneccessary pipelining
+        timeslice.reset();
+      
+        for (auto& sink : sinks_){
+          sink->put(ts);
+        ts.reset();
+        }
+      }
+    }
+    free(free_ptr);
+  }
+  else{    
+    while (auto timeslice = source_->get()) {
+      if (index >= par_.offset() &&
+          (index - par_.offset()) % par_.stride() == 0) {
+        ++index;
+      } else {
+        ++index;
+        continue;
+      }
+      std::shared_ptr<const fles::Timeslice> ts;
+      if (par_.release_mode()) {
+        ts = std::make_shared<const fles::StorableTimeslice>(*timeslice);
+        timeslice.reset();
+      } else {
+        ts = std::shared_ptr<const fles::Timeslice>(std::move(timeslice));
+      }
+      if (par_.native_speed() != 0.0) {
+        native_speed_delay(ts->start_time());
+      }
+      if (par_.rate_limit() != 0.0) {
+        rate_limit_delay();
+      }
+
+      for (auto& sink : sinks_) {
+        sink->put(ts);
+      }
+
+      ++count_;
+      if (count_ == limit || *signal_status_ != 0) {
+        break;
+      }
+      // avoid unneccessary pipelining
+      timeslice.reset();
+    }
+  }
   // Loop over sinks. For all sinks of type ManagedTimesliceBuffer, check if
   // they are empty. If at least one of them is not empty, wait for 100 ms.
   // Repeat until all sinks are empty.

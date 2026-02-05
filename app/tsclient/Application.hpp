@@ -5,7 +5,10 @@
 #include "Monitor.hpp"
 #include "Parameters.hpp"
 #include "Sink.hpp"
+#include "TimesliceDescriptor.hpp"
 #include "TimesliceSource.hpp"
+#include "TimesliceDescriptorSource.hpp"
+#include "TimesliceBuilder.hpp"
 #include "log.hpp"
 #include <chrono>
 #include <csignal>
@@ -36,7 +39,9 @@ private:
   zmq::context_t zmq_context_{1};
 
   std::unique_ptr<fles::TimesliceSource> source_;
+  std::unique_ptr<fles::TimesliceDescriptorSource> source_descriptors;
   std::vector<std::unique_ptr<fles::TimesliceSink>> sinks_;
+  std::vector<std::unique_ptr<fles::TimesliceDescriptorSink>> sinks_descriptor;
   std::unique_ptr<Benchmark> benchmark_;
 
   uint64_t count_ = 0;
@@ -47,7 +52,14 @@ private:
 
   std::chrono::high_resolution_clock::time_point time_begin_;
   uint64_t first_ts_start_time_{};
+  bool only_shm_outputschemes = true;
 
   void rate_limit_delay() const;
   void native_speed_delay(uint64_t ts_start_time);
+  std::shared_ptr<fles::Timeslice> create_microslices(uint8_t*& content_ptr, uint8_t* original_ptr,
+                                                      std::shared_ptr<fles::TDescriptor> ts, long long& acc_size);
+  std::shared_ptr<fles::TDescriptor> create_ms_cpointer(uint8_t*& content_ptr, uint8_t* original_ptr,
+                                                       std::shared_ptr<fles::TDescriptor> ts, long long& acc_size);
+  fles::TDescriptor create_descriptor_ts(std::shared_ptr<const fles::Timeslice> ts);
+
 };

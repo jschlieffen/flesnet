@@ -33,6 +33,10 @@ public:
   /// Retrieve the timeslice index.
   [[nodiscard]] uint64_t index() const { return timeslice_descriptor_.index; }
 
+  [[nodiscard]] TimesliceDescriptor get_desc() const {return timeslice_descriptor_;}
+
+  [[nodiscard]] uint64_t tpos() const { return timeslice_descriptor_.ts_pos; } 
+
   /// Retrieve the number of core microslices.
   [[nodiscard]] uint64_t num_core_microslices() const {
     return timeslice_descriptor_.num_core_microslices;
@@ -96,6 +100,20 @@ public:
     }
     return 0;
   }
+<<<<<<< HEAD
+=======
+
+protected:
+  Timeslice() = default;
+
+  friend class StorableTimeslice;
+  friend class ::ManagedTimesliceBuffer;
+  friend class TimesliceBuilder;
+
+  /// The timeslice descriptor.
+  TimesliceDescriptor timeslice_descriptor_{};
+
+>>>>>>> origin/tsclient
   /// A vector of pointers to the data content, one per timeslice component.
   std::vector<uint8_t*> data_ptr_;
 
