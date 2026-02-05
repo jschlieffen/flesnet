@@ -727,7 +727,8 @@ class Timeslice_forwarding_ZIB:
                 "path",
                 "use_infiniband",
                 "use_collectl",
-                "use_flesnet"
+                "use_flesnet", 
+                "use_dtsa_files"
             ]   
         with open('tmp/tf_input_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:

@@ -89,6 +89,7 @@ class Params:
         self.write_data_to_file = ""
         self.analyze_data = 0
         self.port = 0
+        self.use_dtsa_files = 0
         self.ZIB_timesliceforwarding = 1
         self.use_flesnet = 1
         self.num_central_manager = 1
@@ -211,6 +212,8 @@ class Params:
     def get_tsclient_par(self):
         self.write_data_to_file = self.get_value('tsclient_commands', 'write_data_to_file', 'str', self.write_data_to_file, False)
         self.analyze_data = self.get_value('tsclient_commands', 'analyze_data', 'str', self.analyze_data, False)
+        self.use_dtsa_files = self.get_value('tsclient_commands','use_dtsa_files','int',self.use_dtsa_files, False)
+        print(self.use_dtsa_files)
         
     def get_GSI_timesliceforwarding_par(self):
         self.activate_timesliceforwarding = self.get_value('GSI_timesliceforwarding', 'activate_timesliceforwarding','int', True)
