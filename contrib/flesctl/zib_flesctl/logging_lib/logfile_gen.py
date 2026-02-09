@@ -36,6 +36,7 @@ class Logfile:
         with open('setup/config.cfg', 'w') as configfile:
             config.write(configfile, space_around_delimiters=False)
         '''
+        
         with open("tmp/run_id.txt", "r") as f:
             run_id = int(f.read().strip())
         run_id += 1

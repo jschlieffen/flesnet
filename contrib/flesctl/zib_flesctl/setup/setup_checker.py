@@ -30,7 +30,12 @@ class system_checker:
                 'docopt' , 'plotext' , 'matplotlib', 'seaborn' , 'deepdiff'
             ]
         self.required_files = [
-                '../nodes/central_manager.py',
+                '../central_manager/central_manager.py',
+                '../central_manager/entry_nodes.py',
+                '../central_manager/build_nodes.py',
+                '../central_manager/super_nodes.py',
+                '../central_manager/Timeslice_forwarding.py',
+                '../central_manager/ZIB_Timeslice_forwarding.py',
                 '../execution.py',
                 '../nodes/input.py',
                 '../logging_lib/logfile_gen.py',

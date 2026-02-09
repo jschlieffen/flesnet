@@ -7,7 +7,7 @@ Created on Mon Mar 17 16:28:18 2025
 """
 import sys
 from setup import params as par
-from nodes import central_manager as cm
+from central_manager import central_manager as cm
 import time
 
 import signal

@@ -14,8 +14,10 @@ if [ "$SET_NODE_LIST" -eq 1 ]; then
 
     source flesctrl_venv/bin/activate
 
-    ACTIVATE_TIMESLICEFORWARDING=$(grep "^activate_timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
-    ZIB_TIMESLICEFORWARDING=$(grep "^zib_timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
+    ACTIVATE_TIMESLICEFORWARDING=$(grep "^GSI_Timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
+    ZIB_TIMESLICEFORWARDING=$(grep "^ZIB_Timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
+    echo $ACTIVATE_TIMESLICEFORWARDING
+    echo $ZIB_TIMESLICEFORWARDING
     if  [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         NODES=$((ENTRY_NODES_CNT + 2*PROCESSING_NODES_CNT))
 	    PROCESS_NODES_LIST=$(grep "^process_nodes_list" setup/config.cfg | cut -d'=' -f2)
@@ -61,10 +63,10 @@ if [ "$SET_NODE_LIST" -eq 1 ]; then
 else
     source flesctrl_venv/bin/activate
 
-    ACTIVATE_TIMESLICEFORWARDING=$(grep "^activate_timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
+    ACTIVATE_TIMESLICEFORWARDING=$(grep "^GSI_Timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_ENTRY_NODES=$(grep "^exclude_entry_nodes" setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_BUILD_NODES=$(grep "^exclude_build_nodes" setup/config.cfg | cut -d'=' -f2)
-    ZIB_TIMESLICEFORWARDING=$(grep "^zib_timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
+    ZIB_TIMESLICEFORWARDING=$(grep "^ZIB_Timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
     echo $ACTIVATE_TIMESLICEFORWARDING
     echo $ZIB_TIMESLICEFORWARDING
     if  [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
