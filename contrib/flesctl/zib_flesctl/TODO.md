@@ -11,7 +11,8 @@
 | get run_id out of the config | $${\color{green}Done}$$ |
 | merge tsclient_malloc with repo and build into flesctrl | $${\color{green}Done} $$|
 | use another command to kill tsclient etc. | $${\color{blue}Canceled}$$ |
-| defractor and clean up central manager | $${\color{yellow}In \space Progress}$$ |
+| defractor and clean up central manager | $${\color{green}Done}$$ |
+| make ./exec.sh new | $${\color{yellow}In \space progress}$$|
 | benchmark evaluation and logging for timeslice-forwarding | $${\color{red}Open}$$ |
 | create script to check timeslices via validator | $${\color{red}Open}$$ |
 | make tsclient implementation independent of flesnet like ts-forwarding | $${\color{red}Open}$$ |
