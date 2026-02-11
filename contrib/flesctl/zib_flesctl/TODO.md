@@ -14,6 +14,7 @@
 | defractor and clean up central manager | $${\color{green}Done}$$ |
 | make ./exec.sh new | $${\color{yellow}In \space progress}$$|
 | benchmark evaluation and logging for timeslice-forwarding | $${\color{red}Open}$$ |
+| make that archive-validator can read tsas from shm | $${\color{red}Open}$$ |
 | create script to check timeslices via validator | $${\color{red}Open}$$ |
 | make tsclient implementation independent of flesnet like ts-forwarding | $${\color{red}Open}$$ |
 | check for signal handler behavior during monitoring | $${\color{red}Open}$$ |
