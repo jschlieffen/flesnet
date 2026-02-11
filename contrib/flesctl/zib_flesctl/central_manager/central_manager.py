@@ -433,6 +433,7 @@ class execution:
                 time.sleep(1)
                 self.central_manager[node] = {
                         'node' : node,
+                        'cm_idx' : cm_nodes_cnt,
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip
                     }
@@ -481,6 +482,7 @@ class execution:
             if cm_nodes_cnt < self.Par_.num_central_manager and node not in self.Par_.exclude_central_manager:
                 self.central_manager[node] = {
                         'node' : node,
+                        'cm_idx' : cm_nodes_cnt,
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip
                     }
@@ -501,6 +503,9 @@ class execution:
                         'eth_ip' : node_eth_ip
                     }
                 output_nodes_cnt += 1
+        Logfile.logfile.input_node_list = self.input_nodes
+        Logfile.logfile.cm_list = self.central_manager
+        Logfile.logfile.output_node_list = self.output_nodes
                 
     # =============================================================================
     # This function starts flesnet and partly checks if the start was successful  

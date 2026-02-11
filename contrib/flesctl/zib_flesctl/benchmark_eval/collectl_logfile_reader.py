@@ -17,12 +17,12 @@ import os
 # =============================================================================
 class collectl_reader:
     
-    def __init__(self, node_name,Logfile_name_infiniband,Logfile_name_cpu, node_type, timeslice_forwarding_activated):
+    def __init__(self, node_name,Logfile_name_infiniband,Logfile_name_cpu, node_type, mode_flesctrl):
         self.node_name = node_name
         self.Logfile_infiniband = self.read_file(Logfile_name_infiniband)
         self.Logfile_cpu_usage = self.read_file(Logfile_name_cpu)
         self.node_type = node_type
-        self.timeslice_forwarding_activated = timeslice_forwarding_activated
+        self.mode_flesctrl = mode_flesctrl
         self.data_rates = {}
         self.cpu_usage = {}
 
@@ -38,16 +38,16 @@ class collectl_reader:
             #print(row)
             dt = row['#Date'] + ' ' + row['Time']
             timestamp = datetime.strptime(dt, "%Y%m%d %H:%M:%S")
-            if self.node_type == 'tsclient':
+            if self.node_type == 'tsclient' or self.node_type == 'output_node':
                 self.data_rates[timestamp] = {
                         'KBIn' : int(row['[IB]InKB'])
                     }
-            elif self.node_type == 'entry_node':
+            elif self.node_type == 'entry_node' or self.node_type == 'input_node':
                 self.data_rates[timestamp] = {
                         'KBOut' : int(row['[IB]OutKB'])
                     }
             elif self.node_type == 'build_node':
-                if self.timeslice_forwarding_activated:
+                if 'timeslice_forwarding' in self.mode_flesctrl or 'ZIB_timeslice_forwarding' in self.mode_flesctrl:
                     self.data_rates[timestamp] = {
                             'KBIn' : int(row['[IB]InKB']),
                             'KBOut' : int(row['[IB]OutKB'])
@@ -62,16 +62,16 @@ class collectl_reader:
             #print(row)
             dt = row['#Date'] + ' ' + row['Time']
             timestamp = datetime.strptime(dt, "%Y%m%d %H:%M:%S")
-            if self.node_type == 'tsclient':
+            if self.node_type == 'tsclient' or self.node_type == 'output_node':
                 self.data_rates[timestamp] = {
                         'KBIn' : int(row['[NET]RxKBTot'])
                     }
-            elif self.node_type == 'entry_node':
+            elif self.node_type == 'entry_node' or self.node_type == 'input_node':
                 self.data_rates[timestamp] = {
                         'KBOut' : int(row['[NET]TxKBTot'])
                     }
             elif self.node_type == 'build_node':
-                if self.timeslice_forwarding_activated:
+                if 'timeslice_forwarding' in self.mode_flesctrl or 'ZIB_timeslice_forwarding' in self.mode_flesctrl:
                     self.data_rates[timestamp] = {
                             'KBIn' : int(row['[NET]RxKBTot']),
                             'KBOut' : int(row['[NET]TxKBTot'])

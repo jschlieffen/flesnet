@@ -11,7 +11,7 @@ function execute_iteration() {
     cd "benchmark_eval"
     python3 $benchmark_eval $Logfile --collectl_used --mode='all'
     cd ..
-    create_output_folder $Logfile 1
+    #create_output_folder $Logfile 1
 }
 
 function create_output_folder() {

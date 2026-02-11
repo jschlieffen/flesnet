@@ -22,6 +22,9 @@ class Logfile:
         self.build_nodes_list = {}
         self.overlap_nodes_list = {}
         self.receiving_node_list = {}
+        self.input_node_list = {}
+        self.cm_list = {}
+        self.output_node_list = {}
         self.avg_data_rate = 0
         self.exec_time = 0
         self.transport_method = ''
@@ -76,6 +79,22 @@ class Logfile:
                     #idx = val['receiving_node_idx']
                     build_node_name = build_node['node']
                     file.write(f'   {build_node_name} was connected to {receiving_node} \n')
+            if self.input_node_list:
+                file.write('Input nodes: \n')
+                for key,val in self.input_node_list.items():
+                    idx = val['input_node_idx']
+                    file.write(f'   {key} as index {idx} \n')
+            if self.cm_list:
+                print(self.cm_list)
+                file.write('central_manager: \n')
+                for key,val in self.cm_list.items():
+                    idx = val['cm_idx']
+                    file.write(f'   {key} as index {idx} \n')
+            if self.output_node_list:
+                file.write('Output nodes: \n')
+                for key,val in self.output_node_list.items():
+                    idx = val['output_node_idx']
+                    file.write(f'   {key} as index {idx} \n')
 
             file.write(f'The average data rate of this run was: {self.avg_data_rate}\n')
             file.write(f'The execution time of this run was: {self.exec_time}\n')

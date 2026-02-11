@@ -97,16 +97,17 @@ def change_dir(flesctl_logfile):
     
     os.mkdir(f"eval_round_{eval_number}")
     os.chdir(f"eval_round_{eval_number}")
+    print(os.path)
+    print(flesctl_logfile)
     if not (os.path.isfile(flesctl_logfile)):
-        logger.critical('file does not exist')
+        logger.critical(f"File does not exist: {os.path.abspath(flesctl_logfile)}")
         sys.exit(1)
     
     logger.success(f"Run found and proceeding as eval run {eval_number}")
 
 # ===============================================================================
 # TODOs:
-#        2. clean up code
-#        3. comment code 
+#           1. append for ZIB timesliceforwarding
 # ===============================================================================
 
 # =============================================================================
@@ -120,10 +121,14 @@ class execution:
         self.entry_nodes = []
         self.build_nodes = []
         self.receiving_nodes = []
+        self.input_nodes = []
+        self.output_nodes = []
+        self.central_manager = []
         self.flesctl_logfile = flesctl_logfile
         if not (os.path.isfile(flesctl_logfile)):
-            logger.critical('file does not exist')
+            logger.critical(f'file does not exist {flesctl_logfile}')
             sys.exit(1)
+        self.mode_flesctrl = []
         self.infiniband_used = False
         self.zeromq_used = False
         self.get_node_names(flesctl_logfile)
@@ -150,12 +155,13 @@ class execution:
             r"([a-zA-Z0-9-]+)\s+with entry node index\s+(\d+)\s+and build node index\s+(\d+)"
         )
         nodes_info = []
-        node_types = ['Entry', 'Build', 'receiving', 'Super']
+        node_types = ['Entry', 'Build', 'receiving', 'Super','Input','central_manager','Output']
         for node_type in node_types:
             matches = re.findall(f'{node_type} nodes:([\s\S]*?)(?=\n[A-Za-z]|$)', flesctl_logfile)
             if matches:
                 for match in matches:
-                    if node_type in ['Entry', 'Build']:
+                    print(match)
+                    if node_type in ['Entry', 'Build','Input','Output','central_manager']:
                         for name, index in re.findall(pattern, match):
                             nodes_info.append({
                                 'node_name': name,
@@ -181,6 +187,7 @@ class execution:
                                 'node_type': 'Build',
                                 'index': int(build_idx)
                             })
+        #print(nodes_info)
         for node in nodes_info:
             if node['node_type'] == 'Entry':
                 self.entry_nodes.append((node['node_name'], node['index']))
@@ -188,8 +195,22 @@ class execution:
                 self.build_nodes.append((node['node_name'], node['index']))
             elif node['node_type'] == 'receiving':
                 self.receiving_nodes.append((node['node_name'], node['connected_to']))
+            elif node['node_type'] == 'Input':
+                self.input_nodes.append((node['node_name'], node['index']))
+            elif node['node_type'] == 'central_manager':
+                self.central_manager.append((node['node_name'], node['index']))
+            elif node['node_type'] == 'Output':
+                self.output_nodes.append((node['node_name'], node['index']))
+            else:
+                logger.error(f'unknown nodetype: {node}')
         #print(self.entry_nodes)
         #print(self.build_nodes)
+        if self.entry_nodes != []:
+            self.mode_flesctrl.append('flesnet')
+        if self.receiving_nodes != []:
+            self.mode_flesctrl.append('timeslice_forwarding')
+        if self.output_nodes != []:
+            self.mode_flesctrl.append('ZIB_timeslice_forwarding')
         if "Infiniband" in flesctl_logfile:
             self.infiniband_used = True
         elif "Ethernet" in flesctl_logfile:
@@ -217,18 +238,27 @@ class execution:
             self.shm_usages_build_nodes[f"build_node_{build_node[0]}"] = Logfile_reader_cls.data_shms
 
     def get_data_collectl(self):
-        self.data_rates_collectl['entry_nodes'] = {}
-        self.cpu_usage_collectl['entry_nodes'] = {}
-        self.data_rates_collectl['build_nodes'] = {}
-        self.cpu_usage_collectl['build_nodes'] = {}
-        if self.receiving_nodes != []:
+        if 'flesnet' in self.mode_flesctrl:
+            self.data_rates_collectl['entry_nodes'] = {}
+            self.cpu_usage_collectl['entry_nodes'] = {}
+            self.data_rates_collectl['build_nodes'] = {}
+            self.cpu_usage_collectl['build_nodes'] = {}
+        if 'timeslice_forwarding' in self.mode_flesctrl:
             self.timeslice_forwarding_activated = True
             self.data_rates_collectl['receiving_nodes'] = {}
             self.cpu_usage_collectl['receiving_nodes'] = {}
+        if 'ZIB_timeslice_forwarding' in self.mode_flesctrl:
+            if 'flesnet' not in self.mode_flesctrl:
+                self.data_rates_collectl['input_nodes'] = {}
+                self.cpu_usage_collectl['input_nodes'] = {}
+            self.data_rates_collectl['central_manager'] = {}
+            self.cpu_usage_collectl['central_manager'] = {}
+            self.data_rates_collectl['output_nodes'] = {}
+            self.cpu_usage_collectl['output_nodes'] = {}
         for entry_node in self.entry_nodes:
             Logfile_name = f"../logs/collectl/entry_nodes/entry_node_{entry_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
-            Logfile_reader_cls = CLR.collectl_reader(f'entry_node_{entry_node[0]}',Logfile_name, Logfile_name_cpu, 'entry_node',self.timeslice_forwarding_activated)
+            Logfile_reader_cls = CLR.collectl_reader(f'entry_node_{entry_node[0]}',Logfile_name, Logfile_name_cpu, 'entry_node',self.mode_flesctrl)
             if self.infiniband_used:
                 Logfile_reader_cls.extract_infiniband_usage()
             else:
@@ -239,7 +269,7 @@ class execution:
         for build_node in self.build_nodes:
             Logfile_name = f"../logs/collectl/build_nodes/build_node_{build_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
-            Logfile_reader_cls = CLR.collectl_reader(f'build_node_{build_node[0]}',Logfile_name, Logfile_name_cpu, 'build_node',self.timeslice_forwarding_activated)
+            Logfile_reader_cls = CLR.collectl_reader(f'build_node_{build_node[0]}',Logfile_name, Logfile_name_cpu, 'build_node',self.mode_flesctrl)
             if self.infiniband_used:
                 Logfile_reader_cls.extract_infiniband_usage()
             else:
@@ -250,7 +280,7 @@ class execution:
         for receiving_node in self.receiving_nodes:
             Logfile_name = f"../logs/collectl/tsclient/receiving_node_{receiving_node[0]}.csv"
             Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
-            Logfile_reader_cls = CLR.collectl_reader(f'receiving_node_{receiving_node[0]}',Logfile_name, Logfile_name_cpu, 'tsclient', self.timeslice_forwarding_activated)
+            Logfile_reader_cls = CLR.collectl_reader(f'receiving_node_{receiving_node[0]}',Logfile_name, Logfile_name_cpu, 'tsclient', self.mode_flesctrl)
             if self.infiniband_used:
                 Logfile_reader_cls.extract_infiniband_usage()
             else:
@@ -258,7 +288,30 @@ class execution:
             Logfile_reader_cls.extract_cpu_usage()
             self.data_rates_collectl['receiving_nodes'][f"receiving_nodes_{receiving_node[0]}"] = Logfile_reader_cls.data_rates
             self.cpu_usage_collectl['receiving_nodes'][f"receiving_nodes_{receiving_node[0]}"] = Logfile_reader_cls.cpu_usage
-        
+        if not 'flesnet' in self.mode_flesctrl:
+            for input_node in self.input_nodes:
+                Logfile_name = f"../logs/collectl/timeslice_forwarding/input_nodes/input_node_{input_node[0]}.csv"
+                Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
+                Logfile_reader_cls = CLR.collectl_reader(f'input_node_{input_node[0]}',Logfile_name, Logfile_name_cpu, 'input_node', self.mode_flesctrl)
+                if self.infiniband_used:
+                    Logfile_reader_cls.extract_infiniband_usage()
+                else:
+                    Logfile_reader_cls.extract_ethernet_usage()
+                Logfile_reader_cls.extract_cpu_usage()
+                self.data_rates_collectl['input_nodes'][f"input_nodes_{input_node[0]}"] = Logfile_reader_cls.data_rates
+                self.cpu_usage_collectl['input_nodes'][f"input_nodes_{input_node[0]}"] = Logfile_reader_cls.cpu_usage
+            for output_node in self.output_nodes:
+                Logfile_name = f"../logs/collectl/timeslice_forwarding/output_nodes/output_node_{output_node[0]}.csv"
+                Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
+                Logfile_reader_cls = CLR.collectl_reader(f'output_node_{output_node[0]}',Logfile_name, Logfile_name_cpu, 'output_node', self.mode_flesctrl)
+                if self.infiniband_used:
+                    Logfile_reader_cls.extract_infiniband_usage()
+                else:
+                    Logfile_reader_cls.extract_ethernet_usage()
+                Logfile_reader_cls.extract_cpu_usage()
+                self.data_rates_collectl['output_nodes'][f"output_nodes_{output_node[0]}"] = Logfile_reader_cls.data_rates
+                self.cpu_usage_collectl['output_nodes'][f"output_nodes_{output_node[0]}"] = Logfile_reader_cls.cpu_usage
+                
     def serialize_data_rates(self):
         Logfile_serializer_entry_nodes = LH.serialize_data("e",self.data_rates_entry_nodes, self.shm_usages_entry_nodes, self.flesctl_logfile)
         Logfile_serializer_entry_nodes.serialize_data_rates()
@@ -269,6 +322,7 @@ class execution:
             Logfile_serializer_build_nodes.serialize_shm_usage_build_nodes()
         logger.success('serialization process finished')
         
+    
     def serialize_data_rates_collectl(self):
         Logfile_serializer = CLH.serialize_data(self.data_rates_collectl, self.cpu_usage_collectl, self.flesctl_logfile, self.timeslice_forwarding_activated)
         Logfile_serializer.serialize_data()
@@ -415,46 +469,7 @@ class execution:
         
     def start_plots_collectl(self,starttime,endtime):
         
-        cp_cls = Cplots.create_plots_collectl(self.data_rates_collectl, self.cpu_usage_collectl ,self.timeslice_forwarding_activated, starttime,endtime)
-        cp_cls.plot_total_data_rate()
-        cp_cls.plot_avg_data_rate()
-        cp_cls.plot_data_rate_mean_max_min()
-        cp_cls.plot_data_rate_single()
-        cp_cls.bar_plots_data_rates()
-        cp_cls.plot_cpu_usage_avg()
-        logger.success('created plots from collectl data')
-
-
-
-    def start_plots_entry_nodes(self,starttime,endtime):
-
-        cp_cls = plots.create_plots_entry_nodes(self.data_rates_entry_nodes, self.shm_usages_entry_nodes,starttime,endtime)
-        cp_cls.plot_total_data_rate()
-        cp_cls.plot_avg_data_rate()
-        cp_cls.plot_data_rate_single()
-        cp_cls.plot_data_rate_mean_max_min()
-        #cp_cls.box_plot_data_rates()
-        cp_cls.bar_plots_data_rates()
-        cp_cls.plot_shm_usage()
-        cp_cls.plot_shm_usage_single()
-        logger.success('created plots for entry nodes')
-
-    def start_plots_build_nodes(self,starttime,endtime):
-        cp_cls = plots.create_plots_build_nodes(self.data_rates_build_nodes, self.shm_usages_build_nodes,starttime,endtime)
-        cp_cls.plot_total_data_rate()
-        cp_cls.plot_avg_data_rate()
-        cp_cls.plot_data_rate_single()
-        cp_cls.plot_data_rate_mean_max_min()
-        #cp_cls.box_plot_data_rates()
-        cp_cls.bar_plots_data_rates()
-        cp_cls.plot_shm_usage_assemble()
-        cp_cls.plot_shm_usage_single_node_avg()
-        cp_cls.plot_shm_usage_single_node_single_entry_node()
-        logger.success('created plots for build nodes')
-        
-    def start_plots_collectl(self,starttime,endtime):
-        
-        cp_cls = Cplots.create_plots_collectl(self.data_rates_collectl, self.cpu_usage_collectl ,self.timeslice_forwarding_activated, starttime,endtime)
+        cp_cls = Cplots.create_plots_collectl(self.data_rates_collectl, self.cpu_usage_collectl ,self.mode_flesctrl, starttime,endtime)
         cp_cls.plot_total_data_rate()
         cp_cls.plot_avg_data_rate()
         cp_cls.plot_data_rate_mean_max_min()
@@ -463,6 +478,7 @@ class execution:
         cp_cls.plot_cpu_usage_avg()
         cp_cls.plot_cpu_usage_single()
         logger.success('created plots from collectl data')
+
 
 def main():
     args = docopt.docopt(__doc__)
@@ -491,9 +507,10 @@ def main():
         if collectl_used:
             exec_cls.deserialize_data_collectl()
     if 'create_plots' in modes:
-        exec_cls.start_plots_entry_nodes(starttime,endtime)
-        if not exec_cls.zeromq_used:
-            exec_cls.start_plots_build_nodes(starttime,endtime)
+        if 'flesnet' in exec_cls.mode_flesctrl:
+            exec_cls.start_plots_entry_nodes(starttime,endtime)
+            if not exec_cls.zeromq_used:
+                exec_cls.start_plots_build_nodes(starttime,endtime)
         if collectl_used:
             exec_cls.start_plots_collectl(starttime, endtime)
     
@@ -516,10 +533,13 @@ def validate_params(logfile,modes,verbose):
         logger.warning('It is quite pointless to not do anything')
     for mode in modes:
         if 'all' in modes:
+            #tmp change, reverse that shit
             if 'prev_run' in modes:
-                modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots', 'prev_run']
+                #modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots', 'prev_run']
+                modes = ['flesctrl_logfile','create_plots', 'prev_run']
             else:
-                modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots']
+                #modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots']
+                modes = ['flesctrl_logfile','create_plots']
             break
         elif mode not in valid_modes:
             logger.critical('Unknown mode')

@@ -151,7 +151,7 @@ class Timeslice_forwarding_ZIB:
             
             logger.info(f'start input node for timeslice-forwarding: {node}')
             logfile = "logs/timeslice_forwarding/input_nodes/input_node_%s.log" % node
-            logfile_collectl = "logs/collectl/timeslice_forwarding/intput_nodes/input_node_%s.csv" % node
+            logfile_collectl = "logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % node
             logfile_tsclient = "logs/timeslice_forwarding/tsclient/input_nodes/input_node_%s.log" % node
             if self.Par_.use_infiniband:
                 ip = self.input_nodes[node]['inf_ip']
