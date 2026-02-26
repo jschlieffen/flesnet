@@ -12,7 +12,7 @@
 | merge tsclient_malloc with repo and build into flesctrl | $${\color{green}Done} $$|
 | use another command to kill tsclient etc. | $${\color{blue}Canceled}$$ |
 | defractor and clean up central manager | $${\color{green}Done}$$ |
-| make ./exec.sh new | $${\color{yellow}In \space progress}$$|
+| make ./exec.sh new | $${\color{green}Done}$$ |
 | benchmark evaluation and logging for timeslice-forwarding | $${\color{yellow}In \space progress}$$ for next TODOs look at the code itself |
 | clean up ./execution_flesctrl | $${\color{red}Open}$$
 | make that archive-validator can read tsas from shm | $${\color{red}Open}$$ |
