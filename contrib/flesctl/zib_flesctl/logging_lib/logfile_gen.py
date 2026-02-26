@@ -28,6 +28,7 @@ class Logfile:
         self.avg_data_rate = 0
         self.exec_time = 0
         self.transport_method = ''
+        self.use_flesnet = 0
         self.infiniband_used = False
         
     def write(self):
@@ -82,10 +83,12 @@ class Logfile:
             if self.input_node_list:
                 file.write('Input nodes: \n')
                 for key,val in self.input_node_list.items():
-                    idx = val['input_node_idx']
+                    if self.use_flesnet:
+                        idx = val['build_node_idx']
+                    else:
+                        idx = val['input_node_idx']
                     file.write(f'   {key} as index {idx} \n')
             if self.cm_list:
-                print(self.cm_list)
                 file.write('central_manager: \n')
                 for key,val in self.cm_list.items():
                     idx = val['cm_idx']

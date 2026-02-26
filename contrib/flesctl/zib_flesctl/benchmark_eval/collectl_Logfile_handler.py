@@ -44,6 +44,12 @@ class serialize_data:
             path = os.path.join(dir,'collectl/data/data_rates/build_nodes')
         elif node_type == 'receiving_nodes':
             path = os.path.join(dir,'collectl/data/data_rates/receiving_nodes')
+        elif node_type == 'input_nodes':
+            path = os.path.join(dir,'collectl/data/data_rates/timeslice_forwarding/input_nodes')
+        elif node_type == 'output_nodes':
+            path = os.path.join(dir,'collectl/data/data_rates/timeslice_forwarding/output_nodes')
+        elif node_type == 'central_manager':
+            path = os.path.join(dir,'collectl/data/data_rates/timeslice_forwarding/central_manager')
         #print(node_type)
         if not os.path.exists(path):
             os.makedirs(path)
@@ -56,6 +62,12 @@ class serialize_data:
             csv_file_name = f"{path}/data_rates_build_nodes_{Run_id}.csv"
         elif node_type == "receiving_nodes":
             csv_file_name = f"{path}/data_rates_receiving_nodes_{Run_id}.csv"
+        elif node_type == 'input_nodes':
+            csv_file_name = f"{path}/data_rates_input_nodes_{Run_id}.csv"
+        elif node_type == 'output_nodes':
+            csv_file_name = f"{path}/data_rates_output_nodes_{Run_id}.csv"
+        elif node_type == 'central_manager':
+            csv_file_name = f"{path}/data_rates_central_manager_{Run_id}.csv"
         return csv_file_name
             
     def serialize_data(self):
@@ -92,6 +104,15 @@ class serialize_data:
                                 row.extend([vals.get('KBIn','')])
                         elif node_type == 'receiving_nodes':
                             row.extend([vals.get('KBIn','')])
+                        elif node_type == 'input_nodes':
+                            row.extend([vals.get('KBOut','')])
+                        elif node_type == 'output_nodes':
+                            row.extend([vals.get('KBIn','')])
+                        elif node_type == 'central_manager':
+                            row.extend([
+                                    vals.get('KBIn'),
+                                    vals.get('KBOut')
+                                ])
                     writer.writerow(row)
         
     def get_csv_file_name_cpu_usages(self, node_type):
@@ -102,6 +123,12 @@ class serialize_data:
             path = os.path.join(dir,'collectl/data/cpu_usages/build_nodes')
         elif node_type == 'receiving_nodes':
             path = os.path.join(dir,'collectl/data/cpu_usages/receiving_nodes')
+        elif node_type == 'input_nodes':
+            path = os.path.join(dir,'collectl/data/cpu_usages/timeslice_forwarding/input_nodes')
+        elif node_type == 'output_nodes':
+            path = os.path.join(dir,'collectl/data/cpu_usages/timeslice_forwarding/output_nodes')
+        elif node_type == 'central_manager':
+            path = os.path.join(dir,'collectl/data/cpu_usages/timeslice_forwarding/central_manager')
         if not os.path.exists(path):
             os.makedirs(path)
         path = path + '/'
@@ -113,6 +140,12 @@ class serialize_data:
             csv_file_name = f"{path}/cpu_usages_build_nodes_{Run_id}.csv"
         elif node_type == "receiving_nodes":
             csv_file_name = f"{path}/cpu_usages_receiving_nodes_{Run_id}.csv"
+        elif node_type == 'input_nodes':
+            csv_file_name = f"{path}/cpu_usages_input_nodes_{Run_id}.csv"
+        elif node_type == 'output_nodes':
+            csv_file_name = f"{path}/cpu_usages_output_nodes_{Run_id}.csv"
+        elif node_type == 'central_manager':
+            csv_file_name = f"{path}/cpu_usages_central_manager_{Run_id}.csv"
         return csv_file_name
     
     def serialize_cpu_usage(self):
@@ -150,9 +183,8 @@ class serialize_data:
                 
 class deserialize_data:
     
-    def __init__(self,file_name, timeslice_forwarding_activated):
-        
-        self.timeslice_forwarding_activated = timeslice_forwarding_activated
+    def __init__(self,file_name,mode):
+        self.mode = mode
         self.file_name = file_name
         self.data_rate = {}
         self.cpu_usage = {}
@@ -166,6 +198,13 @@ class deserialize_data:
             path = os.path.join(dir,'collectl/data/data_rates/build_nodes')
         elif node_type == 'receiving_nodes':
             path = os.path.join(dir,'collectl/data/data_rates/receiving_nodes')
+        
+        elif node_type == 'input_nodes':
+            path = os.path.join(dir,'collectl/data/data_rates/timeslice_forwarding/input_nodes')
+        elif node_type == 'output_nodes':
+            path = os.path.join(dir,'collectl/data/data_rates/timeslice_forwarding/output_nodes')
+        elif node_type == 'central_manager':
+            path = os.path.join(dir,'collectl/data/data_rates/timeslice_forwarding/central_manager')
         if not os.path.exists(path):
             os.makedirs(path)
         path = path + '/'
@@ -177,21 +216,36 @@ class deserialize_data:
             csv_file_name = f"{path}/data_rates_build_nodes_{Run_id}.csv"
         elif node_type == "receiving_nodes":
             csv_file_name = f"{path}/data_rates_receiving_nodes_{Run_id}.csv"
+        elif node_type == 'input_nodes':
+            csv_file_name = f"{path}/data_rates_input_nodes_{Run_id}.csv"
+        elif node_type == 'output_nodes':
+            csv_file_name = f"{path}/data_rates_output_nodes_{Run_id}.csv"
+        elif node_type == 'central_manager':
+            csv_file_name = f"{path}/data_rates_central_manager_{Run_id}.csv"
         return csv_file_name
     
     
     def deserialize_data(self):
-        node_types = ['entry_nodes', 'build_nodes']
-        if self.timeslice_forwarding_activated:
+        node_types = []
+        if "flesnet" in self.mode:
+            node_types.append('entry_nodes')
+            node_types.append('build_nodes')
+        if "timeslice_forwarding" in self.mode:
             node_types.append('receiving_nodes')
+        if "ZIB_timeslice_forwarding" in self.mode:
+            if not "flesnet" in self.mode:
+                node_types.append('input_nodes')
+            node_types.append('output_nodes')
+            node_types.append('central_manager')
         for node_type in node_types:
+            print(node_type)
             csv_file_name = self.get_csv_file_name_data_rates(node_type)
             data_dict = {}
             with open(csv_file_name, 'r', newline='') as csvfile:
                 reader = csv.reader(csvfile)
                 first_header = next(reader)
                 keys = [key for key in first_header if key != '' and key != 'timestamps']
-                if node_type == 'build_nodes' and self.timeslice_forwarding_activated:
+                if node_type == 'build_nodes' and ("timeslice_forwarding" in self.mode or "ZIB_timeslice_forwarding" in self.mode):
                     second_header = next(reader)
                 for row in reader:
                     vals = ''
@@ -204,8 +258,7 @@ class deserialize_data:
                             timestamp = datetime.fromtimestamp(float(timestamp_str))
                         except ValueError:
                             raise ValueError(f"Unrecognized timestamp format: {timestamp_str}")
-                    if node_type == 'build_nodes' and self.timeslice_forwarding_activated:
-                        #print('test')
+                    if (node_type == 'build_nodes' and ("timeslice_forwarding" in self.mode or "ZIB_timeslice_forwarding" in self.mode)) or node_type == 'central_manager':
                         for i, node in enumerate(keys):
                             idx = 1 + i * 2  
                             vals = row[idx:idx+2]
@@ -220,7 +273,7 @@ class deserialize_data:
                             if node not in data_dict:
                                 data_dict[node] = {}
                             data_dict[node][timestamp] = data_dict_tmp
-                    elif node_type =='entry_nodes':
+                    elif node_type =='entry_nodes' or node_type == 'input_nodes':
                         for i, node in enumerate(keys):
                             idx = 1 + i
                             vals = row[idx]
@@ -231,7 +284,7 @@ class deserialize_data:
                                 if node not in data_dict:
                                     data_dict[node] = {}
                                 data_dict[node][timestamp] = data_dict_tmp
-                    elif node_type == 'receiving_nodes' or node_type =='build_nodes':
+                    elif node_type == 'receiving_nodes' or node_type =='build_nodes' or node_type == 'output_nodes':
                         for i, node in enumerate(keys):
                             idx = 1 + i
                             vals = row[idx]
@@ -242,8 +295,6 @@ class deserialize_data:
                                 if node not in data_dict:
                                     data_dict[node] = {}
                                 data_dict[node][timestamp] = data_dict_tmp
-                    
-                
                 
                 self.data_rate[node_type] = data_dict
                 
@@ -256,6 +307,12 @@ class deserialize_data:
             path = os.path.join(dir,'collectl/data/cpu_usages/build_nodes')
         elif node_type == 'receiving_nodes':
             path = os.path.join(dir,'collectl/data/cpu_usages/receiving_nodes')
+        elif node_type == 'input_nodes':
+            path = os.path.join(dir,'collectl/data/cpu_usages/timeslice_forwarding/input_nodes')
+        elif node_type == 'output_nodes':
+            path = os.path.join(dir,'collectl/data/cpu_usages/timeslice_forwarding/output_nodes')
+        elif node_type == 'central_manager':
+            path = os.path.join(dir,'collectl/data/cpu_usages/timeslice_forwarding/central_manager')
         if not os.path.exists(path):
             os.makedirs(path)
         path = path + '/'
@@ -267,6 +324,12 @@ class deserialize_data:
             csv_file_name = f"{path}/cpu_usages_build_nodes_{Run_id}.csv"
         elif node_type == "receiving_nodes":
             csv_file_name = f"{path}/cpu_usages_receiving_nodes_{Run_id}.csv"
+        elif node_type == 'input_nodes':
+            csv_file_name = f"{path}/cpu_usages_input_nodes_{Run_id}.csv"
+        elif node_type == 'output_nodes':
+            csv_file_name = f"{path}/cpu_usages_output_nodes_{Run_id}.csv"
+        elif node_type == 'central_manager':
+            csv_file_name = f"{path}/cpu_usages_central_manager_{Run_id}.csv"    
         return csv_file_name
 
     def auto_cast_number(self,s):
@@ -279,9 +342,17 @@ class deserialize_data:
             raise ValueError(f"'{s}' is not a valid number")
     #KeyErrors for more then one node. Debug that 
     def deserialize_cpu_usage(self):
-        node_types = ['entry_nodes', 'build_nodes']
-        if self.timeslice_forwarding_activated:
+        node_types = []
+        if "flesnet" in self.mode:
+            node_types.append('entry_nodes')
+            node_types.append('build_nodes')
+        if "timeslice_forwarding" in self.mode:
             node_types.append('receiving_nodes')
+        if "ZIB_timeslice_forwarding" in self.mode:
+            if not "flesnet" in self.mode:
+                node_types.append('input_nodes')
+            node_types.append('output_nodes')
+            node_types.append('central_manager')
         for node_type in node_types:
             csv_file_name = self.get_csv_file_name_cpu_usages(node_type)
             cpu_usage = {}

@@ -13,8 +13,9 @@
 | use another command to kill tsclient etc. | $${\color{blue}Canceled}$$ |
 | defractor and clean up central manager | $${\color{green}Done}$$ |
 | make ./exec.sh new | $${\color{green}Done}$$ |
-| benchmark evaluation and logging for timeslice-forwarding | $${\color{yellow}In \space progress}$$ for next TODOs look at the code itself |
-| clean up ./execution_flesctrl | $${\color{red}Open}$$
+| benchmark evaluation and logging for timeslice-forwarding |  $${\color{green} Done }$$ |
+| clean up ./execution_flesctrl | $${\color{green} Done }$$ |
+| implement timeslice_forwarding for super nodes | $${\color{red} Open } $$ |
 | make that archive-validator can read tsas from shm | $${\color{red}Open}$$ |
 | create script to check timeslices via validator | $${\color{red}Open}$$ |
 | make tsclient implementation independent of flesnet like ts-forwarding | $${\color{red}Open}$$ |

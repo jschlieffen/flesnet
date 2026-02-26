@@ -144,6 +144,7 @@ class Params:
         self.activate_timesliceforwarding = self.get_value('mode', 'GSI_Timesliceforwarding','int', True)
         self.ZIB_timesliceforwarding = self.get_value('mode', 'ZIB_Timesliceforwarding','int',True)
         self.use_flesnet = self.get_value('mode','use_flesnet' ,'int', True)
+        print(self.use_flesnet)
     
     def get_kill_par(self):
         self.kill_nodes = self.get_value('robustness_test', 'kill_nodes_during_execution', 'int',self.kill_nodes, required=False)

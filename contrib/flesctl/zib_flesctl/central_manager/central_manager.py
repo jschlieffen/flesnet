@@ -71,6 +71,7 @@ def infiniband_ip(node_id):
     except subprocess.CalledProcessError as e:
         logger.error(f'ERROR: {e} Error occurred at reading ips')
         sys.exit(1)
+    #print(stdout)
     match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
     content = match.group(1)
     match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)

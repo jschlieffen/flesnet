@@ -11,7 +11,7 @@ function execute_iteration() {
     cd "benchmark_eval"
     python3 $benchmark_eval $Logfile --collectl_used --mode='all'
     cd ..
-    #create_output_folder $Logfile 1
+    create_output_folder $Logfile 1
 }
 
 function create_output_folder() {
@@ -37,6 +37,7 @@ function create_output_folder() {
 
     data_folder="benchmark_eval/data"
     plot_folder="benchmark_eval/plots"
+    collectl_folder="benchmark_eval/collectl"
     logfolder="logs"
 
     cp -r $data_folder $foldername
@@ -45,9 +46,9 @@ function create_output_folder() {
 
     cp -r $logfolder $foldername
     
-    #cp -r collectl $foldername
+    cp -r $collectl_folder $foldername
 
-    cp -r tmp $foldername
+    #cp -r tmp $foldername
 
     if [ $delete_folder_after_cp -eq 1 ]; then
         rm -rf $data_folder
@@ -56,9 +57,7 @@ function create_output_folder() {
 
         rm -rf $logfolder
     	
-        	rm -rf collectl
-    	
-	rm -rf tmp
+        rm -rf $collectl_folder	
 
 	create_folders
     fi
@@ -80,7 +79,24 @@ function create_folders() {
 
     mkdir logs/collectl/tsclient
 
-    mkdir tmp
+    mkdir logs/collectl/timeslice_forwarding
+    
+    mkdir logs/collectl/timeslice_forwarding/central_manager
+
+    mkdir logs/collectl/timeslice_forwarding/input_nodes
+
+    mkdir logs/collectl/timeslice_forwarding/output_nodes
+
+    mkdir logs/timeslice_forwarding 
+
+    mkdir logs/timeslice_forwarding/central_manager
+
+    mkdir logs/timeslice_forwarding/input_nodes
+
+    mkdir logs/timeslice_forwarding/output_nodes
+
+    mkdir logs/timeslice_forwarding/tsclient
+
 }
 
 

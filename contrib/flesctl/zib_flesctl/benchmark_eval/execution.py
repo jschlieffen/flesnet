@@ -300,18 +300,18 @@ class execution:
                 Logfile_reader_cls.extract_cpu_usage()
                 self.data_rates_collectl['input_nodes'][f"input_nodes_{input_node[0]}"] = Logfile_reader_cls.data_rates
                 self.cpu_usage_collectl['input_nodes'][f"input_nodes_{input_node[0]}"] = Logfile_reader_cls.cpu_usage
-            for output_node in self.output_nodes:
-                Logfile_name = f"../logs/collectl/timeslice_forwarding/output_nodes/output_node_{output_node[0]}.csv"
-                Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
-                Logfile_reader_cls = CLR.collectl_reader(f'output_node_{output_node[0]}',Logfile_name, Logfile_name_cpu, 'output_node', self.mode_flesctrl)
-                if self.infiniband_used:
-                    Logfile_reader_cls.extract_infiniband_usage()
-                else:
-                    Logfile_reader_cls.extract_ethernet_usage()
-                Logfile_reader_cls.extract_cpu_usage()
-                self.data_rates_collectl['output_nodes'][f"output_nodes_{output_node[0]}"] = Logfile_reader_cls.data_rates
-                self.cpu_usage_collectl['output_nodes'][f"output_nodes_{output_node[0]}"] = Logfile_reader_cls.cpu_usage
-                
+        for output_node in self.output_nodes:
+            Logfile_name = f"../logs/collectl/timeslice_forwarding/output_nodes/output_node_{output_node[0]}.csv"
+            Logfile_name_cpu = Logfile_name.replace('.csv', '_cpu_usage.csv')
+            Logfile_reader_cls = CLR.collectl_reader(f'output_node_{output_node[0]}',Logfile_name, Logfile_name_cpu, 'output_node', self.mode_flesctrl)
+            if self.infiniband_used:
+                Logfile_reader_cls.extract_infiniband_usage()
+            else:
+                Logfile_reader_cls.extract_ethernet_usage()
+            Logfile_reader_cls.extract_cpu_usage()
+            self.data_rates_collectl['output_nodes'][f"output_nodes_{output_node[0]}"] = Logfile_reader_cls.data_rates
+            self.cpu_usage_collectl['output_nodes'][f"output_nodes_{output_node[0]}"] = Logfile_reader_cls.cpu_usage
+            
     def serialize_data_rates(self):
         Logfile_serializer_entry_nodes = LH.serialize_data("e",self.data_rates_entry_nodes, self.shm_usages_entry_nodes, self.flesctl_logfile)
         Logfile_serializer_entry_nodes.serialize_data_rates()
@@ -324,7 +324,8 @@ class execution:
         
     
     def serialize_data_rates_collectl(self):
-        Logfile_serializer = CLH.serialize_data(self.data_rates_collectl, self.cpu_usage_collectl, self.flesctl_logfile, self.timeslice_forwarding_activated)
+        mode = "timeslice_forwarding" in self.mode_flesctrl or "ZIB_timeslice_forwarding" in self.mode_flesctrl 
+        Logfile_serializer = CLH.serialize_data(self.data_rates_collectl, self.cpu_usage_collectl, self.flesctl_logfile, mode)
         Logfile_serializer.serialize_data()
         Logfile_serializer.serialize_cpu_usage()
     
@@ -342,7 +343,7 @@ class execution:
         self.shm_usages_build_nodes = deserialzer_build_nodes.shm_usage
     
     def deserialize_data_collectl(self):
-        Logfile_deserializer = CLH.deserialize_data(self.flesctl_logfile, self.timeslice_forwarding_activated)
+        Logfile_deserializer = CLH.deserialize_data(self.flesctl_logfile, self.mode_flesctrl)
         Logfile_deserializer.deserialize_data()
         Logfile_deserializer.deserialize_cpu_usage()
         self.data_rates_collectl = Logfile_deserializer.data_rate
@@ -410,7 +411,7 @@ class execution:
 
     def check_deserialization_collectl(self):
         self.serialize_data_rates_collectl()
-        Logfile_deserializer = CLH.deserialize_data(self.flesctl_logfile, self.timeslice_forwarding_activated)
+        Logfile_deserializer = CLH.deserialize_data(self.flesctl_logfile, self.mode_flesctrl)
         Logfile_deserializer.deserialize_data()
         Logfile_deserializer.deserialize_cpu_usage()
         data_rates = Logfile_deserializer.data_rate
@@ -424,7 +425,7 @@ class execution:
                 logger.success('serialization process succeeded')
             else:
                 logger.error('serialization process not succeeded')
-                print(self.data_rates_collectl)
+                #print(self.data_rates_collectl)
                 print(data_rates)
                 print(diff)
             #print(diff)
@@ -535,11 +536,11 @@ def validate_params(logfile,modes,verbose):
         if 'all' in modes:
             #tmp change, reverse that shit
             if 'prev_run' in modes:
-                #modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots', 'prev_run']
-                modes = ['flesctrl_logfile','create_plots', 'prev_run']
+                modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots', 'prev_run']
+                #modes = ['flesctrl_logfile','create_plots', 'prev_run']
             else:
-                #modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots']
-                modes = ['flesctrl_logfile','create_plots']
+                modes = ['flesctrl_logfile','serialization', 'check_serialization','create_plots']
+                #modes = ['flesctrl_logfile','create_plots']
             break
         elif mode not in valid_modes:
             logger.critical('Unknown mode')
