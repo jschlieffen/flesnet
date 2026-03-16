@@ -48,7 +48,8 @@ class Build_nodes:
             "use_collectl",
             "desc_size",
             "data_size",
-            "ZIB_timesliceforwarding"
+            "ZIB_timesliceforwarding", 
+            "activate_timesliceforwarding"
         ]
         with open('tmp/build_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
@@ -70,7 +71,10 @@ class Build_nodes:
         for node in self.node_list.keys():
             logger.info(f'start build node: {node}')
             logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (node)
-            logfile_tf = 'logs/timeslice_forwarding/input_nodes/input_node_%s.log' % (node)
+            if self.Par_.ZIB_timesliceforwarding:
+                logfile_tf = 'logs/timeslice_forwarding/input_nodes/input_node_%s.log' % (node)
+            else:
+                logfile_tf = 'logs/flesnet/tsclient/sender_node_%s.log' % (node)
             logfile_collectl = 'logs/collectl/build_nodes/build_node_%s.csv' % (node)
             command = (
                 'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'

@@ -145,9 +145,18 @@ def start_timeslice_forwarded_input(logfile_tf,build_node_idx,use_infiniband):
     result_tf_input = subprocess.Popen(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
     #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     return result_tf_input
+
+def start_timeslice_forwarded_input_GSI(logfile_tf, build_node_idx, use_infiniband):
+    logfile_collectl = "dwdw"
+    input_file = "efefd"
+    node_ip = get_node_ip(use_infiniband)
+    tf_input_command = "nodes/./timeslice_forwarding_sender.py %s %s %s %s %s" % (input_file,logfile_tf, build_node_idx, logfile_collectl, node_ip)
+    result_tf_input = subprocess.Popen(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
+    #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    return result_tf_input
     
 def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-                transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl, desc_size,data_size,logfile_tf, use_tf_zib):
+                transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl, desc_size,data_size,logfile_tf, use_tf_zib, use_tf_GSI):
     ip_string, shm_string = calc_str(ip, build_nodes_ip, num_build_nodes,desc_size,data_size)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
@@ -192,6 +201,8 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
     print(use_tf_zib)
     if use_tf_zib == 1:
         result_tf_input = start_timeslice_forwarded_input(logfile_tf, build_node_idx, use_infiniband)
+    elif use_tf_GSI == 1:
+        result_tf_input = start_timeslice_forwarded_input_GSI(logfile_tf, build_node_idx, use_infiniband)
     while True:
         #print(msg)
         time.sleep(0.5)
@@ -240,7 +251,7 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
         thread_collectl.join()
     result_flesnet.terminate()
     result_flesnet.wait()
-    if use_tf_zib == 1:
+    if use_tf_zib == 1 or use_tf_GSI == 1:
         stdout, stderr = result_tf_input.communicate()
         print(f"Output tf input: {stdout}")
         print(f"Error tf input: {stderr}")
@@ -278,4 +289,4 @@ logfile_collectl = arg['<logfile_collectl>']
 logfile_tf = arg["<logfile_tf>"]
 
 build_nodes(ip, build_nodes_ip,logfile, num_buildnodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
-            transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl,desc_size,data_size, logfile_tf, ZIB_timesliceforwarding)
+            transport_method, customize_string, use_infiniband, use_collectl, logfile_collectl,desc_size,data_size, logfile_tf, ZIB_timesliceforwarding, activate_timesliceforwarding)

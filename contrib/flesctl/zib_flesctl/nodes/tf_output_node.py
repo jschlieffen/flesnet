@@ -103,7 +103,7 @@ def start_tsclient(path,shm_str,node_name,write_data_to_file,analyze_data, logfi
     if analyze_data:
         str_ += "-a"
     elif write_data_to_file:
-        str_ += f"-o tsa_files/output_node_{node_name}"
+        str_ += f"-o file:tsa_files/output_node_{node_name}"
     tsclient_command = f"{path}./tsclient -i shm:{shm_str} {str_}"
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     #result_tsclient.wait()

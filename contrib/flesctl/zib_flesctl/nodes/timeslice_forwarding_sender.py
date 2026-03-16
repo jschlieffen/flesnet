@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-#Created on Wed May 14 17:14:05 2025
+#Created on Wed Mar 11 16:01:17 2026
 
 #@author: jschlieffen
 
-"""
-Usage: timeslice_forwarding.py <logfile> <build_node_ip> <logfile_collectl>
 
-Arguments:
-    
+"""
+Usage: timeslice_forwarding_sender.py <input_file> <logfile> <input_node_idx> <logfile_collectl> <input_node_ip>
+
+Arguments: 
+    <input_file> The .tsa input file
     <logfile> The Logfile to use
-    <build_node_ip> The ip address to use
+    <input_node_idx> The index of the input node given by flesctrl
     <logfile_collectl> The csv-file which collectl should use
+    <input_node_ip> The input node ip 
 """
 
 import subprocess
@@ -20,31 +22,19 @@ import time
 import docopt
 import sys
 import os
-import threading 
+import threading
 import queue
 import signal
+import re
 
-# =============================================================================
-# This file starts the tsclient on a given node to a given build node 
-#   srun nodelist=node timeslice_forwarding.py -N 1 <params>  
-# After the tsclient is started the program waits for a signal from the 
-# central manager. If it receives a signal it will shut down the tsclient
-# NOTE: If the program does not terminate correctly, it completly suffices 
-#       to just kill the srun process. One does not have to kill mstool and 
-#       flesnet manually
-# =============================================================================
-#may be extended
-def calc_ip_str(ip,port,write_data_to_file,path,analyze_data,node_name):
-    ip_string = f"tcp://{ip}:{port}"
-    if write_data_to_file == 0:
-        output_file_string = ""
+
+def calc_str(input_file, port, use_flesnet, input_node_idx, input_node_ip):
+    if use_flesnet:
+        input_str = f"-i shm:fles_out_b{input_node_idx}"
     else:
-        output_file_string = f"-o file:tsa_files/output_node_{node_name}"
-    if analyze_data == 1:
-        analyze_data_string = "-a"
-    else:
-        analyze_data_string = ""
-    return ip_string,output_file_string,analyze_data_string
+        input_str = f"-i file:{input_file}"
+    ip_str = f"-o tcp://*:{port}"
+    return input_str, ip_str
 
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == 1:
@@ -97,18 +87,21 @@ def get_alloc_cpus(filename):
 
 def write_response(node_name, msg):
     with open("tmp/nodes_response.txt", "w") as f:
-        f.write(f"Receiver {node_name}: done {msg}")
+        f.write(f"Sender {node_name}: done {msg}")
         f.flush()
         os.fsync(f.fileno())
 
-def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_data_to_file, analyze_data, use_infiniband, use_collectl, logfile_collectl):
+
+def input_node(port, input_node_idx, use_collectl, path, input_file, use_flesnet , logfile, use_dtsa_files, logfile_collectl, use_grafana, influx_token, influx_node_ip, use_infiniband, input_node_ip):
+    input_str, ip_str = calc_str(input_file, port, use_flesnet, input_node_idx, input_node_ip)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
-    ip_string,output_file_string,analyze_data_string = calc_ip_str(ip, port, write_data_to_file, path, analyze_data,node_name)
     if use_collectl == 1:
-        basename = os.path.splitext(os.path.basename(logfile_collectl))[0]
+        print(use_collectl)
+        print(logfile_collectl)
+        basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
         get_alloc_cpus(filename_cpus)
-        #+result_collectl = start_collectl(use_infiniband, logfile_collectl)
+        #result_collectl = start_collectl(use_infiniband, logfile_collectl)
         #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
         collectl_communicater = queue.Queue()
         thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
@@ -117,20 +110,21 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
     grafana_string = ''
     if use_grafana == 1:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '-m influx2:%s:8086:tsclient_status: ' % (influx_node_ip)
-    tsclient_commands = (
-            '%s./tsclient -l 1 -L %s -i %s %s %s %s > /dev/null 2>&1 &'
-            % (path,logfile,ip_string, analyze_data_string, output_file_string, grafana_string)
-        )
-    print(tsclient_commands)
-    result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
-    input_data = ''
-    """
-    while input_data == '':
-        input_data = sys.stdin.read().strip()
-    """
-    msg,action = "", ""
+        grafana_string = '-m influx2:%s:8086:tsclient_status:' % (influx_node_ip) 
+    D_flag = ""
+    if use_dtsa_files == 1:
+        D_flag = "-D 1"
+    input_node_commands = (
+        '%s./tsclient -L %s %s %s %s %s' 
+        % (path,logfile,input_str, ip_str, grafana_string, D_flag)
+    )
+    print(input_node_commands)
+    result_input_node = subprocess.Popen(input_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
+    msg,action = "",""
     prev_action = ""
+    with open("test_nodename.txt","w") as nodename_test:
+        nodename_test.write(f"node name: {node_name}")
+        nodename_test.close()
     while True:
         time.sleep(0.5)
         try:
@@ -141,45 +135,42 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
 
         except FileNotFoundError:
             msg = ""
-        #print(msg)
-        #print(node_name)
-        if f"Receiver {node_name}" in msg:
-            #print('test')
-            #print(action)
+        with open("test_msg.txt" , "w") as msg_test:
+            string_vergleich = f"Sender {node_name}" in msg
+            msg_test.write(f"msg: {msg} \n erwartet: Sender {node_name} \n string vergleich {string_vergleich} \n")
+            msg_test.close()
+        if f"Sender {node_name}" in msg:
             node, action = msg.split(": ")
-            #print(node)
-            #print('action ' + action)
-            if action == prev_action: 
+            with open ("test_action.txt" ,"w") as action_test:
+                action_test.write("test action {action}")
+                action_test.close()
+            if action == prev_action:
                 continue
             if action == "kill":
                 print('test kill')
-                #result_flesnet.terminate()
-                #result_flesnet.wait()
-                os.killpg(os.getpgid(result_tsclient.pid), signal.SIGKILL)
+                os.killpg(os.getpgid(result_input_node.pid), signal.SIGKILL)
                 print('test kill 1')
-                write_response(node_name, "killing")
+                write_response(node_name, 'killing')
                 prev_action = action
             elif action == "revive":
-                result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
-                write_response(node_name, "reviving")
+                result_input_node = subprocess.Popen(input_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
+                write_response(node_name,'reviving')
                 prev_action = action
             elif action == "stop":
+
                 print('test action')
                 break
     if use_collectl == 1:
-        #result_collectl.terminate()
-        #result_collectl.wait()
-        #result_collectl_cpu.terminate()
-        #result_collectl_cpu.wait()
         collectl_communicater.put("exit")
         thread_collectl.join()
-    result_tsclient.terminate()
-    result_tsclient.wait()
-    
+    result_input_node.terminate()
+    result_input_node.wait()
+    write_response(node_name, "terminating")
 
+    
 params = {}
 #print('test12')
-with open('tmp/receiving_nodes_params.txt', 'r') as f:
+with open('tmp/sender_nodes_params.txt', 'r') as f:
     print('test1')
     for line in f:
         if ':' in line:
@@ -195,15 +186,17 @@ with open('tmp/receiving_nodes_params.txt', 'r') as f:
                 except ValueError:
                     pass
             params[key] = value
+    f.close()
 
-#print(params)
+print(params)
 for key, value in params.items():
     globals()[key] = value
     
 arg = docopt.docopt(__doc__, version='0.2')
-
-ip = arg["<build_node_ip>"]
+input_file = arg["<input_file>"]
 logfile = arg["<logfile>"]
-logfile_collectl = arg['<logfile_collectl>']
+input_node_idx = arg["<input_node_idx>"]
+logfile_collectl = arg["<logfile_collectl>"]
+input_node_ip = arg["<input_node_ip>"]
 
-main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_data_to_file, analyze_data, use_infiniband, use_collectl, logfile_collectl)
+input_node(port, input_node_idx, use_collectl, path, input_file, use_flesnet, logfile, use_dtsa_files, logfile_collectl, use_grafana, influx_token, influx_node_ip, use_infiniband, input_node_ip)

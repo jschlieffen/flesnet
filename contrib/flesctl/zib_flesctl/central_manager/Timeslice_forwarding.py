@@ -15,11 +15,14 @@ from logging_lib.log_msg import *
 #TODO: make port depended on node
 class Timeslice_forwarding:
     
-    def __init__(self, rec2build, parameters):    
+    def __init__(self, sender,receiver, parameters):    
         super().__init__()
-        self.rec2build = rec2build
+        #self.rec2build = rec2build
+        self.sender = sender
+        self.receiver = receiver
         self.Par_ = parameters
         self.pids = {}
+        self.pids_sender = {}
 
 
     def write_Params(self):
@@ -40,36 +43,95 @@ class Timeslice_forwarding:
                 Params_file.write(f"{name}: {value} \n")
         Params_file.close()   
         
+    def write_Params_Sender(self):
+        param_names = [
+                "influx_node_ip",
+                "influx_token",
+                "use_grafana",
+                "path",
+                "port",
+                "use_collectl",
+                "use_flesnet",
+                "use_dtsa_files",
+                "use_infiniband"
+        ]
+        #print(self.Par_.use_flesnet)
+        with open('tmp/sender_nodes_params.txt', 'w') as Params_file:
+            if self.Par_.use_flesnet:
+                param_names.remove("use_collectl")
+                Params_file.write("use_collectl: 0 \n")
+                param_names.remove('use_dtsa_files')
+                Params_file.write("use_dtsa_files: 0 \n")
+            for name in param_names:
+                value = getattr(self.Par_, name, None)
+                Params_file.write(f"{name}: {value} \n")
+
+        Params_file.close()   
+        
+        
     def start_receivers(self):
         self.write_Params()
         file = 'nodes/timeslice_forwarding.py'
         node_cnt = 0
-        for receiving_node,build_node in self.rec2build:
-            logger.info(f"start timeslice forwarding node {receiving_node} for build node {build_node['node']}")
-            logfile = 'logs/flesnet/tsclient/receiving_node_%s.log' % (receiving_node)
+        for node_id,node in self.receiver.items():
+            sender_node = node['sender_node']
+            logger.info(f"start timeslice forwarding node {node_id} for sender node {sender_node['node']}")
+            logfile = 'logs/flesnet/tsclient/receiving_node_%s.log' % (node_id)
             #print(build_node)
-            logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.csv' % (receiving_node)
+            logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.csv' % (node_id)
+            
             if self.Par_.use_infiniband:
-                build_node_ip = build_node['inf_ip']
+                sender_node_ip = sender_node['inf_ip']
             else:
-                build_node_ip = build_node['eth_ip']
+                sender_node_ip = sender_node['eth_ip']
             command = (
                 'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s'
-                % (receiving_node, self.Par_.num_cpus ,file,logfile, build_node_ip, logfile_collectl)
+                % (node_id, self.Par_.num_cpus ,file,logfile, sender_node_ip, logfile_collectl)
             )
             try:
                 #print(command)
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
-                logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
+                logger.error(f'ERROR {e} occurried in receiver node: {node_id}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
-            self.pids[receiving_node] = result
+            self.pids[node_id] = result
             logger.status('start successful')
             node_cnt += 1
             
         logger.success('start of timeslice receivers successful')
         return None
+    
+    def start_Senders(self):
+        self.write_Params_Sender()
+        file ='nodes/timeslice_forwarding_sender.py'
+        node_cnt = 0
+        for node_id,node in self.sender.items():
+            input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(node_cnt))), None)
+            print(input_file)
+            if input_file is None:
+                input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
+            logger.info(f"start timeslice sender: {node_id}")
+            logfile = 'logs/flesnet/tsclient/sender_node_%s.log' % node_id
+            logfile_collectl = 'logs/collectl/tsclient/sender_node_%s.csv' % node_id
+            print(logfile)
+            command = (
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s' 
+                % (node_id,self.Par_.num_cpus, file, input_file, logfile, node_cnt, logfile_collectl)
+            )
+            try: 
+                result = subprocess.Popen(command,shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            except subprocess.CalledProcessError as e:
+                logger.error(f'ERROR {e} occurried in GSI timesliceforwarding sender node: {node_id}. Shutdown flesnet')
+                return 'shutdown'
+            time.sleep(1)
+            self.pids_sender[node_id] = result
+            logger.status('start successful')
+            node_cnt += 1
+        logger.success('start of timeslice sender successful')
+        return None
+    
+    
     
     def kill_process(self, kill_node):
         logger.info(f"Killing Receiver node: {kill_node}")
@@ -87,8 +149,25 @@ class Timeslice_forwarding:
             time.sleep(0.5)
         logger.status(f"Receiver node: {kill_node} killed")
     
+    def kill_process_Sender(self, kill_node):
+        logger.info(f"Killing Sender node: {kill_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"Sender {kill_node}: kill")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"Sender {kill_node}: done killing":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.status(f"Receiver node: {kill_node} killed")
+        
+    
     def revieve_process(self, revive_node):
-        logger.info(f"revive Receiver node: {revive_node}")
+        logger.info(f"revieve Receiver node: {revive_node}")
         with open("tmp/central_manager.txt", "w") as f:
             f.write(f"Receiver {revive_node}: revive")
             f.flush()
@@ -101,10 +180,26 @@ class Timeslice_forwarding:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.status(f"Receiver node: {revive_node} revive")
+        logger.status(f"Receiver node: {revive_node} revieved")
         
+    def revieve_process(self,revive_node):
+        logger.info(f"revieve Sender node: {revive_node}")
+        with open("tmp/central_manager.txt", "w") as f:
+            f.write(f"Sender {revive_node}: revive")
+            f.flush()
+            os.fsync(f.fileno())
+        msg = ""
+        while msg != f"Sender {revive_node}: done revive":
+            try:
+                with open("tmp/nodes_response.txt", "r") as f:
+                    msg = f.read().strip()
+            except FileNotFoundError:
+                msg = ""
+            time.sleep(0.5)
+        logger.status(f"Sender node: {revive_node} revieved")
+    
     def stop_timeslice_forwarding(self):
-        for node, build_node in self.rec2build:
+        for node, node_appendix in self.receiver.items():
             logger.info(f"stopping Receiver node: {node}")
             with open("tmp/central_manager.txt", "w") as f:
                 f.write(f"Receiver {node}: stop")
@@ -113,3 +208,27 @@ class Timeslice_forwarding:
             stdout, stderr = self.pids[node].communicate()
             logger.debug(f"Output from receiver node: {node} \n {stdout}")
             logger.debug(f"Error from receiver node: {node} \n {stderr}")
+            
+    def stop_timeslice_forwarding_sender(self):
+        for node_id, node in self.sender.items():
+            logger.info(f"stopping Sender node: {node_id}")
+            with open("tmp/central_manager.txt", "w") as f:
+                f.write(f"Sender {node_id}: stop")
+                f.flush()
+                os.fsync(f.fileno())
+            if self.Par_.use_flesnet:
+                msg = ""
+                while msg != f"Sender {node_id}: done terminating":
+                    try:
+                        with open("tmp/nodes_response.txt", "r") as f:
+                            msg = f.read().strip()
+                    except FileNotFoundError:
+                        msg = ""
+                    time.sleep(0.5)
+                logger.debug(f"TF Sender node: {node_id} stopped. See build nodes for output")
+            #self.pids_sender[node_id].terminate()
+            else:
+                stdout, stderr = self.pids_sender[node_id].communicate()
+                logger.debug(f"Output from sender node: {node_id} \n {stdout}")
+                logger.debug(f"Error from sender node: {node_id} \n {stderr}")
+    

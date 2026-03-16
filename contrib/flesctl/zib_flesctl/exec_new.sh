@@ -3,6 +3,7 @@
 function set_general_params(){
     ENTRY_NODES_CNT=$(grep -E '^entry_nodes=' setup/config.cfg | cut -d'=' -f2)
     PROCESSING_NODES_CNT=$(grep -E '^build_nodes=' setup/config.cfg | cut -d'=' -f2)
+    RECEIVER_NODES_CNT=$(grep -E '^receiver_nodes=' setup/config.cfg | cut -d'=' -f2)
     TIME=$(grep -E '^time=' setup/config.cfg | cut -d'=' -f2)
     SET_NODE_LIST=$(grep -E '^set_node_list=' setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_NODES=$(grep -E '^exclude_nodes=' setup/config.cfg | cut -d'=' -f2)
@@ -18,7 +19,7 @@ function set_general_params(){
         ((NODES=NODES+ENTRY_NODES_CNT+PROCESSING_NODES_CNT))
     fi
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
-        ((NODES=NODES+PROCESSING_NODES_CNT))
+        ((NODES=NODES+2*RECEIVER_NODES_CNT))
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then 
         ((NODES=NODES+INPUT_NODES_CNT+OUTPUT_NODES_CNT+CENTRAL_MANAGER_CNT))
     fi

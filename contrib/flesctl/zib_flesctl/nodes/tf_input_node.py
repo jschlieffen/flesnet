@@ -151,7 +151,7 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files ,ts
             result_tsclient.wait()
             break
 
-def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl):
+def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl, logfile):
     print('input node path:', os.getcwd())
     str_,shm_str = calc_str(input_node_ip,port,cm_node_ip,input_node_idx)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
@@ -294,5 +294,5 @@ logfile_collectl = arg['<logfile_collectl>']
 logfile_tsclient = arg['<logfile_tsclient>']
 #customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
 
-input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl)
+input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl,logfile)
 

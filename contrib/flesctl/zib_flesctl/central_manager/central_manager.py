@@ -48,6 +48,18 @@ import numpy as np
 #        13. full test, that EVERYTHING works as intended
 # =============================================================================
 
+
+# =============================================================================
+# =============================================================================
+# # Left todo for timesliceforwarding:
+#   1. append for senders in central manager class Timesliceforwarding.py
+#   2. finish timeslice_forwarding_sender.py
+#   3. append supernodes and build nodes to new implementation
+#   4. robustness test for senders
+# =============================================================================
+# =============================================================================
+
+
 def ethernet_ip(node_id):
     command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
     try:
@@ -93,6 +105,8 @@ class execution:
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.overlap_nodes = {}
+        self.sender_nodes = {}
+        self.receiver_nodes = {}
         self.central_manager = {}
         self.input_nodes = {}
         self.output_nodes = {}
@@ -110,7 +124,8 @@ class execution:
         self.get_eth_ips()
         if self.Par_.activate_timesliceforwarding:
             self.rec2build = []
-            self.assemble_receiving_nodes2build_nodes()
+            #self.assemble_receiving_nodes2build_nodes()
+            self.assemble_GSI_timeslice_forwarding_nodes()
         if self.Par_.use_flesnet:
             self.entry_nodes_cls = en.Entry_nodes(self.entry_nodes, self.entry_nodes_ips, self.entry_nodes_eth_ips ,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
             self.build_nodes_cls = b.Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
@@ -119,7 +134,7 @@ class execution:
             self.ZIB_timeslice_forwarding_cls = ZIB_T.Timeslice_forwarding_ZIB(self.central_manager, self.central_manager_ips, self.central_manager_eth_ips, 
                                                                         self.output_nodes, self.input_nodes, self.Par_)
         if self.Par_.activate_timesliceforwarding:
-            self.timeslice_forwarding_cls = T.Timeslice_forwarding(self.rec2build, self.Par_)
+            self.timeslice_forwarding_cls = T.Timeslice_forwarding(self.sender_nodes, self.receiver_nodes, self.Par_)
             
             
     # =============================================================================
@@ -361,6 +376,95 @@ class execution:
             self.schedule_nodes_randomly(node_list_remaining, entry_nodes_cnt, build_nodes_cnt)
     
 
+    def assemble_GSI_timeslice_forwarding_nodes(self):
+        node_list = self.get_node_list()
+        unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
+
+        if self.Par_.use_flesnet:
+            self.sender_nodes = self.build_nodes 
+        else:
+             unused_nodes = self.assemble_GSI_timeslice_forwarding_sender_nodes(unused_nodes)   
+        self.assemble_GSI_timeslice_forwarding_receiver_nodes(unused_nodes)
+        print(self.sender_nodes)
+        print(self.receiver_nodes)
+        #sys.exit(1)
+                    
+    def assemble_GSI_timeslice_forwarding_sender_nodes(self,unused_nodes):
+        sender_cnt = 0
+        unused_nodes_iter = unused_nodes[ :]
+        if self.Par_.set_node_list:
+            for node in unused_nodes_iter:
+                if sender_cnt < self.Par_.num_receivers and node in self.Par_.sender_node_list:
+                    node_ip = infiniband_ip(node)
+                    node_eth_ip = ethernet_ip(node)
+                    time.sleep(1)
+                    self.sender_nodes[node] = {
+                        'node' : node,
+                        'sender_idx' : sender_cnt,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip}
+                    sender_cnt += 1
+                    unused_nodes.remove(node)
+        if sender_cnt < self.Par_.num_receivers:
+            logger.warning(f'The number of nodes assigned for the sender nodes does not match the number '
+                            f'of sender nodes. Expected {self.Par_.num_receivers}, got {sender_cnt}'
+                            f'Proceed by assembling the missing entry/build nodes randomly'
+                        )
+            unused_nodes_iter = unused_nodes[ :]
+            for node in unused_nodes_iter: 
+                if sender_cnt < self.Par_.num_receivers:
+                    node_ip = infiniband_ip(node)
+                    node_eth_ip = ethernet_ip(node)
+                    time.sleep(1)
+                    self.sender_nodes[node] = {
+                        'node' : node,
+                        'sender_idx' : sender_cnt,
+                        'inf_ip' : node_ip,
+                        'eth_ip' : node_eth_ip}
+                    sender_cnt += 1
+                    unused_nodes.remove(node)
+        return unused_nodes
+    
+    
+    def assemble_GSI_timeslice_forwarding_receiver_nodes(self,unused_nodes):
+        receiver_cnt = 0
+        unused_nodes_iter = unused_nodes [ :]
+        used_build_nodes = []
+        if self.Par_.set_node_list:
+            for node in unused_nodes_iter:
+                if node not in self.Par_.process_nodes_list or node in self.Par_.exclude_process_nodes:
+                    continue
+                idx = self.Par_.process_nodes_list.index(node)
+                if self.Par_.use_flesnet:    
+                    sender_node_id = self.Par_.build_nodes_list[idx]
+                    sender_node = self.sender_node_id[sender_node_id]
+                    used_build_nodes.append(node)
+                else:
+                    sender_node_id = self.sender_node_list[idx]
+                    sender_node = self.sender_node_id[sender_node_id]
+                self.receiver_nodes[node] = {
+                        'node' : rec_node,
+                        'sender_node' : node
+                    }
+                receiver_cnt += 1
+                unused_nodes.remove(node)
+        for node_id, node in self.sender_nodes.items():
+            rec_node = unused_nodes[receiver_cnt]
+            if rec_node not in self.Par_.exclude_process_nodes or node_id not in used_build_nodes:
+                self.receiver_nodes[rec_node] = {
+                        'node' : rec_node,
+                        'sender_node' : node
+                    }
+                receiver_cnt += 1
+                if receiver_cnt > len(unused_nodes):
+                    logger.critical(f'Could not assemble enough receiver nodes'
+                                    f'Expected: {self.Par_.num_buildnodes}, got: {len(self.rec2build)}')
+                    sys.exit(1)
+
+    
+    # =============================================================================
+    #  will be changed due to changes in the GSI Timeslice-forwarding structures   
+    # =============================================================================
     def assemble_receiving_nodes2build_nodes(self):
         node_list = self.get_node_list()
         unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
@@ -433,7 +537,7 @@ class execution:
                 node_eth_ip = ethernet_ip(node)
                 time.sleep(1)
                 self.central_manager[node] = {
-                        'node' : node,
+                        'node' : node, 
                         'cm_idx' : cm_nodes_cnt,
                         'inf_ip' : node_ip,
                         'eth_ip' : node_eth_ip
@@ -516,6 +620,12 @@ class execution:
             res = self.timeslice_forwarding_cls.start_receivers()
             if res == 'shutdown':
                 self.shutdown()
+            if not self.Par_.use_flesnet:
+                res = self.timeslice_forwarding_cls.start_Senders()
+                if res == 'shutdown':
+                    self.shutdown()
+            else:
+                self.timeslice_forwarding_cls.write_Params_Sender()
         elif self.Par_.ZIB_timesliceforwarding:
             res = self.ZIB_timeslice_forwarding_cls.start_cm()
 
@@ -544,6 +654,8 @@ class execution:
     def shutdown(self):
         if self.Par_.activate_timesliceforwarding:
             self.timeslice_forwarding_cls.stop_timeslice_forwarding()
+            if not self.Par_.use_flesnet:
+                self.timeslice_forwarding_cls.stop_timeslice_forwarding_sender()
         if self.Par_.ZIB_timesliceforawrding:
             self.ZIB_timeslice_forwarding_cls.start_cm()
             
@@ -792,6 +904,7 @@ class execution:
             self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
         elif self.Par_.activate_timesliceforwarding:
             self.timeslice_forwarding_cls.stop_timeslice_forwarding()
+            self.timeslice_forwarding_cls.stop_timeslice_forwarding_sender()
         if self.Par_.use_flesnet:
             if self.overlap_nodes:
                 self.super_nodes_cls.stop_flesnet()

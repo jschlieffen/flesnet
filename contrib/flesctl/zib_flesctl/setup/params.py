@@ -29,6 +29,7 @@ class Params:
     def __init__(self,config_file):
         self.num_entrynodes = 0
         self.num_buildnodes = 0
+        self.num_receivers = 0
         self.use_collectl = 0
         self.num_cpus = 2
         self.loglevel="DEBUG"
@@ -36,6 +37,7 @@ class Params:
         self.timer_for_kill = timedelta(minutes=1)
         self.num_entrynodes_kills = 1 
         self.num_buildnodes_kills = 1
+        self.num_sendernodes_kills = 1
         self.num_processnodes_kills = 1
         self.num_inputnodes_kills = 1
         self.num_cm_kills = 1
@@ -44,6 +46,7 @@ class Params:
         self.set_kill_list = 0
         self.entry_node_kill_list = []
         self.build_node_kill_list = []
+        self.sender_node_kill_list = []
         self.process_node_kill_list = []
         self.input_node_kill_list = []
         self.central_manager_kill_list = []
@@ -51,6 +54,7 @@ class Params:
         self.set_node_list=0
         self.entry_nodes_list=[]
         self.build_nodes_list=[]
+        self.sender_node_list=[]
         self.process_nodes_list=[]
         self.input_node_list=[]
         self.central_manager_list=[]
@@ -58,6 +62,7 @@ class Params:
         self.exclude_nodes=0
         self.exclude_entry_nodes=[]
         self.exclude_build_nodes=[]
+        self.exclude_sender_nodes=[]
         self.exclude_process_nodes=[]
         self.exclude_input_nodes=[]
         self.exclude_central_manager=[]
@@ -129,6 +134,7 @@ class Params:
     def get_num_nodes_par(self):
         self.num_entrynodes = self.get_value('Number_of_Nodes', 'entry_nodes', 'int', required=True)
         self.num_buildnodes = self.get_value('Number_of_Nodes', 'build_nodes', 'int', required=True)
+        self.num_receivers = self.get_value('Number_of_Nodes', 'receiver_nodes','int',required=True)
         self.num_central_manager = self.get_value('Number_of_Nodes', 'central_manager', 'int', True)
         self.num_input_nodes = self.get_value('Number_of_Nodes', 'input_nodes', 'int', True)
         self.num_output_nodes = self.get_value('Number_of_Nodes', 'output_nodes','int',True)
@@ -151,6 +157,7 @@ class Params:
         self.timer_for_kill = self.get_value('robustness_test', 'timer_for_kills', 'time', self.timer_for_kill, required=False)
         self.num_entrynodes_kills = self.get_value('robustness_test', 'num_entry_nodes_kills', 'int' , self.num_entrynodes_kills, required=False)
         self.num_buildnodes_kills = self.get_value('robustness_test', 'num_build_nodes_kills', 'int' , self.num_buildnodes_kills, required=False)
+        self.num_sendernodes_kills = self.get_value('robustness_test','num_sender_nodes_kills','int', self.num_sendernodes_kills, required=False)
         self.num_processnodes_kills = self.get_value('robustness_test', 'num_process_nodes_kills', 'int' , self.num_processnodes_kills, required=False)
         self.num_inputnodes_kills = self.get_value('robustness_test', 'num_input_nodes_kills','int',self.num_inputnodes_kills, required=False)
         self.num_cm_kills = self.get_value('robustness_test','num_central_manager_kills','int',self.num_cm_kills,required=False)
@@ -160,6 +167,7 @@ class Params:
         if self.set_kill_list:
             self.entry_node_kill_list = self.get_node_list('robustness_test', 'entry_node_kill_list', self.entry_node_kill_list, False)
             self.build_node_kill_list = self.get_node_list('robustness_test', 'build_node_kill_list', self.build_node_kill_list, False)
+            self.sender_node_kill_list = self.get_node_list('robustness_test', 'sender_node_kill_list', self.sender_node_kill_list, False)
             self.process_node_kill_list = self.get_node_list('robustness_test', 'process_node_kill_list', self.process_node_kill_list, False)
             self.input_node_kill_list = self.get_node_list('robustness_test','input_node_kill_list', self.input_node_kill_list, False)
             self.central_manager_kill_list = self.get_node_list('robustness_test','central_manager_kill_list', self.central_manager_kill_list, False)
@@ -170,6 +178,7 @@ class Params:
         self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
         self.entry_nodes_list = list(set(self.get_node_list('set_node_list', 'entry_nodes_list', self.entry_nodes_list, False)))
         self.build_nodes_list = list(set(self.get_node_list('set_node_list', 'build_nodes_list', self.build_nodes_list, False)))
+        self.sender_node_list = list(set(self.get_node_list('set_node_list','sender_nodes_list',self.sender_node_list,False)))
         self.process_nodes_list = list(set(self.get_node_list('set_node_list', 'process_nodes_list', self.process_nodes_list, False)))
         self.input_node_list = list(set(self.get_node_list('set_node_list','input_node_list',self.input_node_list,False)))
         self.central_manager_list = list(set(self.get_node_list('set_node_list','central_manager_node_list',self.central_manager_list,False)))
@@ -178,6 +187,7 @@ class Params:
         if self.exclude_nodes == 1:
             self.exclude_entry_nodes = self.get_node_list('set_node_list', 'exclude_entry_nodes', self.exclude_entry_nodes, False)
             self.exclude_build_nodes = self.get_node_list('set_node_list', 'exclude_build_nodes', self.exclude_build_nodes, False)
+            self.exclude_sender_nodes = self.get_node_list('set_node_list', 'exclude_sender_nodes', self.exclude_sender_nodes, False)
             self.exclude_process_nodes = self.get_node_list('set_node_list', 'exclude_process_nodes', self.exclude_process_nodes, False)
             self.exclude_input_nodes = self.get_node_list('set_node_list','exclude_input_nodes',self.exclude_input_nodes,False)
             self.exclude_central_manager = self.get_node_list('set_node_list','exclude_central_manager',self.exclude_central_manager,False)
@@ -291,7 +301,14 @@ class Params:
         node_list = []
         node_str = os.getenv(param)
         if node_str is None:
-            node_str = self.config.get(section,param)
+            if self.config.has_option(section, param):
+                node_str = self.config.get(section,param)
+            elif required:
+                logger.critical(f'required Param not set: {param}')
+                sys.exit(1)
+            else:
+                logger.warning(f'not required Param not set: {param}')
+                return var
         range_pattern = re.findall(r'(.*?)(\d+)-(\d+)', node_str)
         list_pattern = re.findall(r'(.*?)(\d+(?:,\d+)*)', node_str)
         for base, start, end in range_pattern:
@@ -393,7 +410,7 @@ class params_checker:
             logger.critical("Two different timesliceforwardings are active.")
         if not self.Par_.use_flesnet and self.Par_.activate_timesliceforwarding:
             logger.critical("GSI timesliceforwarding without flesnet is currently not implement")
-            self.exit_program()
+            #self.exit_program()
 
     def check_for_duplicates(self):
         if self.Par_.activate_timesliceforwarding and self.Par_.use_flesnet:

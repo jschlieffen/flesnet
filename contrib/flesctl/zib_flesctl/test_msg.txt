@@ -1,0 +1,3 @@
+msg: Sender htc-cmp502: stop 
+ erwartet: Sender htc-cmp502 
+ string vergleich True 
