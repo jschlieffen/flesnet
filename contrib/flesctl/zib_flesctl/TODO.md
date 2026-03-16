@@ -18,7 +18,7 @@
 | implement timeslice_forwarding for super nodes | $${\color{red} Open } $$ |
 | make that archive-validator can read tsas from shm | $${\color{red}Open}$$ |
 | create script to check timeslices via validator | $${\color{red}Open}$$ |
-| make tsclient implementation independent of flesnet like ts-forwarding | $${\color{red}Open}$$ |
+| make tsclient implementation independent of flesnet like ts-forwarding | $${\color{green} Done }$$|
 | check for signal handler behavior during monitoring | $${\color{red}Open}$$ |
 | collectl for monitoring | $${\color{red}Open}$$ |
 | redefine layout for monitoring/ make multiple Graphs and different windows | $${\color{red}Open}$$ |
