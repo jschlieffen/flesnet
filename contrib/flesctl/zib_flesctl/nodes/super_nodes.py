@@ -6,7 +6,7 @@
 #@author: jschlieffen
 
 """
-Usage: input.py <input_file> <logfile_entry_node> <logfile_build_node> <entry_node_idx> <build_node_idx> <logfile_collectl> <logfile_collectl_build_nodes>
+Usage: input.py <input_file> <logfile_entry_node> <logfile_build_node> <entry_node_idx> <build_node_idx> <logfile_collectl> <logfile_collectl_build_nodes> <logfile_tf>
 
 Arguments: 
     <input_file> The input dmsa file for the mstool
@@ -16,6 +16,7 @@ Arguments:
     <build_node_idx> The index of the current build node
     <logfile_collectl> The csv-file which collectl should use
     <logfile_collectl_build_nodes> The csv-file which collectl should use for the build nodes
+    <logfile_tf> The logfile for the timeslice-forwarding
 """
 
 import subprocess
@@ -26,6 +27,7 @@ import os
 import threading 
 import queue
 import signal
+import re
 
 # =============================================================================
 # This file starts mstool and flesnet on a super node. It is started with 
@@ -120,10 +122,65 @@ def write_response(node_name, node_type, msg):
         f.write(f"{node_type} {node_name}: done {msg}")
         f.flush()
         os.fsync(f.fileno())
+        
+def ethernet_ip():
+    command = 'ip a' 
+    try:
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)    
+        stdout,stderr = result.communicate()
+    except subprocess.CalledProcessError as e:
+        print(e)
+    match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
+    content = match.group(1)
+    match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
+    content2 = match2.group(1)
+    return content2
+    
+def infiniband_ip():
+    #print(node_id)
+    command = 'ip a' 
+    try:
+        result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        stdout,stderr = result.communicate()
+    except subprocess.CalledProcessError as e:
+        print(e)
+    match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
+    content = match.group(1)
+    match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
+    content2 = match2.group(1)
+    return content2   
+     
+def get_node_ip(use_infiniband):
+    if use_infiniband == 1:
+        return infiniband_ip()
+    else:
+        return ethernet_ip()         
+        
+def start_timeslice_forwarded_input(logfile_tf,build_node_idx,use_infiniband):
+    logfile_collectl="dwd"
+    input_file="efdf"
+    logfile_tsclient="sifew"
+    node_ip = get_node_ip(use_infiniband)
+    tf_input_command = "nodes/./tf_input_node.py %s %s %s %s %s %s" % (input_file,logfile_tf,build_node_idx,node_ip,logfile_collectl, logfile_tsclient)
+    print(os.getcwd())
+    print(tf_input_command)
+    result_tf_input = subprocess.Popen(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
+    #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    return result_tf_input
+
+def start_timeslice_forwarded_input_GSI(logfile_tf, build_node_idx, use_infiniband):
+    logfile_collectl = "dwdw"
+    input_file = "efefd"
+    node_ip = get_node_ip(use_infiniband)
+    tf_input_command = "nodes/./timeslice_forwarding_sender.py %s %s %s %s %s" % (input_file,logfile_tf, build_node_idx, logfile_collectl, node_ip)
+    result_tf_input = subprocess.Popen(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
+    #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    return result_tf_input
+    
 
 def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logfile_build_nodes, num_entry_nodes, num_build_nodes, entry_node_idx, build_node_idx,
                 influx_node_ip, influx_token, use_grafana ,path, transport_method, customize_string, use_pattern_gen, use_dmsa_files,use_infiniband, use_collectl, 
-                logfile_collectl, logfile_collectl_build_nodes,mean, size_var,pattern,overlap,desc_size,data_size):
+                logfile_collectl, logfile_collectl_build_nodes,mean, size_var,pattern,overlap,desc_size,data_size, use_tf_zib, use_tf_GSI, logfile_tf):
 
     ip_string, shm_string = calc_str(build_nodes_ip, entry_nodes_ip, num_entry_nodes, use_pattern_gen,mean, size_var,pattern,overlap)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
@@ -169,6 +226,10 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
 
     build_nodes_thread.start()
     input_data = ''
+    if use_tf_zib == 1:
+        result_tf_input = start_timeslice_forwarded_input(logfile_tf, build_node_idx, use_infiniband)
+    elif use_tf_GSI == 1:
+        result_tf_input = start_timeslice_forwarded_input_GSI(logfile_tf, build_node_idx, use_infiniband)
     #BAUSTELLE
     """
     while input_data == '':
@@ -251,6 +312,11 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
     build_nodes_thread.join()
     result_flesnet.terminate()
     result_flesnet.wait()
+    if use_tf_zib == 1 or use_tf_GSI == 1:
+        stdout, stderr = result_tf_input.communicate()
+        print(f"Output tf input: {stdout}")
+        print(f"Error tf input: {stderr}")
+
     
 
 def calc_str_output(ip, build_nodes_ip,num_build_nodes,desc_size,data_size):
@@ -348,7 +414,8 @@ entry_node_idx = arg["<entry_node_idx>"]
 build_node_idx = arg["<build_node_idx>"]
 logfile_collectl = arg['<logfile_collectl>']
 logfile_collectl_build_nodes = arg['<logfile_collectl_build_nodes>']
+logfile_tf = arg['<logfile_tf>']
 
 entry_nodes(input_file,build_nodes_ip, entry_nodes_ip, logfile_entry_node, logfile_build_node, num_entrynodes, num_buildnodes, entry_node_idx, build_node_idx,
             influx_node_ip, influx_token, use_grafana,path,transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl,
-            logfile_collectl, logfile_collectl_build_nodes,mean, size_var,pattern,overlap,desc_size,data_size)
+            logfile_collectl, logfile_collectl_build_nodes,mean, size_var,pattern,overlap,desc_size,data_size, ZIB_timesliceforwarding, activate_timesliceforwarding,logfile_tf)

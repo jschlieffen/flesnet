@@ -49,7 +49,9 @@ class Super_nodes:
             "pattern",
             "overlap",
             "desc_size",
-            "data_size"
+            "data_size", 
+            "activate_timesliceforwarding",
+            "ZIB_timesliceforwarding"
         ]
         with open('tmp/super_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
@@ -81,10 +83,14 @@ class Super_nodes:
             logfile_build_node = "logs/flesnet/build_nodes/build_node_%s.log" % node
             logfile_collectl_entry_node = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
             logfile_collectl_build_node = "logs/collectl/build_nodes/build_node_%s.csv" % node
+            if self.Par_.ZIB_timesliceforwarding:
+                logfile_tf = 'logs/timeslice_forwarding/input_nodes/input_node_%s.log' % (node)
+            else:
+                logfile_tf = 'logs/flesnet/tsclient/sender_node_%s.log' % (node)
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s %s %s'
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s %s %s %s'
                 % (node, self.Par_.num_cpus ,file,input_file,logfile_entry_node, logfile_build_node, self.node_list[node]['entry_node_idx'],
-                   self.node_list[node]['build_node_idx'], logfile_collectl_entry_node, logfile_collectl_build_node)
+                   self.node_list[node]['build_node_idx'], logfile_collectl_entry_node, logfile_collectl_build_node, logfile_tf)
             )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 

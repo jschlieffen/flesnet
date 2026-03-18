@@ -114,6 +114,7 @@ class execution:
             self.schedule_nodes()
         if self.Par_.ZIB_timesliceforwarding:
             self.assemble_timeslice_forwarding_nodes()
+            print(self.input_nodes)
         self.entry_nodes_ips = ""
         self.build_nodes_ips = ""
         self.central_manager_ips = ""
@@ -381,7 +382,7 @@ class execution:
         unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
 
         if self.Par_.use_flesnet:
-            self.sender_nodes = self.build_nodes 
+            self.sender_nodes = self.build_nodes | self.overlap_nodes
         else:
              unused_nodes = self.assemble_GSI_timeslice_forwarding_sender_nodes(unused_nodes)   
         self.assemble_GSI_timeslice_forwarding_receiver_nodes(unused_nodes)
@@ -576,7 +577,7 @@ class execution:
         output_nodes_cnt = 0
         cm_nodes_cnt = 0
         if self.Par_.use_flesnet:
-            self.input_nodes = self.build_nodes
+            self.input_nodes = self.build_nodes | self.overlap_nodes
         unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes and node not in self.overlap_nodes]
         if self.Par_.set_node_list:
             unused_nodes,input_nodes_cnt,cm_nodes_cnt,output_nodes_cnt = self.assemble_timeslice_forwarding_nodes_customized(unused_nodes)

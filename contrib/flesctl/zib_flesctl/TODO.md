@@ -15,11 +15,12 @@
 | make ./exec.sh new | $${\color{green}Done}$$ |
 | benchmark evaluation and logging for timeslice-forwarding |  $${\color{green} Done }$$ |
 | clean up ./execution_flesctrl | $${\color{green} Done }$$ |
-| implement timeslice_forwarding for super nodes | $${\color{red} Open } $$ |
-| make that archive-validator can read tsas from shm | $${\color{red}Open}$$ |
-| create script to check timeslices via validator | $${\color{red}Open}$$ |
+| implement timeslice_forwarding for super nodes | $${\color{green} Done } $$ |
+| make that archive-validator can read tsas from shm | $${\color{blue}Canceled}$$ |
+| create script to check timeslices via validator | $${\color{yellow} In \space Progress}$$ |
 | make tsclient implementation independent of flesnet like ts-forwarding | $${\color{green} Done }$$|
 | check for signal handler behavior during monitoring | $${\color{red}Open}$$ |
 | collectl for monitoring | $${\color{red}Open}$$ |
 | redefine layout for monitoring/ make multiple Graphs and different windows | $${\color{red}Open}$$ |
+| make sbatch implementation ready | $${\color{red}Open}$$ |
 | write Documentation for full scale test and test |$${\color{red}Open}$$ |
