@@ -35,7 +35,6 @@ class collectl_reader:
     
     def extract_infiniband_usage(self):
         for row in self.Logfile_infiniband:
-            #print(row)
             dt = row['#Date'] + ' ' + row['Time']
             timestamp = datetime.strptime(dt, "%Y%m%d %H:%M:%S")
             if self.node_type == 'tsclient' or self.node_type == 'output_node':
@@ -59,7 +58,6 @@ class collectl_reader:
                     
     def extract_ethernet_usage(self):
         for row in self.Logfile_infiniband:
-            #print(row)
             dt = row['#Date'] + ' ' + row['Time']
             timestamp = datetime.strptime(dt, "%Y%m%d %H:%M:%S")
             if self.node_type == 'tsclient' or self.node_type == 'output_node':
@@ -128,8 +126,6 @@ def main():
     entry_node_reader.extract_infiniband_usage()
     build_node_reader.extract_infiniband_usage()
     tsclient_reader.extract_infiniband_usage()
-    print("\033[35mentry_nodes\033[0m")
-    #print(entry_node_reader.data_rates)
     for data in entry_node_reader.data_rates:
         print(f"\033[32m{data}: \033[0m {entry_node_reader.data_rates[data]}")
     print("\033[35mbuild_nodes\033[0m")

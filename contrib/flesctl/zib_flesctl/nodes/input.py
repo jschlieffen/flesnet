@@ -54,7 +54,6 @@ def calc_str(ip, entry_nodes_ip ,num_entry_nodes, use_pattern_gen,mean,size_var,
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == 1:
         collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
-        #print(collectl_command)
     else:
         collectl_command = f"collectl --plot --sep , -i 1 -sn > {csvfile_name}"
     result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -74,7 +73,6 @@ def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicate
     while True:
         msg = collectl_communicater.get()
         if msg == "exit":
-            #print('test collectl')
             result_collectl.terminate()
             result_collectl.wait()
             result_collectl_cpu.terminate()
@@ -101,11 +99,9 @@ def get_alloc_cpus(filename):
 def start_mstool(path,dmsa_file, entry_node_idx, D_flag, mstool_communicater):
     mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
     result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    #result_mstool.wait()
     while True:
         msg = mstool_communicater.get()
         if msg == 'exit':
-            #print('test mstool')
             result_mstool.terminate()
             result_mstool.wait()
             break
@@ -126,8 +122,6 @@ def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_nod
         basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
         get_alloc_cpus(filename_cpus)
-        #result_collectl = start_collectl(use_infiniband, logfile_collectl)
-        #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
         collectl_communicater = queue.Queue()
         thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
         thread_collectl.start()
@@ -140,8 +134,6 @@ def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_nod
     if use_dmsa_files == 1:
         D_flag = "-D 1"
     if use_pattern_gen == 0:
-        #mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
-        #result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         mstool_communicater = queue.Queue()
         thread_mstool = threading.Thread(target=start_mstool, args=(path, dmsa_file, entry_node_idx, D_flag, mstool_communicater))
         thread_mstool.start()
@@ -154,19 +146,6 @@ def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_nod
     )
     print(flesnet_commands)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
-    input_data = ''
-    """
-    while 'stop' not in input_data:
-        input_data = sys.stdin.read().strip()
-        if input_data == 'kill':
-            print('kill')
-            print(input_data)
-            #result_flesnet.terminate()
-            #result_flesnet.wait()
-        elif input_data == 'revieve':
-            print('revieve')
-            #result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    """
     msg,action = "", ""
     prev_action = ""
     while True:
@@ -179,22 +158,12 @@ def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_nod
 
         except FileNotFoundError:
             msg = ""
-        #print(msg)
-        #print(node_name)
         if f"Entry {node_name}" in msg:
-            #print('test')
-            #print(action)
             node, action = msg.split(": ")
-            #print(node)
-            #print('action ' + action)
             if action == prev_action: 
                 continue
             if action == "kill":
-                print('test kill')
-                #result_flesnet.terminate()
-                #result_flesnet.wait()
                 os.killpg(os.getpgid(result_flesnet.pid), signal.SIGKILL)
-                print('test kill 1')
                 write_response(node_name, "killing")
                 prev_action = action
             elif action == "revive":
@@ -202,21 +171,11 @@ def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_nod
                 write_response(node_name, "reviving")
                 prev_action = action
             elif action == "stop":
-                print('test action')
                 break
-    
-    #print(input_data)
-    #print(type(input_data))
     if use_collectl == 1:
-        #result_collectl.terminate()
-        #result_collectl.wait()
-        #result_collectl_cpu.terminate()
-        #result_collectl_cpu.wait()
         collectl_communicater.put("exit")
         thread_collectl.join()
     if use_pattern_gen == 0:
-        #result_mstool.terminate()
-        #result_mstool.wait()
         mstool_communicater.put("exit")
         thread_mstool.join()
     result_flesnet.terminate()
@@ -225,7 +184,6 @@ def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_nod
     
 
 params = {}
-#print('test12')
 with open('tmp/entry_nodes_params.txt', 'r') as f:
     print('test1')
     for line in f:
@@ -244,19 +202,16 @@ with open('tmp/entry_nodes_params.txt', 'r') as f:
             params[key] = value
     f.close()
 
-#print(params)
 for key, value in params.items():
     globals()[key] = value
 
 entry_nodes_ips = params.get('entry node ips')
-#print(entry_nodes_ips)
 ip = params.get('build node ips')
 arg = docopt.docopt(__doc__, version='0.2')
 input_file = arg["<input_file>"]
 logfile = arg["<logfile>"]
 entry_node_idx = arg["<entry_node_idx>"]
 logfile_collectl = arg['<logfile_collectl>']
-#customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
 
 entry_nodes(input_file,ip, entry_nodes_ips, logfile,num_entrynodes, entry_node_idx, influx_node_ip, influx_token, use_grafana,path, 
             transport_method, customize_string, use_pattern_gen, use_dmsa_files, use_infiniband, use_collectl,

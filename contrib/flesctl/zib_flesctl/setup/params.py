@@ -150,7 +150,6 @@ class Params:
         self.activate_timesliceforwarding = self.get_value('mode', 'GSI_Timesliceforwarding','int', True)
         self.ZIB_timesliceforwarding = self.get_value('mode', 'ZIB_Timesliceforwarding','int',True)
         self.use_flesnet = self.get_value('mode','use_flesnet' ,'int', True)
-        print(self.use_flesnet)
     
     def get_kill_par(self):
         self.kill_nodes = self.get_value('robustness_test', 'kill_nodes_during_execution', 'int',self.kill_nodes, required=False)
@@ -192,7 +191,6 @@ class Params:
             self.exclude_input_nodes = self.get_node_list('set_node_list','exclude_input_nodes',self.exclude_input_nodes,False)
             self.exclude_central_manager = self.get_node_list('set_node_list','exclude_central_manager',self.exclude_central_manager,False)
             self.exclude_output_nodes = self.get_node_list('set_node_list','exclude_output_nodes',self.exclude_output_nodes,False)
-            #print(self.exclude_input_nodes)
 
             
     def get_flesnet_par(self):
@@ -334,6 +332,7 @@ class Params:
     def validation_params(self, system_check):
         Params_check = params_checker(self, system_check)
         Params_check.check_validity_of_files()
+        Params_check.check_program_exists()
         Params_check.check_mode()
         if self.set_node_list:
             Params_check.check_nodes_exist()
@@ -392,10 +391,17 @@ class params_checker:
                     if not os.path.isfile(elem[1]):
                         logger.critical(f'File {elem[1]} does not exist')
                         self.exit_program()
+        if not self.Par_.use_flesnet:
+            if not self.Par_.input_tsa_files:
+                logger.critical('no .tsa input file for the tsclietn to reead from')
+            else:
+                for elem in self.Par_.input_tsa_files:
+                    if not os.path.isfile(elem[1]):
+                        logger.critical(f'File {elem[1]} does not exist')
     
     def check_program_exists(self):
         logger.debug('check if the path to flesnet is correct')
-        for program in ['./mstool', './flesnet']:
+        for program in ['./mstool', './flesnet', './tsclient', './timeslice_forwarder','./archive_validator']:
             program_path = self.Par_.path + program
             if not (os.path.isfile(program_path) and os.access(program_path, os.X_OK)):
                 logger.critical(f'Program {program} does not exist')
@@ -408,30 +414,31 @@ class params_checker:
             self.exit_program()
         if self.Par_.activate_timesliceforwarding and self.Par_.ZIB_timesliceforwarding:
             logger.critical("Two different timesliceforwardings are active.")
-        if not self.Par_.use_flesnet and self.Par_.activate_timesliceforwarding:
-            logger.critical("GSI timesliceforwarding without flesnet is currently not implement")
-            #self.exit_program()
+            self.exit_program()
 
     def check_for_duplicates(self):
-        if self.Par_.activate_timesliceforwarding and self.Par_.use_flesnet:
-            for receiver_node in self.Par_.process_nodes_list:
-                if receiver_node in self.Par_.entry_nodes_list:
-                    logger.critical(f'receiving node: {receiver_node} is also an entry node. This is not allowed')
-                    self.exit_program()
-                if receiver_node in self.Par_.build_nodes_list:
-                    logger.critical(f'receiving node: {receiver_node} is also an build node. This is not allowed')
-                    self.exit_program()
+        if self.Par_.activate_timesliceforwarding:
+            if self.Par_.use_flesnet:
+                for receiver_node in self.Par_.process_nodes_list:
+                    if receiver_node in self.Par_.entry_nodes_list:
+                        logger.critical(f'receiving node: {receiver_node} is also an entry node. This is not allowed')
+                        self.exit_program()
+                    if receiver_node in self.Par_.build_nodes_list:
+                        logger.critical(f'receiving node: {receiver_node} is also an build node. This is not allowed')
+                        self.exit_program()
+            else:
+                for sender_node in self.Par_.sender_node_list:
+                    if sender_node in self.Par_.process_nodes_list:
+                        logger.critical(f'sender node: {sender_node} is also an receiver node. This is not allowed')
         if self.Par_.ZIB_timesliceforwarding:
-            for input_node in self.Par_.input_node_list:
-                if input_node in self.Par_.entry_nodes_list and self.Par_.use_flesnet:
-                    logger.critical(f'input node: {input_node} is also an entry node. This is not allowed')
-                    self.exit_program()
-                if input_node in self.Par_.output_node_list:
-                    logger.critical(f'input node: {input_node} is also an output node. This is not allowed')
-                    self.exit_program()
-                if input_node in self.Par_.central_manager_list:
-                    logger.critical(f'input node: {input_node} is also a central manager. This is not allowed')
-                    self.exit_program()
+            if not self.Par_.use_flesnet:
+                for input_node in self.Par_.input_node_list:
+                    if input_node in self.Par_.output_node_list:
+                        logger.critical(f'input node: {input_node} is also an output node. This is not allowed')
+                        self.exit_program()
+                    if input_node in self.Par_.central_manager_list:
+                        logger.critical(f'input node: {input_node} is also a central manager. This is not allowed')
+                        self.exit_program()
             for central_manager in self.Par_.central_manager_list:
                 if central_manager in self.Par_.entry_nodes_list and self.Par_.use_flesnet:
                     logger.critical(f'central manager: {central_manager} is also an entry node. This is not allowed')
@@ -470,11 +477,15 @@ class params_checker:
     
                 if self.Par_.set_node_list:
                     num_nodes_req_list = len(set(self.Par_.entry_nodes_list  + self.Par_.build_nodes_list))
-        if self.Par_.activate_timesliceforwarding:
+        if self.Par_.activate_timesliceforwarding and self.Par_.use_flesnet:
             num_tot_nodes_req += self.Par_.num_buildnodes
             if self.Par_.set_node_list:
                 num_nodes_req_list += len(self.Par_.process_nodes_list)
-        if self.Par_.ZIB_timesliceforwarding:
+        elif self.Par_.activate_timesliceforwarding:
+            num_tot_nodes_req += 2*self.Par_.num_receivers
+            if self.Par_.set_node_list:
+                num_nodes_req_list += len(self.Par_.process_nodes_list) + len(self.Par_.sender_node_list)
+        elif self.Par_.ZIB_timesliceforwarding:
             num_tot_nodes_req += self.Par_.num_central_manager + self.Par_.num_output_nodes
             if self.Par_.set_node_list:
                 num_nodes_req_list += len(set(self.Par_.output_node_list + self.Par_.central_manager_list))
@@ -502,37 +513,40 @@ class params_checker:
         try:
             cmd = ["sinfo", "-N", "-h", "-o", "%N %f"]
             result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            node_features = {}
-            for line in result.stdout.strip().splitlines():
-                if not line.strip():
-                    continue
-                parts = line.strip().split(None, 1)
-                node = parts[0]
-                features = parts[1] if len(parts) > 1 else ""
-                node_features[node] = features 
-            req_node_list = []
-            if self.Par_.use_flesnet:
-                req_node_list += [("Entry node", node) for node in self.Par_.entry_nodes_list]
-                req_node_list += [("Build node", node) for node in self.Par_.build_nodes_list]
-            if self.Par_.activate_timesliceforwarding:
-                req_node_list += [("Process node", node) for node in self.Par_.process_nodes_list]
-            if self.Par_.ZIB_timesliceforwarding:
-                req_node_list += [("Input node", node) for node in self.Par_.input_node_list]
-                req_node_list += [("Central manager", node) for node in self.Par_.central_manager_list]
-                req_node_list += [("Output node", node) for node in self.Par_.output_node_list]
-            for node_type,node in req_node_list:
-                if node not in node_features:
-                    logger.critical(f"{node_type}: {node} not found on the cluster")
-                    self.exit_program()
-                    continue
-                if self.Par_.use_infiniband:
-                    features = node_features[node]
-                    #print(features.lower())
-                    if "infiniband" not in features.lower():
-                        logger.critical(f"{node_type}: {node} does not provide Infiniband")
-                        self.exit_program()
         except subprocess.CalledProcessError as e:
             logger.error(f"[!] Error running sinfo: {e} Cannot check the validity of the given nodelist")
+        node_features = {}
+        for line in result.stdout.strip().splitlines():
+            if not line.strip():
+                continue
+            parts = line.strip().split(None, 1)
+            node = parts[0]
+            features = parts[1] if len(parts) > 1 else ""
+            node_features[node] = features 
+        req_node_list = []
+        if self.Par_.use_flesnet:
+            req_node_list += [("Entry node", node) for node in self.Par_.entry_nodes_list]
+            req_node_list += [("Build node", node) for node in self.Par_.build_nodes_list]
+        if self.Par_.activate_timesliceforwarding:
+            if self.Par_.use_flesnet:
+                req_node_list += [("Sender node", node) for node in self.Par_.sender_node_list]
+            req_node_list += [("Process node", node) for node in self.Par_.process_nodes_list]
+        elif self.Par_.ZIB_timesliceforwarding:
+            if self.Par_.use_flesnet:
+                req_node_list += [("Input node", node) for node in self.Par_.input_node_list]
+            req_node_list += [("Central manager", node) for node in self.Par_.central_manager_list]
+            req_node_list += [("Output node", node) for node in self.Par_.output_node_list]
+        for node_type,node in req_node_list:
+            if node not in node_features:
+                logger.critical(f"{node_type}: {node} not found on the cluster")
+                self.exit_program()
+                continue
+            if self.Par_.use_infiniband:
+                features = node_features[node]
+                if "infiniband" not in features.lower():
+                    logger.critical(f"{node_type}: {node} does not provide Infiniband")
+                    self.exit_program()
+
 
     def check_req_nodes_alloc(self):
         logger.debug('check if all nodes that are wished via the list are allocated')
@@ -560,9 +574,12 @@ class params_checker:
             req_node_list += [("Entry node", node) for node in self.Par_.entry_nodes_list]
             req_node_list += [("Build node", node) for node in self.Par_.build_nodes_list]
         if self.Par_.activate_timesliceforwarding:
+            if self.Par_.use_flesnet:
+                req_node_list += [("Sender node", node) for node in self.Par_.sender_node_list]
             req_node_list += [("Process node", node) for node in self.Par_.process_nodes_list]
-        if self.Par_.ZIB_timesliceforwarding:
-            req_node_list += [("Input node", node) for node in self.Par_.input_node_list]
+        elif self.Par_.ZIB_timesliceforwarding:
+            if self.Par_.use_flesnet:
+                req_node_list += [("Input node", node) for node in self.Par_.input_node_list]
             req_node_list += [("Central manager", node) for node in self.Par_.central_manager_list]
             req_node_list += [("Output node", node) for node in self.Par_.output_node_list]
         for node_type,node in req_node_list:
@@ -599,8 +616,11 @@ class params_checker:
             excluded_node_list += [("Build node",node) for node in self.Par_.exclude_build_nodes]
         if self.Par_.activate_timesliceforwarding:
             excluded_node_list += [("Process node",node) for node in self.Par_.exclude_process_nodes]
+            if self.Par_.use_flesnet:
+                excluded_node_list += [("Sender node", node) for node in self.Par_.exclude_sender_nodes]
         if self.Par_.ZIB_timesliceforwarding:
-            excluded_node_list += [("Input node",node) for node in self.Par_.exclude_input_nodes]
+            if self.Par_.use_flesnet:
+                excluded_node_list += [("Input node",node) for node in self.Par_.exclude_input_nodes]
             excluded_node_list += [("Central Manager",node) for node in self.Par_.exclude_central_manager]
             excluded_node_list += [("Output node",node) for node in self.Par_.exclude_output_nodes]
         for node_type,node in excluded_node_list:
@@ -616,8 +636,11 @@ class params_checker:
             excluded_node_list += [("Build node",node) for node in self.Par_.exclude_build_nodes]
         if self.Par_.activate_timesliceforwarding:
             excluded_node_list += [("Process node",node) for node in self.Par_.exclude_process_nodes]
+            if self.Par_.use_flesnet:
+                excluded_node_list += [("Sender node", node) for node in self.Par_.exclude_sender_nodes]
         if self.Par_.ZIB_timesliceforwarding:
-            excluded_node_list += [("Input node",node) for node in self.Par_.exclude_input_nodes]
+            if self.Par_.use_flesnet:
+                excluded_node_list += [("Input node",node) for node in self.Par_.exclude_input_nodes]
             excluded_node_list += [("Central Manager",node) for node in self.Par_.exclude_central_manager]
             excluded_node_list += [("Output node",node) for node in self.Par_.exclude_output_nodes]
         if os.getenv('SLURM_JOB_NUM_NODES') and self.Par_.set_node_list:
@@ -666,19 +689,34 @@ class params_checker:
         if self.Par_.timer_for_kill == timedelta(seconds=0):
             logger.critical("Cannot kill programs immediatly")
             self.exit_program()
-        if self.Par_.num_entrynodes_kills > self.Par_.num_entrynodes:
-            logger.critical(f"Too many entry node kills: num entry nodes total: {self.Par_.num_entrynodes}, entry node kills: {self.Par_.num_entrynodes_kills}")
-            self.exit_program()
-        if self.Par_.num_buildnodes_kills > self.Par_.num_buildnodes:
-            logger.critical(f"Too many build node kills: num build nodes total: {self.Par_.num_buildnodes}, build node kills: {self.Par_.num_buildnodes_kills}")
-            self.exit_program()
-        if self.Par_.num_processnodes_kills > self.Par_.num_buildnodes and self.Par_.activate_timesliceforwarding:
-            logger.critical(f"Too many process node kills: num process nodes total: {self.Par_.num_buildnodes}, process node kills: {self.Par_.num_processnodes_kills}")
-            self.exit_program()
-        if self.Par_.ZIB_timesliceforwarding:
-            if self.Par_.num_inputnodes_kills > self.Par_.num_input_nodes:
-                logger.critical(f"Too many input node kills: num input nodes total: {self.Par_.num_input_nodes}, input node kills: {self.Par_.num_inputnodes_kills}")
+        if self.Par_.use_flesnet:
+            if self.Par_.num_entrynodes_kills > self.Par_.num_entrynodes:
+                logger.critical(f"Too many entry node kills: num entry nodes total: {self.Par_.num_entrynodes}, entry node kills: {self.Par_.num_entrynodes_kills}")
                 self.exit_program()
+            if self.Par_.num_buildnodes_kills > self.Par_.num_buildnodes:
+                logger.critical(f"Too many build node kills: num build nodes total: {self.Par_.num_buildnodes}, build node kills: {self.Par_.num_buildnodes_kills}")
+                self.exit_program()
+        if self.Par_.activate_timesliceforwarding:
+            if self.Par_.use_flesnet:
+                if self.Par_.num_processnodes_kills > self.Par_.num_buildnodes:
+                    logger.critical(f"Too many process node kills: num process nodes total: {self.Par_.num_buildnodes}, process node kills: {self.Par_.num_processnodes_kills}")
+                    self.exit_program()
+            else:
+                if self.Par_.num_sendernodes_kills > self.Par_.num_receivers:
+                    logger.critical(f"Too many sender node kills: num sender nodes total: {self.Par_.num_receiver}, sender node kills: {self.Par_.num_sendernodes_kills}")
+                    self.exit_program()
+                if self.Par_.num_processnodes_kills > self.Par_.num_receivers:
+                    logger.critical(f"Too many process node kills: num process nodes total: {self.Par_.num_receivers}, process node kills: {self.Par_.num_processnodes_kills}")
+                    self.exit_program()
+        elif self.Par_.ZIB_timesliceforwarding:
+            if self.Par_.use_flesnet: 
+                if self.Par_.num_inputnodes_kills > self.Par_.num_buildnodes:
+                    logger.critical(f"Too many input node kills: num input nodes total: {self.Par_.num_buildnodes}, input node kills: {self.Par_.num_inputnodes_kills}")
+                    self.exit_program()
+            else:
+                if self.Par_.num_inputnodes_kills > self.Par_.num_input_nodes:
+                    logger.critical(f"Too many input node kills: num input nodes total: {self.Par_.num_input_nodes}, input node kills: {self.Par_.num_inputnodes_kills}")
+                    self.exit_program()
             if self.Par_.num_cm_kills > self.Par_.num_central_manager:
                 logger.critical(f"Too many Central manager kills: num Central Manager total: {self.Par_.num_central_manager}, Central manager kills: {self.Par_.num_cm_kills}")
                 self.exit_program()
@@ -689,15 +727,20 @@ class params_checker:
             if not self.Par_.set_node_list:
                 logger.critical("Node list is not set, but kill list. Might happen that nodes are gonna be killed that are not part of the allocation")
                 self.exit_program()
-            for kill_entry in self.Par_.entry_node_kill_list:
-                if kill_entry not in self.Par_.entry_nodes_list:
-                    logger.critical(f"Supposed to kill entry node: {kill_entry}. But this is not contained in the entry nodes list")
-                    self.exit_program()
-            for kill_build in self.Par_.build_node_kill_list:
-                if kill_build not in self.Par_.build_nodes_list:
-                    logger.critical(f"Supposed to kill build node: {kill_build}. But this is not contained in the build nodes list")
-                    self.exit_program()
+            if self.Par_.use_flesnet:
+                for kill_entry in self.Par_.entry_node_kill_list:
+                    if kill_entry not in self.Par_.entry_nodes_list:
+                        logger.critical(f"Supposed to kill entry node: {kill_entry}. But this is not contained in the entry nodes list")
+                        self.exit_program()
+                for kill_build in self.Par_.build_node_kill_list:
+                    if kill_build not in self.Par_.build_nodes_list:
+                        logger.critical(f"Supposed to kill build node: {kill_build}. But this is not contained in the build nodes list")
+                        self.exit_program()
             if self.Par_.activate_timesliceforwarding:
+                for kill_process in self.Par_.sender_node_kill_list:
+                    if kill_process not in self.Par_.sender_node_list:
+                        logger.critical(f"Supposed to kill sender node: {kill_process}. But this is not contained in the sender nodes list")
+                        self.exit_program()
                 for kill_process in self.Par_.process_node_kill_list:
                     if kill_process not in self.Par_.process_nodes_list:
                         logger.critical(f"Supposed to kill process node: {kill_process}. But this is not contained in the process nodes list")
@@ -778,12 +821,6 @@ class params_checker:
             if int(self.Par_.port) < 1023:
                 logger.critical(f"used port for timeslice-forwarding: {self.Par_.port} is privileged, thus cannot be used")
                 self.exit_program()
-            if f"tcp://*:{self.Par_.port}" not in self.Par_.customize_string:
-                logger.critical(f"used port for timeslice-forwarding: {self.Par_.port} does not coincide with the port used in flesnet")
-                self.exit_program()
-            #TODO:check if this is true
-            if self.Par_.write_data_to_file != '0':
-                logger.warning(f"The .tsa file is written in {self.Par_.path} unless you gave a path to the output file")
                 
     def check_influxdb2_access(self):
         logger.debug('check influxdb access')

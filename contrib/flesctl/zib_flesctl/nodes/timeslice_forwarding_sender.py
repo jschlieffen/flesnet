@@ -60,7 +60,6 @@ def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicate
     while True:
         msg = collectl_communicater.get()
         if msg == "exit":
-            #print('test collectl')
             result_collectl.terminate()
             result_collectl.wait()
             result_collectl_cpu.terminate()
@@ -96,13 +95,9 @@ def input_node(port, input_node_idx, use_collectl, path, input_file, use_flesnet
     input_str, ip_str = calc_str(input_file, port, use_flesnet, input_node_idx, input_node_ip)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
-        print(use_collectl)
-        print(logfile_collectl)
         basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
         get_alloc_cpus(filename_cpus)
-        #result_collectl = start_collectl(use_infiniband, logfile_collectl)
-        #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
         collectl_communicater = queue.Queue()
         thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
         thread_collectl.start()
@@ -122,34 +117,22 @@ def input_node(port, input_node_idx, use_collectl, path, input_file, use_flesnet
     result_input_node = subprocess.Popen(input_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
     msg,action = "",""
     prev_action = ""
-    with open("test_nodename.txt","w") as nodename_test:
-        nodename_test.write(f"node name: {node_name}")
-        nodename_test.close()
     while True:
         time.sleep(0.5)
         try:
             with open("tmp/central_manager.txt", "r") as f:
                 msg = f.read().strip()
-                #ode, action = line.split(": ")
                 f.close()
 
         except FileNotFoundError:
             msg = ""
-        with open("test_msg.txt" , "w") as msg_test:
-            string_vergleich = f"Sender {node_name}" in msg
-            msg_test.write(f"msg: {msg} \n erwartet: Sender {node_name} \n string vergleich {string_vergleich} \n")
-            msg_test.close()
         if f"Sender {node_name}" in msg:
             node, action = msg.split(": ")
-            with open ("test_action.txt" ,"w") as action_test:
-                action_test.write("test action {action}")
-                action_test.close()
+
             if action == prev_action:
                 continue
             if action == "kill":
-                print('test kill')
                 os.killpg(os.getpgid(result_input_node.pid), signal.SIGKILL)
-                print('test kill 1')
                 write_response(node_name, 'killing')
                 prev_action = action
             elif action == "revive":
@@ -157,8 +140,6 @@ def input_node(port, input_node_idx, use_collectl, path, input_file, use_flesnet
                 write_response(node_name,'reviving')
                 prev_action = action
             elif action == "stop":
-
-                print('test action')
                 break
     if use_collectl == 1:
         collectl_communicater.put("exit")
@@ -169,9 +150,7 @@ def input_node(port, input_node_idx, use_collectl, path, input_file, use_flesnet
 
     
 params = {}
-#print('test12')
 with open('tmp/sender_nodes_params.txt', 'r') as f:
-    print('test1')
     for line in f:
         if ':' in line:
             key, value = line.strip().split(':', 1)
@@ -188,7 +167,6 @@ with open('tmp/sender_nodes_params.txt', 'r') as f:
             params[key] = value
     f.close()
 
-print(params)
 for key, value in params.items():
     globals()[key] = value
     

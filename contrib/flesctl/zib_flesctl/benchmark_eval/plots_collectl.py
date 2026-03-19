@@ -29,7 +29,6 @@ class create_plots_collectl:
         self.data_rates = data_rates
         self.cpu_usage = cpu_usage
         self.mode = mode
-        #print(self.data_rates)
         if time_start != "00:00:00":
             time_start_dt = parser.parse(time_start)
             time_end_dt = parser.parse(time_end)
@@ -82,7 +81,6 @@ class create_plots_collectl:
                 for val in self.data_rates[node_type].values():
                     if time_stmp in val:
                         if node_type == 'entry_nodes' or node_type == 'input_nodes':
-                            #print(val[time_stmp])
                             total_data_rate_tmp += val[time_stmp]['KBOut']/1000000
                         elif node_type == 'build_nodes':
                             total_data_rate_tmp += val[time_stmp]['KBIn']/1000000
@@ -128,7 +126,6 @@ class create_plots_collectl:
                 for val in self.data_rates[node_type].values():
                     if time_stmp in val:
                         if node_type == 'entry_nodes' or node_type == 'input_nodes':
-                            #print(val[time_stmp])
                             avg_data_rate_tmp += val[time_stmp]['KBOut']/1000000
                         elif node_type == 'build_nodes':
                             avg_data_rate_tmp += val[time_stmp]['KBIn']/1000000
@@ -180,7 +177,6 @@ class create_plots_collectl:
                 for val in self.data_rates[node_type].values():
                     if time_stmp in val:
                         if node_type == 'entry_nodes' or node_type == 'input_nodes':
-                            #print(val[time_stmp])
                             data_rate = val[time_stmp]['KBOut']/1000000
                         elif node_type == 'build_nodes':
                             data_rate = val[time_stmp]['KBIn']/1000000
@@ -377,7 +373,6 @@ class create_plots_collectl:
             for key, val in self.cpu_usage[node_type].items():
                 first_timestmp = next((item for item in self.time_stmps[node_type] if item in val), None)
                 alloc_cpus = [cpu for cpu in val[first_timestmp].keys() if cpu != 'overall_avg']
-                #print(alloc_cpus)
                 cpu_usage = {}
                 for timestmp in self.time_stmps[node_type]:
                     if timestmp in val:

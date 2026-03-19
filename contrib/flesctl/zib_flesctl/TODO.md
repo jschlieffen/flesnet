@@ -19,8 +19,10 @@
 | make that archive-validator can read tsas from shm | $${\color{blue}Canceled}$$ |
 | create script to check timeslices via validator | $${\color{yellow} In \space Progress}$$ |
 | make tsclient implementation independent of flesnet like ts-forwarding | $${\color{green} Done }$$|
+| redefine robustness test such that a certain number of nodes are killed constantly throughout the run | $${\color{red} Open }$$ |
 | check for signal handler behavior during monitoring | $${\color{red}Open}$$ |
 | collectl for monitoring | $${\color{red}Open}$$ |
 | redefine layout for monitoring/ make multiple Graphs and different windows | $${\color{red}Open}$$ |
 | make sbatch implementation ready | $${\color{red}Open}$$ |
+| make the implementation more robust. e.g. communication between nodes | $${\color{red}Open}$$ |
 | write Documentation for full scale test and test |$${\color{red}Open}$$ |

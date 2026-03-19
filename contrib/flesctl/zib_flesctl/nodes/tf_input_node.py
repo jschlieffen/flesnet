@@ -53,7 +53,6 @@ def ethernet_ip():
     return content2
     
 def infiniband_ip():
-    #print(node_id)
     command = 'ip a' 
     try:
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -84,7 +83,6 @@ def calc_str(input_node_ip,port,cm_node_ip,input_node_idx):
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == 1:
         collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
-        #print(collectl_command)
     else:
         collectl_command = f"collectl --plot --sep , -i 1 -sn > {csvfile_name}"
     result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -104,7 +102,6 @@ def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicate
     while True:
         msg = collectl_communicater.get()
         if msg == "exit":
-            #print('test collectl')
             result_collectl.terminate()
             result_collectl.wait()
             result_collectl_cpu.terminate()
@@ -142,43 +139,26 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files ,ts
         dtsa_command = ""
     tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n=26 {dtsa_command}"
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    #result_tsclient.wait()
     while True:
         msg = tsclient_communicater.get()
         if msg == 'exit':
-            #print('test tsclient')
             result_tsclient.terminate()
             result_tsclient.wait()
             break
 
 def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl, logfile):
-    print('input node path:', os.getcwd())
     str_,shm_str = calc_str(input_node_ip,port,cm_node_ip,input_node_idx)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
-        print(use_collectl)
-        print(logfile_collectl)
         basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
         get_alloc_cpus(filename_cpus)
-        #result_collectl = start_collectl(use_infiniband, logfile_collectl)
-        #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
         collectl_communicater = queue.Queue()
         thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
         thread_collectl.start()
         time.sleep(1)
-    '''
-    grafana_string = ''
-    if use_grafana == 1:
-        os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
-    '''
     if use_flesnet == 0:
-        #tsclient_commands = '%s./tsclient -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
-        #result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         tsclient_communicater = queue.Queue()
-        print(use_dtsa_files)
-        print(type(use_dtsa_files))
         thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, shm_str, logfile_tsclient, use_dtsa_files, tsclient_communicater))
         thread_tsclient.start()
         time.sleep(1)
@@ -186,15 +166,8 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
         '%s./timeslice_forwarder %s > %s 2>&1 &' 
         % (path,str_,logfile)
     )
-    '''
-    input_node_commands = (
-        '%s./timeslice_forwarder %s' 
-        % (path,str_)
-    )
-    '''
     print(input_node_commands)
     result_input_node = subprocess.Popen(input_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
-    input_data = ''
     msg,action = "", ""
     prev_action = ""
     while True:
@@ -202,27 +175,14 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
         try:
             with open("tmp/central_manager.txt", "r") as f:
                 msg = f.read().strip()
-                #ode, action = line.split(": ")
-
         except FileNotFoundError:
             msg = ""
-        #print(msg)
-        #print(node_name)
         if f"TF Input {node_name}" in msg:
-            #print(msg)
-            #print('test')
-            #print(action)
             node, action = msg.split(": ")
-            #print(node)
-            #print('action ' + action)
             if action == prev_action: 
                 continue
             if action == "kill":
-                print('test kill')
-                #result_flesnet.terminate()
-                #result_flesnet.wait()
                 os.killpg(os.getpgid(result_input_node.pid), signal.SIGKILL)
-                print('test kill 1')
                 write_response(node_name, "killing")
                 prev_action = action
             elif action == "revive":
@@ -230,37 +190,20 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
                 write_response(node_name, "reviving")
                 prev_action = action
             elif action == "stop":
-                print('test action')
                 break
     
-    #print(input_data)
-    #print(type(input_data))
     if use_collectl == 1:
-        #result_collectl.terminate()
-        #result_collectl.wait()
-        #result_collectl_cpu.terminate()
-        #result_collectl_cpu.wait()
         collectl_communicater.put("exit")
         thread_collectl.join()
     if use_flesnet == 0:
-        #result_mstool.terminate()
-        #result_mstool.wait()
         tsclient_communicater.put("exit")
         thread_tsclient.join()
     result_input_node.terminate()
     result_input_node.wait()
-    #os.killpg(result_input_node.pid, signal.SIGTERM)
-    #stdout, stderr = result_input_node.communicate(timeout=5)
-    #print("STDOUT:")
-    #print(stdout)
-    
-    #print("STDERR:")
-    #print(stderr)
     write_response(node_name, "terminating")
     
 
 params = {}
-#print('test12')
 with open('tmp/tf_input_nodes_params.txt', 'r') as f:
     print('test1')
     for line in f:
@@ -279,7 +222,6 @@ with open('tmp/tf_input_nodes_params.txt', 'r') as f:
             params[key] = value
     f.close()
 
-print(params)
 for key, value in params.items():
     globals()[key] = value
 
@@ -292,7 +234,6 @@ input_node_idx = arg["<input_node_idx>"]
 input_node_ip = arg["<input_node_ip>"]
 logfile_collectl = arg['<logfile_collectl>']
 logfile_tsclient = arg['<logfile_tsclient>']
-#customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
 
 input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl,logfile)
 

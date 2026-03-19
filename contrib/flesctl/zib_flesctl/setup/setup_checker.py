@@ -110,6 +110,7 @@ def main():
     else:
         logger.success('setup is ready for flesctrl.')  
     Par_ = par.Params('config.cfg')
+    os.chdir("../")
     if Par_.validation_params(True):
         logger.success(f"Params are valid and ready for start")
     else:

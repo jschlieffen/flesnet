@@ -71,7 +71,6 @@ class create_plots_entry_nodes:
             
     
     def plot_total_data_rate(self):
-        #print(os.getcwd())
         dir = os.getcwd()
         path = os.path.join(dir,'plots/general/entry_nodes')
         if not os.path.exists(path):

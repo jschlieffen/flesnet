@@ -78,7 +78,6 @@ class Entry_nodes:
                 % (node, self.Par_.num_cpus ,file,input_file,logfile, self.node_list[node]['entry_node_idx'], logfile_collectl)
             )
             try:
-                #print(command)
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
                 logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')

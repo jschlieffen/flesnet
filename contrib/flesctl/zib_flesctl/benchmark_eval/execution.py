@@ -31,7 +31,6 @@ import os
 import sys
 from pathlib import Path
 #sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-#print(__file__)
 script_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(script_dir, '..'))
 os.environ['write_logfile'] = '0'
@@ -82,8 +81,6 @@ def change_dir(flesctl_logfile):
         sys.exit(1)
     
     os.chdir(path)
-    #print(os.getcwd())
-    #print('test')
     eval_number = 0
     eval_file = f"tmp/eval_num.txt"
     if not os.path.isfile(eval_file):
@@ -97,8 +94,6 @@ def change_dir(flesctl_logfile):
     
     os.mkdir(f"eval_round_{eval_number}")
     os.chdir(f"eval_round_{eval_number}")
-    print(os.path)
-    print(flesctl_logfile)
     if not (os.path.isfile(flesctl_logfile)):
         logger.critical(f"File does not exist: {os.path.abspath(flesctl_logfile)}")
         sys.exit(1)
@@ -160,7 +155,6 @@ class execution:
             matches = re.findall(f'{node_type} nodes:([\s\S]*?)(?=\n[A-Za-z]|$)', flesctl_logfile)
             if matches:
                 for match in matches:
-                    print(match)
                     if node_type in ['Entry', 'Build','Input','Output','central_manager']:
                         for name, index in re.findall(pattern, match):
                             nodes_info.append({
@@ -187,7 +181,6 @@ class execution:
                                 'node_type': 'Build',
                                 'index': int(build_idx)
                             })
-        #print(nodes_info)
         for node in nodes_info:
             if node['node_type'] == 'Entry':
                 self.entry_nodes.append((node['node_name'], node['index']))
@@ -203,8 +196,6 @@ class execution:
                 self.output_nodes.append((node['node_name'], node['index']))
             else:
                 logger.error(f'unknown nodetype: {node}')
-        #print(self.entry_nodes)
-        #print(self.build_nodes)
         if self.entry_nodes != []:
             self.mode_flesctrl.append('flesnet')
         if self.receiving_nodes != []:
@@ -425,8 +416,6 @@ class execution:
                 logger.success('serialization process succeeded')
             else:
                 logger.error('serialization process not succeeded')
-                #print(self.data_rates_collectl)
-                print(data_rates)
                 print(diff)
             #print(diff)
         if cpu_usage == self.cpu_usage_collectl:
@@ -495,7 +484,6 @@ def main():
     time.sleep(10)
     if 'prev_run' in modes:
         #exec_cls.prev_run = True
-        #print('test')
         change_dir(logfile)
     exec_cls = execution(logfile)
     if 'flesctrl_logfile' in modes:

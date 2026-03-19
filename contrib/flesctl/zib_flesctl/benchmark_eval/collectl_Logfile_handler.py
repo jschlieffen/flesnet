@@ -50,7 +50,6 @@ class serialize_data:
             path = os.path.join(dir,'collectl/data/data_rates/timeslice_forwarding/output_nodes')
         elif node_type == 'central_manager':
             path = os.path.join(dir,'collectl/data/data_rates/timeslice_forwarding/central_manager')
-        #print(node_type)
         if not os.path.exists(path):
             os.makedirs(path)
         path = path + '/'
@@ -238,7 +237,6 @@ class deserialize_data:
             node_types.append('output_nodes')
             node_types.append('central_manager')
         for node_type in node_types:
-            print(node_type)
             csv_file_name = self.get_csv_file_name_data_rates(node_type)
             data_dict = {}
             with open(csv_file_name, 'r', newline='') as csvfile:
@@ -250,7 +248,6 @@ class deserialize_data:
                 for row in reader:
                     vals = ''
                     timestamp_str = row[0]
-                    #print(timestamp_str)
                     try:
                         timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
                     except ValueError:
@@ -377,7 +374,6 @@ class deserialize_data:
                         except ValueError:
                             raise ValueError(f"Unrecognized timestamp format: {timestamp_str}")
                     for i in range(len(node_indices)):
-                        #print('test')
                         idx = node_indices[i]
                         node = keys[i]
                         if i+1 < len(node_indices):
@@ -402,10 +398,6 @@ class deserialize_data:
                                     cpu_usage[node][timestamp][cpu] = val
                                 idx += 1
                             except (ValueError, IndexError):
-                                #print('something')
-                                #print(idx)
-                                #print(row)
-                                #print(node)
                                 idx+=1
                                 continue
 

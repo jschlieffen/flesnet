@@ -54,4 +54,3 @@ with open("monitoring.log", "w") as log_file:
         log_file.write(f'avg_data_rate: {avg_data_rate} \n')
     except Exception as e:
         log_file.write(f"Error: {e}\n")
-        print(f"Error: {e}")

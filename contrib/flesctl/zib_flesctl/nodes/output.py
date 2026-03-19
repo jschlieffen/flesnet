@@ -44,7 +44,6 @@ def calc_str(ip, build_nodes_ip,num_build_nodes,desc_size,data_size):
     parts_build = build_nodes_ip.split('sep')
     shm_string = ""
     for i in range(0,int(num_build_nodes)):
-        #shm_string += "shm://%s/fles_out_b%s?desc_size=%s\&data_size=%s " % (parts_build[i],str(i),desc_size,data_size)
         shm_string += "shm://%s/fles_out_b%s" % (parts_build[i],str(i))
     return ip_string, shm_string
 
@@ -70,7 +69,6 @@ def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicate
     while True:
         msg = collectl_communicater.get()
         if msg == "exit":
-            #print('test collectl')
             result_collectl.terminate()
             result_collectl.wait()
             result_collectl_cpu.terminate()
@@ -115,7 +113,6 @@ def ethernet_ip():
     return content2
     
 def infiniband_ip():
-    #print(node_id)
     command = 'ip a' 
     try:
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -143,7 +140,6 @@ def start_timeslice_forwarded_input(logfile_tf,build_node_idx,use_infiniband):
     print(os.getcwd())
     print(tf_input_command)
     result_tf_input = subprocess.Popen(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
-    #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     return result_tf_input
 
 def start_timeslice_forwarded_input_GSI(logfile_tf, build_node_idx, use_infiniband):
@@ -152,7 +148,6 @@ def start_timeslice_forwarded_input_GSI(logfile_tf, build_node_idx, use_infiniba
     node_ip = get_node_ip(use_infiniband)
     tf_input_command = "nodes/./timeslice_forwarding_sender.py %s %s %s %s %s" % (input_file,logfile_tf, build_node_idx, logfile_collectl, node_ip)
     result_tf_input = subprocess.Popen(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
-    #print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
     return result_tf_input
     
 def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, influx_node_ip, influx_token, use_grafana,path, 
@@ -163,8 +158,6 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
         basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
         get_alloc_cpus(filename_cpus)
-        #result_collectl = start_collectl(use_infiniband, logfile_collectl)
-        #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
         collectl_communicater = queue.Queue()
         thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
         thread_collectl.start()
@@ -180,22 +173,6 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
     )
     print(flesnet_commands)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
-    input_data = ''
-    #print(flesnet_commands)
-    #print(result_flesnet)
-    """
-    while 'stop' not in input_data:
-        input_data = sys.stdin.read().strip()
-        if input_data == 'kill':
-            print('kill')
-            #result_flesnet.terminate()
-            #result_flesnet.wait()
-        elif input_data == 'revieve':
-            print('revieve')
-            #result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    print(input_data)
-    print(type(input_data))
-    """
     msg,action = "", ""
     prev_action = ""
     print(use_tf_zib)
@@ -204,34 +181,18 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
     elif use_tf_GSI == 1:
         result_tf_input = start_timeslice_forwarded_input_GSI(logfile_tf, build_node_idx, use_infiniband)
     while True:
-        #print(msg)
         time.sleep(0.5)
         try:
             with open("tmp/central_manager.txt", "r") as f:
                 msg = f.read().strip()
-                #ode, action = line.split(": ")
-
         except FileNotFoundError:
             msg = ""
-        #print(type(msg))
-        #print('htc-cmp506' in msg)
-        #print('test')
         if f"Build {node_name}" in msg:
-            #print('test')
-            #print(action)
-            #print(msg)
             node, action = msg.split(": ")
-            #print(node)
-            #print('action ' + action)
             if action == prev_action: 
                 continue
             elif action == "kill":
-                #print('test kill')
-                #result_flesnet.terminate()
-                #result_flesnet.wait()
                 os.killpg(os.getpgid(result_flesnet.pid), signal.SIGKILL)
-
-                print('test kill 1')
                 write_response(node_name, "killing")
                 prev_action = action
             elif action == "revive":
@@ -239,14 +200,9 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
                 write_response(node_name, "reviving")
                 prev_action = action
             elif action == "stop":
-                print('test action')
                 break
     
     if use_collectl == 1:
-        #result_collectl.terminate()
-        #result_collectl.wait()
-        #result_collectl_cpu.terminate()
-        #result_collectl_cpu.wait()
         collectl_communicater.put("exit")
         thread_collectl.join()
     result_flesnet.terminate()
@@ -258,7 +214,6 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
     write_response(node_name, "terminating")
 
 params = {}
-#print('test12')
 with open('tmp/build_nodes_params.txt', 'r') as f:
     for line in f:
         if ':' in line:
@@ -274,8 +229,6 @@ with open('tmp/build_nodes_params.txt', 'r') as f:
                 except ValueError:
                     pass
             params[key] = value
-
-#print(params)
 for key, value in params.items():
     globals()[key] = value
 

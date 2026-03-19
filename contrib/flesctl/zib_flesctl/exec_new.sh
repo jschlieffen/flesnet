@@ -14,13 +14,26 @@ function set_general_params(){
     INPUT_NODES_CNT=$(grep -E '^input_nodes=' setup/config.cfg | cut -d'=' -f2)
     OUTPUT_NODES_CNT=$(grep -E '^output_nodes=' setup/config.cfg | cut -d'=' -f2)
     USE_FLESNET=$(grep -E '^use_flesnet=' setup/config.cfg | cut -d'=' -f2)
+    OVERLAP_USG_NODES=$(grep -E '^overlap_usage_of_nodes' setup/config.cfg | cut -d'=' -f2)
     NODES=0
     if [ "$USE_FLESNET" -eq 1 ]; then
-        ((NODES=NODES+ENTRY_NODES_CNT+PROCESSING_NODES_CNT))
+        if [ "$OVERLAP_USG_NODES" -eq 1 ]; then
+            MAX_E_B_NODES=$([ "$ENTRY_NODES_CNT" -gt "$PROCESSING_NODES_CNT" ] && echo "$ENTRY_NODES_CNT" || echo "$PROCESSING_NODES_CNT")
+            ((NODES=NODES+MAX_E_B_NODES))
+        else
+            ((NODES=NODES+ENTRY_NODES_CNT+PROCESSING_NODES_CNT))
+        fi
     fi
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
-        ((NODES=NODES+2*RECEIVER_NODES_CNT))
-    elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then 
+        if [ "$USE_FLESNET" -eq 1 ]; then
+            ((NODES=NODES+PROCESSING_NODES_CNT))
+        else
+            ((NODES=2*RECEIVER_NODES_CNT))
+        fi
+    elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
+        if [ "$USE_FLESNET" -eq 1 ]; then
+            INPUT_NODES_CNT=0
+        fi 
         ((NODES=NODES+INPUT_NODES_CNT+OUTPUT_NODES_CNT+CENTRAL_MANAGER_CNT))
     fi
 }

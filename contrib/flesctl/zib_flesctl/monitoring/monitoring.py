@@ -275,7 +275,6 @@ def calc_output_msg(data_dict):
     for key,val in data_dict.items():
         if 'entry_node' in key:
             total_data += val['current_data']
-            print(len(val['data_array']))
             for data_rate in val['data_array']:
                 if data_rate > 0:
                     avg_data_rate += data_rate

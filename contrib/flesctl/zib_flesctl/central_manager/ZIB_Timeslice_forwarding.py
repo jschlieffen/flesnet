@@ -100,7 +100,6 @@ class Timeslice_forwarding_ZIB:
                 % (node, self.Par_.num_cpus ,file,logfile, logfile_collectl)
             )
             try:
-                #print(command)
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
                 logger.error(f'ERROR {e} occurried in central manager: {node}. Shutdown flesnet')
@@ -129,7 +128,6 @@ class Timeslice_forwarding_ZIB:
                 % (node, self.Par_.num_cpus ,file,logfile, self.output_nodes[node]['output_node_idx'], ip, logfile_collectl, logfile_tsclient)
             )
             try:
-                #print(command)
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
                 logger.error(f'ERROR {e} occurried in tf output node: {node}. Shutdown flesnet')
@@ -145,7 +143,6 @@ class Timeslice_forwarding_ZIB:
         self.write_params_input()
         for node in self.input_nodes.keys():
             input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(nodes_cnt))), None)
-            print(input_file)
             if input_file is None:
                 input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
             
@@ -162,7 +159,6 @@ class Timeslice_forwarding_ZIB:
                 % (node, self.Par_.num_cpus ,file,input_file ,logfile, self.input_nodes[node]['input_node_idx'], ip, logfile_collectl, logfile_tsclient)
             )
             try:
-                #print(command)
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
                 logger.error(f'ERROR {e} occurried in tf input node: {node}. Shutdown flesnet')

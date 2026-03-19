@@ -150,8 +150,6 @@ class Logfile_reader_build_node:
 
 def main():
     Logfile_reader_cls = Logfile_reader_entry_node("../logs/flesnet/entry_nodes/entry_node_htc-cmp108.log")
-    #for line in Logfile_reader_cls.Logfile:
-       # print(line)
     Logfile_reader_cls.extract_data_rates()
     Logfile_reader_cls.extract_data_shms_entry_node()
     

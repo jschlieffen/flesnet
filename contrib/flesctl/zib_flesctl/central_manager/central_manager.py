@@ -75,7 +75,6 @@ def ethernet_ip(node_id):
     return content2
     
 def infiniband_ip(node_id):
-    #print(node_id)
     command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
     try:
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -83,7 +82,6 @@ def infiniband_ip(node_id):
     except subprocess.CalledProcessError as e:
         logger.error(f'ERROR: {e} Error occurred at reading ips')
         sys.exit(1)
-    #print(stdout)
     match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
     content = match.group(1)
     match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
@@ -114,7 +112,6 @@ class execution:
             self.schedule_nodes()
         if self.Par_.ZIB_timesliceforwarding:
             self.assemble_timeslice_forwarding_nodes()
-            print(self.input_nodes)
         self.entry_nodes_ips = ""
         self.build_nodes_ips = ""
         self.central_manager_ips = ""
@@ -161,7 +158,6 @@ class execution:
             num_list = numbers.split(",")
             node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
         node_list = sorted(set(node_list))
-        #print(node_list)
         return node_list
     
         
@@ -386,9 +382,6 @@ class execution:
         else:
              unused_nodes = self.assemble_GSI_timeslice_forwarding_sender_nodes(unused_nodes)   
         self.assemble_GSI_timeslice_forwarding_receiver_nodes(unused_nodes)
-        print(self.sender_nodes)
-        print(self.receiver_nodes)
-        #sys.exit(1)
                     
     def assemble_GSI_timeslice_forwarding_sender_nodes(self,unused_nodes):
         sender_cnt = 0
@@ -714,16 +707,12 @@ class execution:
         if self.Par_.activate_timesliceforwarding:
             num_kills += self.Par_.num_processnodes_kills
         elif self.Par_.ZIB_timesliceforwarding:
-            print('test')
             num_kills += self.Par_.num_inputnodes_kills + self.Par_.num_cm_kills + self.Par_.num_outputnodes_kills
-        print(num_kills)
         while num_kills != revieve_count:
             td = self.Par_.timer_for_kill.total_seconds()
             sleep_val = np.random.poisson(td)
             time.sleep(sleep_val)
-            print(revieve_dict)
             weights_rc_1 = [sum(len(kill_nodes) for kill_nodes in kill_dict.values()), sum(len(revive_nodes) for revive_nodes in revieve_dict.values())]
-            print(weights_rc_1)
             kill_or_revieve = random.choices(["Kill", "Revieve"], weights=weights_rc_1, k=1)[0]
             if kill_or_revieve == "Kill":
                 kill_dict, revieve_dict = self.kill_nodes_fct(kill_dict,revieve_dict)
@@ -790,7 +779,6 @@ class execution:
     
     
     def kill_nodes_fct(self,kill_dict,revieve_dict):
-        #print('test kill nodes fct')
         weights_rc_2 = [len(kill_node) for kill_node in kill_dict.values()]
         node_type = random.choices(["Entry", "Build", "Process","Input", "CM","Output"], weights=weights_rc_2, k=1)[0]
         if node_type == "Entry":
@@ -881,9 +869,7 @@ class execution:
     
             self.build_nodes_cls.stop_flesnet()
             self.entry_nodes_cls.stop_flesnet()
-            #print(self.activate_timesliceforwarding)
             if self.Par_.activate_timesliceforwarding:
-                #print('test')
                 self.timeslice_forwarding_cls.stop_timeslice_forwarding()
             if self.Par_.show_total_data:
                 total_data, avg_data_rate = self.stop_monitoring()
@@ -1067,7 +1053,6 @@ class execution:
         time.sleep(1)
         with open('monitoring/monitoring.log', 'r') as log_file:
             contents = log_file.read()
-        #print(contents)
         total_data = float(re.search(r'total_data: \s*([0-9.]+)', contents).group(1))
         avg_data_rate = float(re.search(r'avg_data_rate: \s*([0-9.]+)', contents).group(1))
         return total_data, avg_data_rate

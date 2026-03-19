@@ -55,7 +55,6 @@ class Timeslice_forwarding:
                 "use_dtsa_files",
                 "use_infiniband"
         ]
-        #print(self.Par_.use_flesnet)
         with open('tmp/sender_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_flesnet:
                 param_names.remove("use_collectl")
@@ -77,7 +76,6 @@ class Timeslice_forwarding:
             sender_node = node['sender_node']
             logger.info(f"start timeslice forwarding node {node_id} for sender node {sender_node['node']}")
             logfile = 'logs/flesnet/tsclient/receiving_node_%s.log' % (node_id)
-            #print(build_node)
             logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.csv' % (node_id)
             
             if self.Par_.use_infiniband:
@@ -89,7 +87,6 @@ class Timeslice_forwarding:
                 % (node_id, self.Par_.num_cpus ,file,logfile, sender_node_ip, logfile_collectl)
             )
             try:
-                #print(command)
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
             except subprocess.CalledProcessError as e:
                 logger.error(f'ERROR {e} occurried in receiver node: {node_id}. Shutdown flesnet')
@@ -108,16 +105,18 @@ class Timeslice_forwarding:
         node_cnt = 0
         for node_id,node in self.sender.items():
             input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(node_cnt))), None)
-            print(input_file)
             if input_file is None:
                 input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
             logger.info(f"start timeslice sender: {node_id}")
             logfile = 'logs/flesnet/tsclient/sender_node_%s.log' % node_id
             logfile_collectl = 'logs/collectl/tsclient/sender_node_%s.csv' % node_id
-            print(logfile)
+            if self.Par_.use_infiniband:
+                node_ip = node['inf_ip']
+            else:
+                node_ip = node['eth_ip']
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s' 
-                % (node_id,self.Par_.num_cpus, file, input_file, logfile, node_cnt, logfile_collectl)
+                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s' 
+                % (node_id,self.Par_.num_cpus, file, input_file, logfile, node_cnt, logfile_collectl, node_ip)
             )
             try: 
                 result = subprocess.Popen(command,shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
