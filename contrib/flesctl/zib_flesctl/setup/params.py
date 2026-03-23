@@ -81,7 +81,8 @@ class Params:
         self.desc_size = 19
         self.data_size = 27
         self.activate_timesliceforwarding = 0
-        self.write_data_to_file = ""
+        self.write_data_to_file = 0
+        self.path_to_output_file = ""
         self.analyze_data = 0
         self.port = 0
         self.use_dtsa_files = 0
@@ -215,7 +216,8 @@ class Params:
         self.data_size = self.get_value('shm_commands','data_size','int', self.data_size, False)
     
     def get_tsclient_par(self):
-        self.write_data_to_file = self.get_value('tsclient_commands', 'write_data_to_file', 'str', self.write_data_to_file, False)
+        self.write_data_to_file = self.get_value('tsclient_commands', 'write_data_to_file', 'int', self.write_data_to_file, False)
+        self.path_to_output_file = self.get_value('tsclient_commands', "path_to_output_file",'str', self.path_to_output_file, False)
         self.analyze_data = self.get_value('tsclient_commands', 'analyze_data', 'str', self.analyze_data, False)
         self.use_dtsa_files = self.get_value('tsclient_commands','use_dtsa_files','int',self.use_dtsa_files, False)
         
@@ -817,9 +819,12 @@ class params_checker:
     
     def check_timeslice_forwarding(self):
         logger.debug('check for timesliceforwarding params')
-        if self.Par_.activate_timesliceforwarding == 1:
+        if self.Par_.activate_timesliceforwarding == 1 or self.Par_.ZIB_timesliceforwarding == 1:
             if int(self.Par_.port) < 1023:
                 logger.critical(f"used port for timeslice-forwarding: {self.Par_.port} is privileged, thus cannot be used")
+                self.exit_program()
+            if self.Par_.write_data_to_file == 1 and not os.path.exists(f"{self.Par_.path_to_output_file}/tsa_files"):
+                logger.critical(f"output file path: {self.Par_.path_to_output_file}/tsa_files does not exists")
                 self.exit_program()
                 
     def check_influxdb2_access(self):

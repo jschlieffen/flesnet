@@ -34,12 +34,12 @@ import signal
 #       flesnet manually
 # =============================================================================
 #may be extended
-def calc_ip_str(ip,port,write_data_to_file,path,analyze_data,node_name):
+def calc_ip_str(ip,port,write_data_to_file,path,analyze_data,node_name,path_to_output_file):
     ip_string = f"tcp://{ip}:{port}"
     if write_data_to_file == 0:
         output_file_string = ""
     else:
-        output_file_string = f"-o file:tsa_files/output_node_{node_name}"
+        output_file_string = f"-o file:{path_to_output_file}/tsa_files/output_node_{node_name}.tsa"
     if analyze_data == 1:
         analyze_data_string = "-a"
     else:
@@ -101,9 +101,9 @@ def write_response(node_name, msg):
         f.flush()
         os.fsync(f.fileno())
 
-def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_data_to_file, analyze_data, use_infiniband, use_collectl, logfile_collectl):
+def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_data_to_file, analyze_data, use_infiniband, use_collectl, logfile_collectl, path_to_output_file):
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
-    ip_string,output_file_string,analyze_data_string = calc_ip_str(ip, port, write_data_to_file, path, analyze_data,node_name)
+    ip_string,output_file_string,analyze_data_string = calc_ip_str(ip, port, write_data_to_file, path, analyze_data,node_name,path_to_output_file)
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile_collectl))[0]
         filename_cpus = f"tmp/{basename}.txt"
@@ -206,4 +206,4 @@ ip = arg["<build_node_ip>"]
 logfile = arg["<logfile>"]
 logfile_collectl = arg['<logfile_collectl>']
 
-main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_data_to_file, analyze_data, use_infiniband, use_collectl, logfile_collectl)
+main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_data_to_file, analyze_data, use_infiniband, use_collectl, logfile_collectl,path_to_output_file)

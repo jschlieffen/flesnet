@@ -62,6 +62,7 @@ class exec_:
         Logfile.logfile.transport_method = self.Par_.transport_method
         Logfile.logfile.infiniband_used = self.Par_.use_infiniband
         Logfile.logfile.use_flesnet = self.Par_.use_flesnet
+        Logfile.logfile.Par_ = self.Par_
         self.start_time = time.time()
         
         self.execution_cls.start_Flesnet()

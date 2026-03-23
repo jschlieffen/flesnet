@@ -53,6 +53,7 @@ class Timeslice_forwarding_ZIB:
                 "use_infiniband",
                 "use_collectl",
                 "write_data_to_file",
+                "path_to_output_file",
                 "analyze_data"
             ]   
         with open('tmp/tf_output_nodes_params.txt', 'w') as Params_file:

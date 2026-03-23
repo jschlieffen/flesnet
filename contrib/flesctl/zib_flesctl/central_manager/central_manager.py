@@ -382,6 +382,8 @@ class execution:
         else:
              unused_nodes = self.assemble_GSI_timeslice_forwarding_sender_nodes(unused_nodes)   
         self.assemble_GSI_timeslice_forwarding_receiver_nodes(unused_nodes)
+        Logfile.logfile.sender_nodes_list = self.sender_nodes
+        Logfile.logfile.receiver_nodes_list = self.receiver_nodes
                     
     def assemble_GSI_timeslice_forwarding_sender_nodes(self,unused_nodes):
         sender_cnt = 0

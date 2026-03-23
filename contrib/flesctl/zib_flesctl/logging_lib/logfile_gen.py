@@ -18,9 +18,11 @@ import os
 class Logfile:
     def __init__(self):
         self.num_nodes = 0
+        self.Par_ = None
         self.entry_nodes_list = {}
         self.build_nodes_list = {}
         self.overlap_nodes_list = {}
+        self.sender_node_list = {}
         self.receiving_node_list = {}
         self.input_node_list = {}
         self.cm_list = {}
@@ -74,12 +76,17 @@ class Logfile:
                 for key,val in self.build_nodes_list.items():
                     idx = val['build_node_idx']
                     file.write(f'   {key} as index {idx} \n')
+            if self.sender_node_list:
+                file.write('Sender nodes: \n')
+                for key,val in self.sender_nodes_list.items():
+                    idx = val['sender_node_idx']
+                    file.write(f'   {key} as index {idx} \n')
             if self.receiving_node_list:
                 file.write('receiving nodes: \n')
-                for receiving_node,build_node in self.receiving_node_list:
+                for key,val in self.receiving_node_list.items():
                     #idx = val['receiving_node_idx']
-                    build_node_name = build_node['node']
-                    file.write(f'   {build_node_name} was connected to {receiving_node} \n')
+                    sender = val['sender_node']
+                    file.write(f'   {sender} was connected to {key} \n')
             if self.input_node_list:
                 file.write('Input nodes: \n')
                 for key,val in self.input_node_list.items():

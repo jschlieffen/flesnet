@@ -33,6 +33,7 @@ class Timeslice_forwarding:
             "path",
             "port",
             "write_data_to_file",
+            "path_to_output_file",
             "analyze_data",
             "use_infiniband",
             "use_collectl"
