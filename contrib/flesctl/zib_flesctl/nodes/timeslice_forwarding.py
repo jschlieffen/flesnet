@@ -39,7 +39,10 @@ def calc_ip_str(ip,port,write_data_to_file,path,analyze_data,node_name,path_to_o
     if write_data_to_file == 0:
         output_file_string = ""
     else:
-        output_file_string = f"-o file:{path_to_output_file}/tsa_files/output_node_{node_name}.tsa"
+        with open('tmp/Run_folder_name.txt','r') as file:
+            run_id = file.read().strip()
+            file.close()
+        output_file_string = f"-o file:{path_to_output_file}/{run_id}/tsa_files/output_node_{node_name}.tsa"
     if analyze_data == 1:
         analyze_data_string = "-a"
     else:

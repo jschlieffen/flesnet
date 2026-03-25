@@ -18,7 +18,7 @@ from logging_lib.log_msg import *
 # attributes for the start of flesnet (e.g. rmda/zeromq)
 # =============================================================================
 class Super_nodes:
-    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips,build_nodes_ips,build_nodes_eth_ips,parameters):
+    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips,build_nodes_ips,build_nodes_eth_ips,parameters, Run_folder):
         super().__init__()
         self.node_list = node_list
         #self.num_build_nodes = num_build_nodes
@@ -27,6 +27,7 @@ class Super_nodes:
         self.build_nodes_ips = build_nodes_ips
         self.build_nodes_eth_ips = build_nodes_eth_ips
         self.Par_ = parameters
+        self.Run_folder = Run_folder 
         self.pids = {}
         
     
@@ -79,14 +80,14 @@ class Super_nodes:
             else:
                 logger.info(f'start super node: {node}, with pattern generator')
             logger.status(f'start super node')
-            logfile_entry_node = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
-            logfile_build_node = "logs/flesnet/build_nodes/build_node_%s.log" % node
-            logfile_collectl_entry_node = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
-            logfile_collectl_build_node = "logs/collectl/build_nodes/build_node_%s.csv" % node
+            logfile_entry_node = "%s/logs/flesnet/entry_nodes/entry_node_%s.log" % (self.Run_folder,node)
+            logfile_build_node = "%s/logs/flesnet/build_nodes/build_node_%s.log" % (self.Run_folder,node)
+            logfile_collectl_entry_node = "%s/logs/collectl/entry_nodes/entry_node_%s.csv" % (self.Run_folder,node)
+            logfile_collectl_build_node = "%s/logs/collectl/build_nodes/build_node_%s.csv" % (self.Run_folder,node)
             if self.Par_.ZIB_timesliceforwarding:
-                logfile_tf = 'logs/timeslice_forwarding/input_nodes/input_node_%s.log' % (node)
+                logfile_tf = '%s/logs/timeslice_forwarding/input_nodes/input_node_%s.log' % (self.Run_folder,node)
             else:
-                logfile_tf = 'logs/flesnet/tsclient/sender_node_%s.log' % (node)
+                logfile_tf = '%s/logs/flesnet/tsclient/sender_node_%s.log' % (self.Run_folder,node)
             command = (
                 'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s %s %s %s'
                 % (node, self.Par_.num_cpus ,file,input_file,logfile_entry_node, logfile_build_node, self.node_list[node]['entry_node_idx'],

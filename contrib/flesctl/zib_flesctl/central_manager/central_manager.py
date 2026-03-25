@@ -97,9 +97,9 @@ def infiniband_ip(node_id):
 # experiment is finished.
 # =============================================================================
 class execution:
-    def __init__(self, parameters):
+    def __init__(self, parameters, Run_folder):
         self.Par_ = parameters
-
+        self.Run_folder = Run_folder
         self.entry_nodes = {}
         self.build_nodes = {} 
         self.overlap_nodes = {}
@@ -125,14 +125,14 @@ class execution:
             #self.assemble_receiving_nodes2build_nodes()
             self.assemble_GSI_timeslice_forwarding_nodes()
         if self.Par_.use_flesnet:
-            self.entry_nodes_cls = en.Entry_nodes(self.entry_nodes, self.entry_nodes_ips, self.entry_nodes_eth_ips ,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
-            self.build_nodes_cls = b.Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
-            self.super_nodes_cls = s.Super_nodes(self.overlap_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_)
+            self.entry_nodes_cls = en.Entry_nodes(self.entry_nodes, self.entry_nodes_ips, self.entry_nodes_eth_ips ,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_, self.Run_folder)
+            self.build_nodes_cls = b.Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_, self.Run_folder)
+            self.super_nodes_cls = s.Super_nodes(self.overlap_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_, self.Run_folder)
         if self.Par_.ZIB_timesliceforwarding:
             self.ZIB_timeslice_forwarding_cls = ZIB_T.Timeslice_forwarding_ZIB(self.central_manager, self.central_manager_ips, self.central_manager_eth_ips, 
-                                                                        self.output_nodes, self.input_nodes, self.Par_)
+                                                                        self.output_nodes, self.input_nodes, self.Par_, self.Run_folder)
         if self.Par_.activate_timesliceforwarding:
-            self.timeslice_forwarding_cls = T.Timeslice_forwarding(self.sender_nodes, self.receiver_nodes, self.Par_)
+            self.timeslice_forwarding_cls = T.Timeslice_forwarding(self.sender_nodes, self.receiver_nodes, self.Par_, self.Run_folder)
             
             
     # =============================================================================

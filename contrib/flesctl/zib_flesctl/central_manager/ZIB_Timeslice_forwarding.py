@@ -16,7 +16,7 @@ from logging_lib.log_msg import *
 # =============================================================================
 class Timeslice_forwarding_ZIB:
     
-    def __init__(self,central_manager, central_manager_ips, central_manager_eth_ips, output_nodes,input_nodes, parameters):
+    def __init__(self,central_manager, central_manager_ips, central_manager_eth_ips, output_nodes,input_nodes, parameters,  Run_folder):
         self.central_manager = central_manager
         self.central_manager_ips = central_manager_ips
         self.central_manager_eth_ips = central_manager_eth_ips
@@ -27,7 +27,7 @@ class Timeslice_forwarding_ZIB:
         self.pids_o = {}
         self.pids_i = {}
         self.Par_ = parameters
-        
+        self.Run_folder = Run_folder 
     
     def write_params_cm(self):
         param_names = [
@@ -94,8 +94,8 @@ class Timeslice_forwarding_ZIB:
         self.write_params_cm()
         for node in self.central_manager.keys():
             logger.info(f'start central manager for timeslice-forwarding: {node}')
-            logfile = "logs/timeslice_forwarding/central_manager/central_manager_%s.log" % node
-            logfile_collectl = "logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % node
+            logfile = "%s/logs/timeslice_forwarding/central_manager/central_manager_%s.log" % (self.Run_folder,node)
+            logfile_collectl = "%s/logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % (self.Run_folder,node)
             command = (
                 'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s'
                 % (node, self.Par_.num_cpus ,file,logfile, logfile_collectl)
@@ -117,9 +117,9 @@ class Timeslice_forwarding_ZIB:
         self.write_params_output()
         for node in self.output_nodes.keys():
             logger.info(f'start output node for timeslice-forwarding: {node}')
-            logfile = "logs/timeslice_forwarding/output_nodes/output_node_%s.log" % node
-            logfile_collectl = "logs/collectl/timeslice_forwarding/output_nodes/output_node_%s.csv" % node
-            logfile_tsclient = "logs/timeslice_forwarding/tsclient/output_nodes/output_node_%s.log" % node
+            logfile = "%s/logs/timeslice_forwarding/output_nodes/output_node_%s.log" % (self.Run_folder,node)
+            logfile_collectl = "%s/logs/collectl/timeslice_forwarding/output_nodes/output_node_%s.csv" % (self.Run_folder,node)
+            logfile_tsclient = "%s/logs/timeslice_forwarding/tsclient/output_nodes/output_node_%s.log" % (self.Run_folder,node)
             if self.Par_.use_infiniband:
                 ip = self.output_nodes[node]['inf_ip']
             else:
@@ -148,9 +148,9 @@ class Timeslice_forwarding_ZIB:
                 input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
             
             logger.info(f'start input node for timeslice-forwarding: {node}')
-            logfile = "logs/timeslice_forwarding/input_nodes/input_node_%s.log" % node
-            logfile_collectl = "logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % node
-            logfile_tsclient = "logs/timeslice_forwarding/tsclient/input_nodes/input_node_%s.log" % node
+            logfile = "%s/logs/timeslice_forwarding/input_nodes/input_node_%s.log" % (self.Run_folder,node)
+            logfile_collectl = "%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,node)
+            logfile_tsclient = "%s/logs/timeslice_forwarding/tsclient/input_nodes/input_node_%s.log" % (self.Run_folder,node)
             if self.Par_.use_infiniband:
                 ip = self.input_nodes[node]['inf_ip']
             else:

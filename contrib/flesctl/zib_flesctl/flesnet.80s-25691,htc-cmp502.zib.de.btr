@@ -1,0 +1,15 @@
+
+flesnet:25691 terminated with signal 6 at PC=7f8a613c8eec SP=7ffcbc10b630.  Backtrace:
+/lib/x86_64-linux-gnu/libc.so.6(+0x8aeec)[0x7f8a613c8eec]
+/lib/x86_64-linux-gnu/libc.so.6(gsignal+0x12)[0x7f8a61379fb2]
+/lib/x86_64-linux-gnu/libc.so.6(abort+0xd3)[0x7f8a61364472]
+/lib/x86_64-linux-gnu/libstdc++.so.6(+0x9d919)[0x7f8a6169d919]
+/lib/x86_64-linux-gnu/libstdc++.so.6(+0xa8e1a)[0x7f8a616a8e1a]
+/lib/x86_64-linux-gnu/libstdc++.so.6(+0xa8e85)[0x7f8a616a8e85]
+/lib/x86_64-linux-gnu/libstdc++.so.6(__cxa_rethrow+0x4b)[0x7f8a616a912b]
+/lib/x86_64-linux-gnu/libboost_log.so.1.74.0(+0x2ddd0)[0x7f8a61ad6dd0]
+../../../build/./flesnet(+0x62df2)[0x557f1c2c7df2]
+../../../build/./flesnet(+0x41675)[0x557f1c2a6675]
+/lib/x86_64-linux-gnu/libc.so.6(+0x2724a)[0x7f8a6136524a]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0x85)[0x7f8a61365305]
+../../../build/./flesnet(+0x57341)[0x557f1c2bc341]

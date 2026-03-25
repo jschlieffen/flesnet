@@ -17,9 +17,10 @@
 | clean up ./execution_flesctrl | $${\color{green} Done }$$ |
 | implement timeslice_forwarding for super nodes | $${\color{green} Done } $$ |
 | make that archive-validator can read tsas from shm | $${\color{blue}Canceled}$$ |
-| create script to check timeslices via validator | $${\color{yellow} In \space Progress}$$ |
+| create script to check timeslices via validator | $${\color{blue} Canceled}$$ |
 | make tsclient implementation independent of flesnet like ts-forwarding | $${\color{green} Done }$$|
-| redefine robustness test such that a certain number of nodes are killed constantly throughout the run | $${\color{red} Open }$$ |
+| make output folders per default in Runfolder with run id | $${\color{green} Done }$$|
+| redefine robustness test such that a certain number of nodes are killed constantly throughout the run | $${\color{yellow} In \space Progress }$$ |
 | check for signal handler behavior during monitoring | $${\color{red}Open}$$ |
 | collectl for monitoring | $${\color{red}Open}$$ |
 | redefine layout for monitoring/ make multiple Graphs and different windows | $${\color{red}Open}$$ |

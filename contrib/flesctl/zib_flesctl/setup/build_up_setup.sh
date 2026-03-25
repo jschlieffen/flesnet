@@ -13,6 +13,8 @@ function create_venv() {
 
     pip install deepdiff
 
+    pip install influxdb_client
+
     deactivate
 }
 

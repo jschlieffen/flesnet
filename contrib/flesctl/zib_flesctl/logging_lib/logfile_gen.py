@@ -31,7 +31,19 @@ class Logfile:
         self.exec_time = 0
         self.transport_method = ''
         self.use_flesnet = 0
+        self.Run_id = ""
         self.infiniband_used = False
+        
+        
+    def get_run_id(self):
+        with open("tmp/run_id.txt", "r") as f:
+            run_id = int(f.read().strip())
+        run_id += 1
+        with open("tmp/run_id.txt", "w") as f:
+            f.write(str(run_id))
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        self.Run_id = f"Run_{str(run_id+1)}_{timestamp}"
+        print('test')
         
     def write(self):
         '''
@@ -43,13 +55,7 @@ class Logfile:
             config.write(configfile, space_around_delimiters=False)
         '''
         
-        with open("tmp/run_id.txt", "r") as f:
-            run_id = int(f.read().strip())
-        run_id += 1
-        with open("tmp/run_id.txt", "w") as f:
-            f.write(str(run_id))
-        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        logfile_name = f'logs/general/Run_{str(run_id+1)}_{timestamp}.log'
+        logfile_name = f'Runs/{self.Run_id}/logs/general/{self.Run_id}.log'
         dir = os.path.dirname(__file__)
         path = os.path.join(dir,'../tmp')
         if not os.path.exists(path):

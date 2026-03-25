@@ -15,12 +15,13 @@ from logging_lib.log_msg import *
 #TODO: make port depended on node
 class Timeslice_forwarding:
     
-    def __init__(self, sender,receiver, parameters):    
+    def __init__(self, sender,receiver, parameters, Run_folder):    
         super().__init__()
         #self.rec2build = rec2build
         self.sender = sender
         self.receiver = receiver
         self.Par_ = parameters
+        self.Run_folder = Run_folder
         self.pids = {}
         self.pids_sender = {}
 
@@ -76,8 +77,8 @@ class Timeslice_forwarding:
         for node_id,node in self.receiver.items():
             sender_node = node['sender_node']
             logger.info(f"start timeslice forwarding node {node_id} for sender node {sender_node['node']}")
-            logfile = 'logs/flesnet/tsclient/receiving_node_%s.log' % (node_id)
-            logfile_collectl = 'logs/collectl/tsclient/receiving_node_%s.csv' % (node_id)
+            logfile = '%s/logs/flesnet/tsclient/receiving_node_%s.log' % (self.Run_folder,node_id)
+            logfile_collectl = '%s/logs/collectl/tsclient/receiving_node_%s.csv' % (self.Run_folder,node_id)
             
             if self.Par_.use_infiniband:
                 sender_node_ip = sender_node['inf_ip']
@@ -109,8 +110,8 @@ class Timeslice_forwarding:
             if input_file is None:
                 input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
             logger.info(f"start timeslice sender: {node_id}")
-            logfile = 'logs/flesnet/tsclient/sender_node_%s.log' % node_id
-            logfile_collectl = 'logs/collectl/tsclient/sender_node_%s.csv' % node_id
+            logfile = '%s/logs/flesnet/tsclient/sender_node_%s.log' % (self.Run_folder,node_id)
+            logfile_collectl = '%s/logs/collectl/tsclient/sender_node_%s.csv' % (self.Run_folder,node_id)
             if self.Par_.use_infiniband:
                 node_ip = node['inf_ip']
             else:

@@ -40,7 +40,7 @@ class exec_:
         self.running = True
         self.start_time = 0
         self.end_time = 0
-
+        self.Run_folder_name = ""
     # =============================================================================
     # Starts the simulation  
     # =============================================================================
@@ -58,7 +58,8 @@ class exec_:
                                      self.Par_.write_data_to_file, self.Par_.analyze_data, self.Par_.port, self.Par_.use_infiniband, 
                                      self.Par_.use_collectl)
         '''
-        self.execution_cls = cm.execution(self.Par_)
+        self.build_up_run_folders()
+        self.execution_cls = cm.execution(self.Par_, self.Run_folder_name)
         Logfile.logfile.transport_method = self.Par_.transport_method
         Logfile.logfile.infiniband_used = self.Par_.use_infiniband
         Logfile.logfile.use_flesnet = self.Par_.use_flesnet
@@ -81,6 +82,49 @@ class exec_:
             logger.removeHandler(handler)
 
     
+
+    def build_up_run_folders(self):
+        Logfile.logfile.get_run_id()
+        run_id = Logfile.logfile.Run_id
+        print(run_id)
+        self.Run_folder_name = f"Runs/{run_id}"
+        with open('tmp/Run_folder_name.txt', "w") as file:
+            file.write(run_id)
+            file.close()
+        if (self.Par_.activate_timesliceforwarding or self.Par_.ZIB_timesliceforwarding) and self.Par_.write_data_to_file:
+            os.mkdir(f'{self.Par_.path_to_output_file}/{run_id}')
+            os.mkdir(f'{self.Par_.path_to_output_file}/{run_id}/tsa_files')
+        os.mkdir(f'Runs/{run_id}')
+        os.mkdir(f'Runs/{run_id}/logs')
+        os.mkdir(f'Runs/{run_id}/logs/general')
+        if self.Par_.use_collectl:
+            os.mkdir(f'Runs/{run_id}/logs/collectl')
+        if self.Par_.use_flesnet or self.Par_.activate_timesliceforwarding:
+            os.mkdir(f'Runs/{run_id}/logs/flesnet')
+            if self.Par_.use_flesnet:
+                os.mkdir(f'Runs/{run_id}/logs/flesnet/build_nodes')
+                os.mkdir(f'Runs/{run_id}/logs/flesnet/entry_nodes')
+                if self.Par_.use_collectl:
+                    os.mkdir(f'Runs/{run_id}/logs/collectl/build_nodes')
+                    os.mkdir(f'Runs/{run_id}/logs/collectl/entry_nodes')
+            if self.Par_.activate_timesliceforwarding:
+                os.mkdir(f'Runs/{run_id}/logs/flesnet/tsclient')
+                if self.Par_.use_collectl:
+                    os.mkdir(f'Runs/{run_id}/logs/collectl/tsclient')
+        if self.Par_.ZIB_timesliceforwarding:
+            os.mkdir(f'Runs/{run_id}/logs/timeslice_forwarding')
+            os.mkdir(f'Runs/{run_id}/logs/timeslice_forwarding/central_manager')
+            os.mkdir(f'Runs/{run_id}/logs/timeslice_forwarding/input_nodes')
+            os.mkdir(f'Runs/{run_id}/logs/timeslice_forwarding/output_nodes')
+            os.mkdir(f'Runs/{run_id}/logs/timeslice_forwarding/tsclient')
+            if self.Par_.use_collectl:
+                os.mkdir(f'Runs/{run_id}/logs/collectl/timeslice_forwarding')
+                os.mkdir(f'Runs/{run_id}/logs/collectl/timeslice_forwarding/central_manager')
+                os.mkdir(f'Runs/{run_id}/logs/collectl/timeslice_forwarding/input_nodes')
+                os.mkdir(f'Runs/{run_id}/logs/collectl/timeslice_forwarding/output_nodes')
+
+
+
     # =============================================================================
     # Defines the signal handler for a clean end of the experiment. Currently only
     # ctrl+c and sigterm are implemented. For safety reasons sigkill is not 

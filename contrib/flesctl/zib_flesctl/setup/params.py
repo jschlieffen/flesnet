@@ -400,6 +400,7 @@ class params_checker:
                 for elem in self.Par_.input_tsa_files:
                     if not os.path.isfile(elem[1]):
                         logger.critical(f'File {elem[1]} does not exist')
+                        self.exit_program()
     
     def check_program_exists(self):
         logger.debug('check if the path to flesnet is correct')
@@ -823,8 +824,8 @@ class params_checker:
             if int(self.Par_.port) < 1023:
                 logger.critical(f"used port for timeslice-forwarding: {self.Par_.port} is privileged, thus cannot be used")
                 self.exit_program()
-            if self.Par_.write_data_to_file == 1 and not os.path.exists(f"{self.Par_.path_to_output_file}/tsa_files"):
-                logger.critical(f"output file path: {self.Par_.path_to_output_file}/tsa_files does not exists")
+            if self.Par_.write_data_to_file == 1 and not os.path.exists(f"{self.Par_.path_to_output_file}"):
+                logger.critical(f"output file path: {self.Par_.path_to_output_file} does not exists")
                 self.exit_program()
                 
     def check_influxdb2_access(self):

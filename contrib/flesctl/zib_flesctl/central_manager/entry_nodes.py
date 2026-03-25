@@ -17,13 +17,14 @@ from logging_lib.log_msg import *
 # attributes for the start of flesnet (e.g. rmda/zeromq)
 # =============================================================================
 class Entry_nodes:
-    def __init__(self, node_list,entry_nodes_ips, entry_nodes_eth_ips,build_nodes_ips,build_nodes_eth_ips,parameters):
+    def __init__(self, node_list,entry_nodes_ips, entry_nodes_eth_ips,build_nodes_ips,build_nodes_eth_ips,parameters, Run_folder):
         super().__init__()
         self.node_list = node_list
         self.entry_nodes_ips = entry_nodes_ips
         self.entry_node_eth_ips = entry_nodes_eth_ips
         self.build_nodes_ips = build_nodes_ips
         self.build_nodes_eth_ips = build_nodes_eth_ips
+        self.Run_folder = Run_folder
         self.Par_ = parameters
         self.pids = {}
     
@@ -71,8 +72,8 @@ class Entry_nodes:
                 logger.info(f'start entry node: {node}, with input file {input_file}')
             else:
                 logger.info(f'start entry node: {node} with pattern generator')
-            logfile = "logs/flesnet/entry_nodes/entry_node_%s.log" % node
-            logfile_collectl = "logs/collectl/entry_nodes/entry_node_%s.csv" % node
+            logfile = "%s/logs/flesnet/entry_nodes/entry_node_%s.log" % (self.Run_folder,node)
+            logfile_collectl = "%s/logs/collectl/entry_nodes/entry_node_%s.csv" % (self.Run_folder,node)
             command = (
                 'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
                 % (node, self.Par_.num_cpus ,file,input_file,logfile, self.node_list[node]['entry_node_idx'], logfile_collectl)

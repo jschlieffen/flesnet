@@ -18,7 +18,7 @@ from logging_lib.log_msg import *
 # =============================================================================
 class Build_nodes:
     
-    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, build_nodes_ips, build_nodes_eth_ips,parameters):
+    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, build_nodes_ips, build_nodes_eth_ips,parameters, Run_folder):
         super().__init__()
         self.node_list = node_list
         #self.num_build_nodes = num_build_nodes
@@ -29,6 +29,7 @@ class Build_nodes:
         #self.central_manager_ips = central_manager_ips, 
         #self.central_manager_eth_ips = central_ma´nager_eth_ips
         self.Par_ = parameters
+        self.Run_folder = Run_folder 
         self.pids = {}
     
     
@@ -70,12 +71,12 @@ class Build_nodes:
         node_cnt = 0
         for node in self.node_list.keys():
             logger.info(f'start build node: {node}')
-            logfile = 'logs/flesnet/build_nodes/build_node_%s.log' % (node)
+            logfile = '%s/logs/flesnet/build_nodes/build_node_%s.log' % (self.Run_folder,node)
             if self.Par_.ZIB_timesliceforwarding:
-                logfile_tf = 'logs/timeslice_forwarding/input_nodes/input_node_%s.log' % (node)
+                logfile_tf = '%s/logs/timeslice_forwarding/input_nodes/input_node_%s.log' % (self.Run_folder,node)
             else:
-                logfile_tf = 'logs/flesnet/tsclient/sender_node_%s.log' % (node)
-            logfile_collectl = 'logs/collectl/build_nodes/build_node_%s.csv' % (node)
+                logfile_tf = '%s/logs/flesnet/tsclient/sender_node_%s.log' % (self.Run_folder,node)
+            logfile_collectl = '%s/logs/collectl/build_nodes/build_node_%s.csv' % (self.Run_folder,node)
             command = (
                 'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
                 % (node, self.Par_.num_cpus ,file,logfile, self.node_list[node]['build_node_idx'], logfile_collectl, logfile_tf)
