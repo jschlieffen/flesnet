@@ -8,10 +8,23 @@ function execute_iteration() {
     local Logfile=$(cat tmp/file_name.txt)
     Logfile="../${Logfile}"
     #echo $Logfile
+    #move_tmp $Logfile
     cd "benchmark_eval"
     python3 $benchmark_eval $Logfile --collectl_used --mode='all'
     cd ..
-    create_output_folder $Logfile 1
+    #create_output_folder $Logfile 1
+}
+
+function move_tmp(){
+    if [ $# -ne 1 ]; then
+        return 1;
+    fi
+
+    local flesctrl_Logfile=$1
+    filename="${flesctrl_Logfile##*/}"       
+    foldername="Runs/${filename%.*}" 
+
+    cp -r tmp $foldername
 }
 
 function create_output_folder() {

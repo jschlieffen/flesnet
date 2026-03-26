@@ -82,9 +82,10 @@ def change_dir(flesctl_logfile):
     
     os.chdir(path)
     eval_number = 0
+    print(os.getcwd())
     eval_file = f"tmp/eval_num.txt"
     if not os.path.isfile(eval_file):
-        #os.mkdir("tmp")
+        os.mkdir("tmp")
         eval_number = 0
     else:
         with open(eval_file, "r") as file:
@@ -482,9 +483,9 @@ def main():
 
     logger.info('starting with evaluation')
     time.sleep(10)
-    if 'prev_run' in modes:
+    #if 'prev_run' in modes:
         #exec_cls.prev_run = True
-        change_dir(logfile)
+    change_dir(logfile)
     exec_cls = execution(logfile)
     if 'flesctrl_logfile' in modes:
         exec_cls.get_data_from_logfile()

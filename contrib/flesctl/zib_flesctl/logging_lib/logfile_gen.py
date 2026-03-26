@@ -56,6 +56,7 @@ class Logfile:
         '''
         
         logfile_name = f'Runs/{self.Run_id}/logs/general/{self.Run_id}.log'
+        logfile_name_to_file = f'logs/general/{self.Run_id}.log'
         dir = os.path.dirname(__file__)
         path = os.path.join(dir,'../tmp')
         if not os.path.exists(path):
@@ -63,7 +64,7 @@ class Logfile:
         #os.environ['flesctl_logfile_name'] = logfile_name
         tmp_file_name = f"{path}/file_name.txt"
         with open(tmp_file_name, "w") as f:
-            f.write(logfile_name)
+            f.write(logfile_name_to_file)
         with open(logfile_name, 'w') as file:
             file.write(f'The total number of nodes allocated: {self.num_nodes} \n')
             if self.overlap_nodes_list:

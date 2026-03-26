@@ -89,7 +89,8 @@ class collectl_reader:
         
 
     def get_alloc_cpus(self):
-        filename = f"../tmp/{self.node_name}.txt"
+        filename = f"../../../tmp/{self.node_name}.txt"
+        #print(os.getcwd())
         with open(filename, "r") as f:
             cpus = [int(line.strip()) for line in f if line.strip().isdigit()]
         return cpus
