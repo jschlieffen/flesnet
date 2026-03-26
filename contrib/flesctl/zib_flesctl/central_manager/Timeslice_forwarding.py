@@ -164,7 +164,7 @@ class Timeslice_forwarding:
             except FileNotFoundError:
                 msg = ""
             time.sleep(0.5)
-        logger.status(f"Receiver node: {kill_node} killed")
+        logger.status(f"Sender node: {kill_node} killed")
         
     
     def revieve_process(self, revive_node):
@@ -183,14 +183,14 @@ class Timeslice_forwarding:
             time.sleep(0.5)
         logger.status(f"Receiver node: {revive_node} revieved")
         
-    def revieve_process(self,revive_node):
+    def revieve_process_Sender(self,revive_node):
         logger.info(f"revieve Sender node: {revive_node}")
         with open("tmp/central_manager.txt", "w") as f:
             f.write(f"Sender {revive_node}: revive")
             f.flush()
             os.fsync(f.fileno())
         msg = ""
-        while msg != f"Sender {revive_node}: done revive":
+        while msg != f"Sender {revive_node}: done reviving":
             try:
                 with open("tmp/nodes_response.txt", "r") as f:
                     msg = f.read().strip()

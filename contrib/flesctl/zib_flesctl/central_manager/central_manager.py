@@ -237,7 +237,7 @@ class execution:
             for node in node_list:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
-                time.sleep(1)
+                #time.sleep(1)
                 if node in Timeslice_forwarding_nodes:
                     continue
                 if entry_nodes_cnt < self.Par_.num_entrynodes and build_nodes_cnt < self.Par_.num_buildnodes and node not in self.Par_.exclude_entry_nodes + self.Par_.exclude_build_nodes:
@@ -275,7 +275,7 @@ class execution:
                     continue
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
-                time.sleep(1)
+                #time.sleep(1)
                 if entry_nodes_cnt < self.Par_.num_entrynodes and node not in self.Par_.exclude_entry_nodes:
                     self.entry_nodes[node] = {
                         'node' : node,
@@ -311,7 +311,7 @@ class execution:
             for node in node_list:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
-                time.sleep(1)
+                #time.sleep(1)
                 
                 if node in self.Par_.entry_nodes_list and node in self.Par_.build_nodes_list and node not in self.Par_.exclude_entry_nodes + self.Par_.exclude_build_nodes:
                     self.overlap_nodes[node] = {
@@ -346,7 +346,7 @@ class execution:
             for node in node_list:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
-                time.sleep(1)
+                #time.sleep(1)
                 if node in self.Par_.entry_nodes_list and node not in self.Par_.exclude_entry_nodes:
                     self.entry_nodes[node] = {
                         'node' : node,
@@ -393,7 +393,7 @@ class execution:
                 if sender_cnt < self.Par_.num_receivers and node in self.Par_.sender_node_list:
                     node_ip = infiniband_ip(node)
                     node_eth_ip = ethernet_ip(node)
-                    time.sleep(1)
+                    #time.sleep(1)
                     self.sender_nodes[node] = {
                         'node' : node,
                         'sender_idx' : sender_cnt,
@@ -411,7 +411,7 @@ class execution:
                 if sender_cnt < self.Par_.num_receivers:
                     node_ip = infiniband_ip(node)
                     node_eth_ip = ethernet_ip(node)
-                    time.sleep(1)
+                    #time.sleep(1)
                     self.sender_nodes[node] = {
                         'node' : node,
                         'sender_idx' : sender_cnt,
@@ -531,7 +531,7 @@ class execution:
             if cm_nodes_cnt < self.Par_.num_central_manager and node in self.Par_.central_manager_list:            
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
-                time.sleep(1)
+                #time.sleep(1)
                 self.central_manager[node] = {
                         'node' : node, 
                         'cm_idx' : cm_nodes_cnt,
@@ -543,7 +543,7 @@ class execution:
             elif input_nodes_cnt < self.Par_.num_input_nodes and not self.Par_.use_flesnet and node in self.Par_.input_node_list:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
-                time.sleep(1)
+                #time.sleep(1)
                 self.input_nodes[node] = {
                         'node' : node,
                         'input_node_idx' : input_nodes_cnt,
@@ -555,7 +555,7 @@ class execution:
             elif output_nodes_cnt < self.Par_.num_output_nodes and node in self.Par_.output_node_list:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
-                time.sleep(1)
+                #time.sleep(1)
                 self.output_nodes[node] = {
                         'node' : node,
                         'output_node_idx' : output_nodes_cnt,
@@ -579,7 +579,7 @@ class execution:
         for node in unused_nodes:
             node_ip = infiniband_ip(node)
             node_eth_ip = ethernet_ip(node)
-            time.sleep(1)
+            #time.sleep(1)
             if cm_nodes_cnt < self.Par_.num_central_manager and node not in self.Par_.exclude_central_manager:
                 self.central_manager[node] = {
                         'node' : node,
@@ -669,6 +669,7 @@ class execution:
     # =============================================================================
     # This function either starts the monotoring if activated or it just waits 
     # until the user stops the program
+    # TODO: rename function
     # =============================================================================
     def stop_via_ctrl_c(self):
         time.sleep(2)
@@ -690,7 +691,12 @@ class execution:
             except Exception as e:
                 logger.critical(f'Error {e} occured during robustness test. Terminating')
                 self.stop_program()
-               
+        elif self.Par_.activate_robustness_test_V2:
+            try:
+                self.robustness_test_V2()
+            except Exception as e:
+                logger.critical(f'Error {e} occured during robustness test V2. Terminating')
+                self.stop_program()
         else:
             while True:
                 time.sleep(1)
@@ -857,6 +863,122 @@ class execution:
             revieve_dict["Output nodes"].remove(to_revieve_node)
         return revieve_dict
     
+    def robustness_test_V2(self):
+        alive_dict = {}
+        dead_dict = {}
+        if self.Par_.use_flesnet:
+            alive_dict['Entry nodes'] = (self.entry_nodes | self.overlap_nodes).copy()
+            alive_dict['Build nodes'] = (self.build_nodes | self.overlap_nodes).copy()
+        
+        if self.Par_.activate_timesliceforwarding:
+            alive_dict['Sender nodes'] = self.sender_nodes.copy()
+            alive_dict['Receiver nodes'] = self.receiver_nodes.copy()
+        
+        if self.Par_.ZIB_timesliceforwarding:
+            alive_dict['Input nodes'] = self.input_nodes.copy()
+            alive_dict['Central Manager'] = self.central_manager.copy()
+            alive_dict['Output nodes'] = self.output_nodes.copy()
+        dead_dict = {key: {} for key in alive_dict}
+        while True:
+            td = self.Par_.timer_for_kills_V2.total_seconds()
+            sleep_val = np.random.poisson(td)
+            time.sleep(sleep_val)
+            kill_or_revive = random.choice([True,False])
+            if kill_or_revive:
+                alive_dict,dead_dict = self.kill_nodes_fct_V2(alive_dict,dead_dict)
+            else:
+                alive_dict,dead_dict = self.revieve_nodes_fct_V2(alive_dict, dead_dict)
+                
+    def kill_nodes_fct_V2(self,alive_dict,dead_dict):
+        print('tets')
+        custom_adjustments = {
+            'Entry nodes': self.Par_.num_min_entry_nodes_alive,
+            'Build nodes': self.Par_.num_min_build_nodes_alive,
+            'Sender nodes': self.Par_.num_min_sender_nodes_alive,
+            'Receiver nodes': self.Par_.num_min_process_nodes_alive,  
+            'Input nodes': self.Par_.num_min_input_nodes_alive,
+            'Central Manager': self.Par_.num_min_central_manager_alive,
+            'Output nodes': self.Par_.num_min_output_nodes_alive
+        }
+
+        weights = [max(len(alive_dict[k]) - custom_adjustments.get(k, 0), 0) for k in alive_dict]
+        print(weights)
+        keys = list(alive_dict.keys())
+        print(keys)
+        if all(w == 0 for w in weights):
+            alive_dict, dead_dict = self.revieve_nodes_fct_V2(alive_dict, dead_dict)
+            return alive_dict,dead_dict
+        Node_type = random.choices(keys, weights=weights, k=1)[0]
+        
+        print(Node_type)
+        to_kill_node = random.choice(list(alive_dict[Node_type].keys()))
+        print(to_kill_node)
+        if Node_type == 'Entry nodes':
+            self.entry_nodes_cls.kill_process(to_kill_node)
+        elif Node_type == 'Build nodes':
+            self.build_nodes_cls.kill_process(to_kill_node)
+        elif Node_type == 'Sender nodes':
+            self.timeslice_forwarding_cls.kill_process_Sender(to_kill_node)
+        elif Node_type == 'Receiver nodes':
+            self.timeslice_forwarding_cls.kill_process(to_kill_node)
+        elif Node_type == 'Input nodes':
+            self.ZIB_timeslice_forwarding_cls.kill_input_node(to_kill_node)
+        elif Node_type == 'Central Manager':
+            self.ZIB_timeslice_forwarding_cls.kill_central_manager(to_kill_node)
+        elif Node_type == 'Output nodes':
+            self.ZIB_timeslice_forwarding_cls.kill_output_node(to_kill_node)   
+        dead_dict[Node_type][to_kill_node] = alive_dict[Node_type][to_kill_node]
+        alive_dict[Node_type].pop(to_kill_node)
+        return alive_dict,dead_dict
+
+    
+    def revieve_nodes_fct_V2(self,alive_dict,dead_dict):
+        print('goth baddie big tits')
+        custom_adjustments = {
+            'Entry nodes': (self.Par_.num_min_entry_nodes_alive,self.Par_.num_entrynodes),
+            'Build nodes': (self.Par_.num_min_build_nodes_alive,self.Par_.num_buildnodes),
+            'Sender nodes': (self.Par_.num_min_sender_nodes_alive,self.Par_.num_receivers if not self.Par_.use_flesnet else self.Par_.num_buildnodes),
+            'Receiver nodes': (self.Par_.num_min_process_nodes_alive,self.Par_.num_receivers if not self.Par_.use_flesnet else self.Par_.num_buildnodes),
+            'Input nodes': (self.Par_.num_min_input_nodes_alive,self.Par_.num_input_nodes if not self.Par_.use_flesnet else self.Par_.num_buildnodes),
+            'Central Manager': (self.Par_.num_min_central_manager_alive,self.Par_.num_central_manager),
+            'Output nodes': (self.Par_.num_min_output_nodes_alive,self.Par_.num_output_nodes),
+        }
+        weights = []
+        keys = []
+        for k, (min_needed, _) in custom_adjustments.items():
+            subdict = alive_dict.get(k, {})
+            if not subdict:
+                continue  # skip empty subdicts, weight = 0
+            
+            current_alive = len(subdict)
+            if current_alive >= min_needed and dead_dict.get(k):
+                # The closer to the minimum, the higher the weight
+                weight = 1 / (current_alive - min_needed + 1)
+                weights.append(weight)
+                keys.append(k)
+        if not keys:
+            print('schwingus dingus')
+            alive_dict,dead_dict = self.kill_nodes_fct_V2(alive_dict, dead_dict)
+            return alive_dict,dead_dict
+        Node_type = random.choices(keys, weights=weights, k=1)[0]
+        to_revive_node = random.choice(list(dead_dict[Node_type].keys()))
+        if Node_type == 'Entry nodes':
+            self.entry_nodes_cls.revieve_process(to_revive_node)
+        elif Node_type == 'Build nodes':
+            self.build_nodes_cls.revieve_process(to_revive_node)
+        elif Node_type == 'Sender nodes':
+            self.timeslice_forwarding_cls.revieve_process_Sender(to_revive_node)
+        elif Node_type == 'Receiver nodes':
+            self.timeslice_forwarding_cls.revieve_process(to_revive_node)
+        elif Node_type == 'Input nodes':
+            self.ZIB_timeslice_forwarding_cls.revieve_input_node(to_revive_node)
+        elif Node_type == 'Central Manager':
+            self.ZIB_timeslice_forwarding_cls.revieve_central_manager(to_revive_node)
+        elif Node_type == 'Output nodes':
+            self.ZIB_timeslice_forwarding_cls.revieve_output_node(to_revive_node)
+        alive_dict[Node_type][to_revive_node] = dead_dict[Node_type][to_revive_node]
+        dead_dict[Node_type].pop(to_revive_node)
+        return alive_dict,dead_dict
     
     # =============================================================================
     # Stops the experiment and kills every process connected    

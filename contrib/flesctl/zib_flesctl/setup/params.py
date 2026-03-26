@@ -51,6 +51,15 @@ class Params:
         self.input_node_kill_list = []
         self.central_manager_kill_list = []
         self.output_node_kill_list = []
+        self.activate_robustness_test_V2 = 1
+        self.timer_for_kills_V2 = timedelta(minutes=1)
+        self.num_min_entry_nodes_alive=2
+        self.num_min_build_nodes_alive=2
+        self.num_min_sender_nodes_alive=2
+        self.num_min_process_nodes_alive=2
+        self.num_min_input_nodes_alive=2
+        self.num_min_central_manager_alive=2
+        self.num_min_output_nodes_alive=2
         self.set_node_list=0
         self.entry_nodes_list=[]
         self.build_nodes_list=[]
@@ -121,6 +130,7 @@ class Params:
         self.get_general_par()
         self.get_mode()
         self.get_kill_par()
+        self.get_kill_par_V2()
         self.get_node_list_par()
         self.get_flesnet_par()
         self.get_mstool_par()
@@ -173,6 +183,17 @@ class Params:
             self.central_manager_kill_list = self.get_node_list('robustness_test','central_manager_kill_list', self.central_manager_kill_list, False)
             self.output_node_kill_list = self.get_node_list('robustness_test','output_node_kill_list',self.output_node_kill_list,False)
     
+
+    def get_kill_par_V2(self):
+        self.activate_robustness_test_V2 = self.get_value('robustness_test_V2','activate_robustness_test_V2','int', self.activate_robustness_test_V2, required=True)
+        self.timer_for_kills_V2 = self.get_value('robustness_test_V2', 'time_for_kills','time',self.timer_for_kills_V2, required=False)
+        self.num_min_entry_nodes_alive = self.get_value('robustness_test_V2', 'num_min_entry_nodes_alive', 'int',self.num_min_entry_nodes_alive, required=False)
+        self.num_min_build_nodes_alive = self.get_value('robustness_test_V2','num_min_build_nodes_alive','int',self.num_min_build_nodes_alive, required=False)
+        self.num_min_sender_nodes_alive = self.get_value('robustness_test_V2','num_min_sender_nodes_alive','int', self.num_min_sender_nodes_alive, required=False)
+        self.num_min_process_nodes_alive = self.get_value('robustness_test_V2','num_min_process_nodes_alive','int', self.num_min_process_nodes_alive, required=False)
+        self.num_min_input_nodes_alive = self.get_value('robustness_test_V2','num_min_input_nodes_alive','int', self.num_min_input_nodes_alive, required=False)
+        self.num_min_central_manager_alive = self.get_value('robustness_test_V2', 'num_min_central_manager_alive','int', self.num_min_central_manager_alive, required=False)
+        self.num_min_output_nodes_alive = self.get_value('robustness_test_V2','num_min_output_nodes_alive','int', self.num_min_output_nodes_alive, required=False)
 
     def get_node_list_par(self):
         self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
@@ -352,6 +373,8 @@ class Params:
         #Params_check.check_log_lvl()
         if self.kill_nodes:
             Params_check.check_kill_par()
+        if self.activate_robustness_test_V2:
+            Params_check.check_kill_par_V2()
         self.show_only_entry_nodes = Params_check.check_transport_method()
         self.enable_progress_bar = Params_check.monitoring_check()
         Params_check.check_timeslice_forwarding()
@@ -689,6 +712,9 @@ class params_checker:
     #TODO: wenn flesnet aktiv input nodes == build nodes !!!
     def check_kill_par(self):
         logger.debug('check robustness test')
+        if self.Par_.activate_robustness_test_V2:
+            logger.critical(f'cannot do both modes for robustness check')
+            self.exit_program()
         if self.Par_.timer_for_kill == timedelta(seconds=0):
             logger.critical("Cannot kill programs immediatly")
             self.exit_program()
@@ -761,8 +787,55 @@ class params_checker:
                     if kill_output not in self.Par_.output_node_list:
                         logger.critical(f"Supposed to kill output node: {kill_output}. But this is not contained in the output nodes list")
                         self.exit_program()
+    
+    def check_kill_par_V2(self):
+        logger.debug('check robustness test V2')
+        if self.Par_.timer_for_kills_V2 == timedelta(seconds=0):
+            logger.critical("Cannot kill programs immediatly")
+            self.exit_program()
+        if self.Par_.use_flesnet:
+            if self.Par_.num_min_entry_nodes_alive >= self.Par_.num_entrynodes:
+                logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_entry_nodes_alive} outmatches the total number of entry nodes: {self.Par_.num_entrynodes}')
+                self.exit_program()
                 
-
+            if self.Par_.num_min_build_nodes_alive >= self.Par_.num_buildnodes:
+                logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_build_nodes_alive} outmatches the total number of build nodes: {self.Par_.num_buildnodes}')
+                self.exit_program()
+        if self.Par_.activate_timesliceforwarding:
+            if self.Par_.use_flesnet:
+                if self.Par_.num_min_sender_nodes_alive >= self.Par_.num_buildnodes:
+                    logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_sender_nodes_alive} outmatches the total number of sender nodes: {self.Par_.num_buildnodes}')
+                    self.exit_program()
+                
+                if self.Par_.num_min_process_nodes_alive >= self.Par_.num_buildnodes:
+                    logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_process_nodes_alive} outmatches the total number of receiver nodes: {self.Par_.num_buildnodes}')
+                    self.exit_program()
+            
+            else:
+                if self.Par_.num_min_sender_nodes_alive >= self.Par_.num_receivers:
+                    logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_sender_nodes_alive} outmatches the total number of sender nodes: {self.Par_.num_receivers}')
+                    self.exit_program()
+                
+                if self.Par_.num_min_process_nodes_alive >= self.Par_.num_receivers:
+                    logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_process_nodes_alive} outmatches the total number of receiver nodes: {self.Par_.num_receivers}')
+                    self.exit_program()
+        if self.Par_.ZIB_timesliceforwarding:
+            if self.Par_.use_flesnet:
+                if self.Par_.num_min_input_nodes_alive >= self.Par_.num_buildnodes:
+                    logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_input_nodes_alive} outmatches the total number of input nodes: {self.Par_.num_buildnodes}')
+                    self.exit_program()
+            else:
+                if self.Par_.num_min_input_nodes_alive >= self.Par_.num_input_nodes:
+                    logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_input_nodes_alive} outmatches the total number of input nodes: {self.Par_.num_input_nodes}')
+                    self.exit_program()
+            if self.Par_.num_min_central_manager_alive >= self.Par_.num_central_manager:
+                logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_central_manager_alive} outmatches the total number of central manager nodes: {self.Par_.num_central_manager}')
+                self.exit_program()
+                
+            if self.Par_.num_min_output_nodes_alive >= self.Par_.num_output_nodes:
+                logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_output_nodes_alive} outmatches the total number of output nodes: {self.Par_.num_output_nodes}')
+                self.exit_program()
+                
     def check_transport_method(self):
         logger.debug('check transport method')
         if self.Par_.transport_method not in ['zeromq', 'rdma']:
