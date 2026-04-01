@@ -62,4 +62,5 @@ private:
                                                        std::shared_ptr<fles::TDescriptor> ts, long long& acc_size);
   fles::TDescriptor create_descriptor_ts(std::shared_ptr<const fles::Timeslice> ts);
 
+  void try_delay(std::chrono::nanoseconds sleep_duration) const;
 };
