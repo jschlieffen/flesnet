@@ -9,6 +9,7 @@ Created on Mon Aug 25 12:15:18 2025
 import os
 import monitoring
 import curses
+import traceback
 os.chdir('monitoring/')
 
 with open("pids_monitoring.txt", "w") as f:
@@ -54,3 +55,4 @@ with open("monitoring.log", "w") as log_file:
         log_file.write(f'avg_data_rate: {avg_data_rate} \n')
     except Exception as e:
         log_file.write(f"Error: {e}\n")
+        log_file.write(traceback.format_exc())

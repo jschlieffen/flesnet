@@ -44,7 +44,7 @@ def calc_str(ip, build_nodes_ip,num_build_nodes,desc_size,data_size):
     parts_build = build_nodes_ip.split('sep')
     shm_string = ""
     for i in range(0,int(num_build_nodes)):
-        shm_string += "shm://%s/fles_out_b%s" % (parts_build[i],str(i))
+        shm_string += "shm://%s/fles_out_b%s " % (parts_build[i],str(i))
     return ip_string, shm_string
 
 def start_collectl(use_infiniband, csvfile_name):

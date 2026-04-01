@@ -127,7 +127,7 @@ class Entry_nodes:
     
     def stop_flesnet(self):
         for node in self.node_list.keys():
-            logger.info(f"stopping super node: {node}")
+            logger.info(f"stopping entry node: {node}")
             with open("tmp/central_manager.txt", "w") as f:
                 f.write(f"Entry {node}: stop")
                 f.flush()

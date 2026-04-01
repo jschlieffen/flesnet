@@ -1,8 +1,8 @@
-file_name: ../logs/flesnet/entry_nodes/entry_node_htc-cmp501.log, 750
-file_name: ../logs/flesnet/entry_nodes/entry_node_htc-cmp502.log, 88
-file_name: ../logs/flesnet/build_nodes/build_node_htc-cmp503.log, 838
-file_name: ../logs/flesnet/build_nodes/build_node_htc-cmp504.log, 838
+file_name: ../Runs/Run_79_2026-04-01-19-54-43/logs/collectl/entry_nodes/entry_node_htc-cmp134.csv, 750
+file_name: ../Runs/Run_79_2026-04-01-19-54-43/logs/collectl/entry_nodes/entry_node_htc-cmp135.csv, 88
+file_name: ../Runs/Run_79_2026-04-01-19-54-43/logs/collectl/build_nodes/build_node_htc-cmp136.csv, 838
+file_name: ../Runs/Run_79_2026-04-01-19-54-43/logs/collectl/build_nodes/build_node_htc-cmp137.csv, 838
 num_buildnodes: 2
 num_entrynodes: 2
 enable_graph: 1
-enable_progess_bar: 0
+enable_progess_bar: None

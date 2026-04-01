@@ -885,11 +885,14 @@ class params_checker:
             
     def monitoring_check(self):
         logger.debug('check monitoring params')
-        if self.Par_.enable_progress_bar:
+        print('test123')
+        print(self.Par_.enable_progress_bar)
+        if self.Par_.enable_progress_bar == 1:
+            print('test')
             if self.Par_.use_pattern_gen == 1:
                 logger.warning('Pattern Generator is used, thus there is no limit for the total data. Therefore progress bar is disabled')
                 return 0
-        return 1
+            return 1
     
     def check_timeslice_forwarding(self):
         logger.debug('check for timesliceforwarding params')

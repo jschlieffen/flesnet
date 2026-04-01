@@ -33,7 +33,7 @@ terminate_program = False
 # =============================================================================
 # Gets the data rate from a line in the logfile
 # =============================================================================
-def get_data_rate(log_line):
+def get_data_rate_V2(log_line):
     match = re.search(r'(\d+\.\d+)\sGB/s', log_line)
     if match:
         return float(match.group(1))
@@ -42,6 +42,12 @@ def get_data_rate(log_line):
         return float(match.group(1))/1000
     return 0.0 # This line returns 0
 
+def get_data_rate(parts, col_index):
+    try:
+        return float(parts[col_index])/1000000
+    except (IndexError, ValueError):
+        return 0.0 #This line returns 0
+
 def calculate_progress(current_data, total_data):
     return current_data / total_data
 
@@ -49,15 +55,18 @@ def calculate_progress(current_data, total_data):
 # Gives the prefix of the progress bars
 # =============================================================================
 def calc_outout_str(input_string):
-    
-    pattern = r"logs/flesnet/(build|entry)_nodes/(build|entry)_node_(.+?)\.log"
-    
+    pattern = r"logs/collectl/(build|entry)_nodes/(build|entry)_node_(.+?)\.csv"
     match = re.search(pattern, input_string)
     if match:
         node_type = match.group(1) 
         node_id = match.group(3)
         formatted_output = f"{node_type} node: {node_id}"
         return formatted_output
+
+    # Log unmatched string
+    with open("debug.log", "a") as debug_log:
+        debug_log.write(f"calc_outout_str: input={input_string}, no match, returning input\n")
+    #return input_string
 
 
 # =============================================================================
@@ -214,12 +223,32 @@ def tail_file_v2(file_path):
 def tail_file(file_path):
     f = subprocess.Popen(['tail', '-F', file_path],
                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    while True:
-        rlist, _, _ = select.select([f.stdout], [], [], 1) 
-        line = str(f.stdout.readline(), 'utf-8').strip()
-        if rlist:
-            if "STATUS:" in line or "INFO:" in line:
-                yield line
+    try:
+        while not terminate_program:
+            rlist, _, _ = select.select([f.stdout], [], [], 1) 
+            line = str(f.stdout.readline(), 'utf-8').strip()
+            if rlist:
+                if "STATUS:" in line or "INFO:" in line:
+                    yield line
+    finally:
+        f.terminate()
+        
+def tail_csv(file_path):
+    with open(file_path, "r") as f:
+        f.seek(0, 2)  # go to end of file
+
+        while not terminate_program:
+            line = f.readline()
+            if not line:
+                time.sleep(0.1)
+                continue
+
+            line = line.strip()
+
+            if not line or line.startswith("#"):
+                continue
+
+            yield line.split(",")
 
 # =============================================================================
 # This function is the main funxtion in of this file. It adds 
@@ -228,39 +257,59 @@ def tail_file(file_path):
 # =============================================================================
 def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable_progress_bar):
     global terminate_program
-    signal.signal(signal.SIGINT, lambda signum, frame: signal_handler(signum, frame, stdscr))
-    signal.signal(signal.SIGTERM, lambda signum, frame: signal_handler(signum, frame, stdscr))
+    signal.signal(signal.SIGINT, lambda signum, frame: signal_handler(signum, frame))
+    signal.signal(signal.SIGTERM, lambda signum, frame: signal_handler(signum, frame))
     stdscr.clear()
     data_dict = {}
     init_color_pairs_v2()
+    COLUMN_MAP = {
+        "[IB]InPkt": 2,
+        "[IB]OutPkt": 3,
+        "[IB]InKB": 4,
+        "[IB]OutKB": 5,
+        "[IB]Err": 6,
+    }
+    
+    #USE_COLUMN = "[IB]InKB"   # change once depending on use case
+    #COL_INDEX = COLUMN_MAP[USE_COLUMN]
     for file_name in file_names:
+        entry_or_build = calc_outout_str(file_name[0])
+        if 'entry node' in entry_or_build:
+            USE_COLUMN = "[IB]OutKB"   
+            COL_INDEX = COLUMN_MAP[USE_COLUMN]
+        elif 'build node' in entry_or_build:
+            USE_COLUMN = "[IB]InKB"   
+            COL_INDEX = COLUMN_MAP[USE_COLUMN]
         data_dict[file_name[0]] = {
             'current_data' : 0.0,
-            'tail' : tail_file(file_name[0]),
+            #'tail' : tail_file(file_name[0]),
+            'tail' : tail_csv(file_name[0]),
             'total_data' : file_name[1], 
-            'data_array' : []
+            'data_array' : [],
+            'COL_INDEX' : COL_INDEX
             }
-    while True:
-        if terminate_program:
-            break
-        for key,val in data_dict.items():
-            try:
-                line = next(val['tail'])
-                data_rate = get_data_rate(line)
-                data_dict[key]['current_data'] += data_rate
-                data_dict[key]['data_array'].append(data_rate)
-            except StopIteration:
-                data_rate = 0.0
-        
-        
-        if enable_progress_bar:
-            draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
-        if enable_graph:
-            draw_Graph(stdscr,data_dict)
-            #stdscr.addstr('test123')
-        #stdscr.addstr('test')
-        stdscr.refresh()
-        time.sleep(1)
+    try: 
+        while not terminate_program:
+            for key,val in data_dict.items():
+                try:
+                    parts = next(val['tail'])
+                    data_rate = get_data_rate(parts, val['COL_INDEX'])
+                    data_dict[key]['current_data'] += data_rate
+                    data_dict[key]['data_array'].append(data_rate)
+                except StopIteration:
+                    data_rate = 0.0
+            
+            stdscr.erase()
+            if enable_progress_bar:
+                draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes)
+            if enable_graph:
+                draw_Graph(stdscr,data_dict)
+                #stdscr.addstr('test123')
+            #stdscr.addstr('test')
+            stdscr.refresh()
+            time.sleep(1)
+    finally:
+        cleanup(stdscr)
     total_data, avg_data_rate = calc_output_msg(data_dict)
     return total_data, avg_data_rate
     
@@ -288,16 +337,35 @@ def calc_output_msg(data_dict):
 # implemented so it is recommended to only use it if the other two fails
 # May be changed in the furture
 # ============================================================================
-def signal_handler(signum, frame,stdscr):
+def signal_handler_V2(signum, frame,stdscr):
     if signum == signal.SIGINT:
+        cleanup(stdscr)
        #logger.error(f'received signal {signum}. Handling termination')
-       print(f'received signal {signum}. Handling termination')
-    elif signum == signal.SIGTERM:
+       #print(f'received signal {signum}. Handling termination')
+    #elif signum == signal.SIGTERM:
         #logger.error(f'received signal {signum}. Handling termination')
-        print(f'received signal {signum}. Handling termination')
-    cleanup(stdscr)
+        #print(f'received signal {signum}. Handling termination')
+    #cleanup(stdscr)
+
+def signal_handler(signum, frame):
+    global terminate_program
+    terminate_program = True
+    with open("debug.log", "a") as f:
+        f.write("SIGINT received\n")
+
 
 def cleanup(stdscr):
+    if stdscr is not None:
+        try:
+            curses.nocbreak()
+            stdscr.keypad(False)
+            curses.echo()
+        except:
+            pass
+        finally:
+            curses.endwin()
+            
+def cleanup_V2(stdscr):
     global terminate_program
     if stdscr is not None:
         curses.endwin()

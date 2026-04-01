@@ -678,8 +678,6 @@ class execution:
             #TODO: check if signal handling error still appears.
             try: 
                 self.monitoring()
-                while True:
-                    time.sleep(1)
             except Exception as e:
                 logger.critical(f'Error {e} occured during monotoring. Terminating')
         if self.Par_.kill_nodes:
@@ -1082,7 +1080,7 @@ class execution:
     # If one wants to access it, open a new terminal and go into the login node.
     # Then execute
     #   tmux attach-session -t monitoring
-    # If the session is no longer needed, execute 
+    # If the session is no longer needed, execute
     #   tmux kill-session -t monitoring
     # TODO: use collectl rather than flesnet logs...
     # =============================================================================
@@ -1092,7 +1090,7 @@ class execution:
             entry_nodes_cnt = 0
             total_file_data = 0
             for super_node in self.overlap_nodes.keys():
-                logfile = '../logs/flesnet/entry_nodes/entry_node_%s.log' % (super_node)
+                logfile = '../%s/logs/collectl/entry_nodes/entry_node_%s.csv' % (self.Run_folder,super_node)
                 #total_data = 1000
                 file_data = 0
                 file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
@@ -1103,13 +1101,13 @@ class execution:
                 total_file_data += file_data
             for super_node in self.overlap_nodes.keys():
                 if not self.Par_.show_only_entry_nodes:
-                    logfile_build = '../logs/flesnet/build_nodes/build_node_%s.log' % (super_node)
+                    logfile_build = '../%s/logs/collectl/build_nodes/build_node_%s.csv' % (self.Run_folder,super_node)
                     total_data = total_file_data
                     file_names.append((logfile_build,total_data))
         entry_nodes_cnt = 0
         total_file_data = 0
         for entry_node in self.entry_nodes.keys():
-            logfile = '../logs/flesnet/entry_nodes/entry_node_%s.log' % (entry_node)
+            logfile = '../%s/logs/collectl/entry_nodes/entry_node_%s.csv' % (self.Run_folder,entry_node)
             file_data = 0
             file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
             if file_data is None:
@@ -1120,7 +1118,7 @@ class execution:
             total_file_data += file_data
         if not self.Par_.show_only_entry_nodes:
             for build_node in self.build_nodes.keys():
-                logfile = '../logs/flesnet/build_nodes/build_node_%s.log' % (build_node)
+                logfile = '../%s/logs/collectl/build_nodes/build_node_%s.csv' % (self.Run_folder, build_node)
                 file_data = total_file_data
                 file_names.append((logfile,file_data))
         with open('monitoring/mon_parameters.txt', 'w') as f:
