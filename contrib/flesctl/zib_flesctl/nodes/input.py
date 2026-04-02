@@ -134,6 +134,8 @@ def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_nod
     if use_dmsa_files == 1:
         D_flag = "-D 1"
     if use_pattern_gen == 0:
+        mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
+        print(mstool_commands)
         mstool_communicater = queue.Queue()
         thread_mstool = threading.Thread(target=start_mstool, args=(path, dmsa_file, entry_node_idx, D_flag, mstool_communicater))
         thread_mstool.start()
