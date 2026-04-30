@@ -35,6 +35,9 @@ class Timeslice_forwarding_ZIB:
             "path",
             "use_infiniband",
             "use_collectl",
+            "influx_node_ip",
+            "influx_token",
+            "use_grafana"
         ]
         with open('tmp/tf_cm_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
@@ -54,7 +57,10 @@ class Timeslice_forwarding_ZIB:
                 "use_collectl",
                 "write_data_to_file",
                 "path_to_output_file",
-                "analyze_data"
+                "analyze_data",
+                "influx_node_ip",
+                "influx_token",
+                "use_grafana"
             ]   
         with open('tmp/tf_output_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:
@@ -73,7 +79,10 @@ class Timeslice_forwarding_ZIB:
                 "use_infiniband",
                 "use_collectl",
                 "use_flesnet", 
-                "use_dtsa_files"
+                "use_dtsa_files",
+                "influx_node_ip",
+                "influx_token",
+                "use_grafana"
             ]   
         with open('tmp/tf_input_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:

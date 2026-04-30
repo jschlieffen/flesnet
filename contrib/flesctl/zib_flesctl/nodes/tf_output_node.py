@@ -98,7 +98,8 @@ def write_response(node_name, msg):
         os.fsync(f.fileno())
                 
         
-def start_tsclient(path,shm_str,node_name,write_data_to_file,analyze_data, logfile_tsclient, path_to_output_file, tsclient_communicater):
+def start_tsclient(path,shm_str,node_name,write_data_to_file,analyze_data, logfile_tsclient, 
+                   path_to_output_file, influx_node_ip, influx_token, use_grafana, tsclient_communicater):
     str_ = f"-L {logfile_tsclient} "
     if analyze_data:
         str_ += "-a "
@@ -107,6 +108,9 @@ def start_tsclient(path,shm_str,node_name,write_data_to_file,analyze_data, logfi
             run_id = file.read().strip()
             file.close()
         str_ += f"-o file:{path_to_output_file}/{run_id}/tsa_files/output_node_{node_name}.tsa"
+    if use_grafana:
+        os.environ['CBM_INFLUX_TOKEN'] = influx_token
+        str_ += f" --monitor influx2:{influx_node_ip}:8086:tsclient_status:" 
     tsclient_command = f"{path}./tsclient -i shm:{shm_str} {str_}"
     print(tsclient_command)
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -119,7 +123,8 @@ def start_tsclient(path,shm_str,node_name,write_data_to_file,analyze_data, logfi
             result_tsclient.wait()
             break
 
-def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_infiniband, path, write_data_to_file, analyze_data, logfile_tsclient,path_to_output_file):
+def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_infiniband, path, write_data_to_file, analyze_data, logfile_tsclient,
+                path_to_output_file, influx_node_ip, influx_token, use_grafana):
     str_,shm_str = calc_str(output_node_ip,port,cm_node_ip,output_node_idx)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
@@ -132,20 +137,21 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
         thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
         thread_collectl.start()
         time.sleep(1)
-    '''
+
     grafana_string = ''
     if use_grafana == 1:
-        os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
-    '''
+        #os.environ['CBM_INFLUX_TOKEN'] = influx_token
+        grafana_string = '-m influx2:%s:8086:timeslice_forwarder_state:%s' % (influx_node_ip, influx_token) 
+
         #tsclient_commands = '%s./tsclient -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
         #result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     tsclient_communicater = queue.Queue()
-    thread_tsclient = threading.Thread(target=start_tsclient, args=(path, shm_str, node_name, write_data_to_file, analyze_data, logfile_tsclient, path_to_output_file, tsclient_communicater))
+    thread_tsclient = threading.Thread(target=start_tsclient, args=(path, shm_str, node_name, write_data_to_file, analyze_data, logfile_tsclient,
+                                                                    path_to_output_file, influx_node_ip, influx_token, use_grafana, tsclient_communicater))
     thread_tsclient.start()
     output_node_commands = (
-        '%s./timeslice_forwarder %s > %s 2>&1 &' 
-        % (path,str_,logfile)
+        '%s./timeslice_forwarder %s %s > %s 2>&1 &' 
+        % (path,str_, grafana_string,logfile)
     )
     print(output_node_commands)
     result_output_node = subprocess.Popen(output_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
@@ -239,4 +245,5 @@ logfile_collectl = arg['<logfile_collectl>']
 logfile_tsclient = arg['<logfile_tsclient>']
 #customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
 
-output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_infiniband, path, write_data_to_file, analyze_data, logfile_tsclient,path_to_output_file)
+output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_infiniband, path, write_data_to_file, analyze_data, logfile_tsclient,
+            path_to_output_file,influx_node_ip, influx_token, use_grafana)

@@ -915,11 +915,17 @@ class params_checker:
             with InfluxDBClient(url=url, token=self.Par_.influx_token, org="CBM") as client:
                 buckets_api = client.buckets_api()
                 buckets = buckets_api.find_buckets().buckets
-                if not any(b.name == "flesnet_status" for b in buckets):
-                    logger.critical("bucket flesnet_status not found in influxdb")
-                    self.exit_program()
-                if not any(b.name == "tsclient_status" for b in buckets):
-                    logger.critical("bucket flesnet_status not found in influxdb")
+                if self.Par_.use_flesnet:
+                    if not any(b.name == "flesnet_status" for b in buckets):
+                        logger.critical("bucket flesnet_status not found in influxdb")
+                        self.exit_program()
+                if self.Par_.activate_timesliceforwarding or self.Par_.ZIB_timesliceforwarding:
+                    if not any(b.name == "tsclient_status" for b in buckets):
+                        logger.critical("bucket tsclient_status not found in influxdb")
+                    if self.Par_.ZIB_timesliceforwarding:
+                        if not any(b.name == "timeslice_forwarder_state" for b in buckets):
+                            logger.critical("bucket timeslice_forwarder_state not found in influxdb")
+                    
         except ApiException as e:
             if e.status == 401:
                 logger.critical("Influxdb token invalid")

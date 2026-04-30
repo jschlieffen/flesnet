@@ -91,7 +91,7 @@ def write_response(node_name, msg):
         f.flush()
         os.fsync(f.fileno())
 
-def central_manager(ip,port,logfile,logfile_collectl,use_collectl,use_infiniband,path):
+def central_manager(ip,port,logfile,logfile_collectl,use_collectl,use_infiniband,path,influx_node_ip, influx_token, use_grafana):
     ip_string = calc_str(ip, port)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
@@ -104,15 +104,14 @@ def central_manager(ip,port,logfile,logfile_collectl,use_collectl,use_infiniband
         thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
         thread_collectl.start()
         time.sleep(1)
-    '''
+    
     grafana_string = ''
     if use_grafana == 1:
-        os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
-    '''
+        #os.environ['CBM_INFLUX_TOKEN'] = influx_token
+        grafana_string = '-m influx2:%s:8086:timeslice_forwarder_state:%s' % (influx_node_ip, influx_token)
     cm_commands = (
-        '%s./timeslice_forwarder %s > %s 2>&1 &' 
-        % (path, ip_string,logfile)
+        '%s./timeslice_forwarder %s %s > %s 2>&1 &' 
+        % (path, ip_string, grafana_string ,logfile)
     )
     print(cm_commands)
     result_cm = subprocess.Popen(cm_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
@@ -200,5 +199,5 @@ logfile = arg["<logfile>"]
 logfile_collectl = arg['<logfile_collectl>']
 #customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
 
-central_manager(ip,port,logfile,logfile_collectl,use_collectl,use_infiniband,path)
+central_manager(ip,port,logfile,logfile_collectl,use_collectl,use_infiniband,path, influx_node_ip, influx_token, use_grafana)
 

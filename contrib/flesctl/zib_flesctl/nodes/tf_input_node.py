@@ -132,12 +132,17 @@ def write_response(node_name, msg):
         f.flush()
         os.fsync(f.fileno())
 
-def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files ,tsclient_communicater):
+def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, influx_node_ip, influx_token, use_grafana ,tsclient_communicater):
     if use_dtsa_files == 1:
         dtsa_command = "-D 1"
     else:
         dtsa_command = ""
-    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n=29 {dtsa_command}"
+    grafana_string = ""
+    if use_grafana:
+        os.environ['CBM_INFLUX_TOKEN'] = influx_token
+        grafana_string = '--monitor influx2:%s:8086:tsclient_status:' % (influx_node_ip)
+    
+    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n=29 {dtsa_command} {grafana_string}"
     print(tsclient_command)
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     while True:
@@ -147,7 +152,8 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files ,ts
             result_tsclient.wait()
             break
 
-def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl, logfile):
+def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl, 
+               logfile,influx_node_ip, influx_token, use_grafana):
     str_,shm_str = calc_str(input_node_ip,port,cm_node_ip,input_node_idx)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
@@ -162,12 +168,17 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
     if use_flesnet == 0:
         print('test1234')
         tsclient_communicater = queue.Queue()
-        thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, shm_str, logfile_tsclient, use_dtsa_files, tsclient_communicater))
+        thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, shm_str, logfile_tsclient, use_dtsa_files,
+                                                                        influx_node_ip, influx_token, use_grafana, tsclient_communicater))
         thread_tsclient.start()
         time.sleep(1)
+    grafana_string = ''
+    if use_grafana == 1:
+        #os.environ['CBM_INFLUX_TOKEN'] = influx_token
+        grafana_string = '-m influx2:%s:8086:timeslice_forwarder_state:%s' % (influx_node_ip, influx_token) 
     input_node_commands = (
-        '%s./timeslice_forwarder %s > %s 2>&1 &' 
-        % (path,str_,logfile)
+        '%s./timeslice_forwarder %s %s > %s 2>&1 &' 
+        % (path,str_, grafana_string,logfile)
     )
     print(input_node_commands)
     result_input_node = subprocess.Popen(input_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
@@ -237,5 +248,6 @@ input_node_idx = arg["<input_node_idx>"]
 input_node_ip = arg["<input_node_ip>"]
 logfile_collectl = arg['<logfile_collectl>']
 logfile_tsclient = arg['<logfile_tsclient>']
-input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl,logfile)
+input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl,
+           logfile,influx_node_ip, influx_token, use_grafana)
 
