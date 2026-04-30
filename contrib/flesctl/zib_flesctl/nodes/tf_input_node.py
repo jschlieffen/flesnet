@@ -77,7 +77,7 @@ def get_node_ip(use_infiniband):
 def calc_str(input_node_ip,port,cm_node_ip,input_node_idx):
     ip = get_node_ip(1)
     shm_str = f"fles_out_b{input_node_idx}"
-    str_ = f"-i {input_node_ip}:{port} -m {cm_node_ip}:{port} -n {input_node_idx} -g 1 --shm-id {shm_str}"
+    str_ = f"-l {input_node_ip}:{port} -c {cm_node_ip}:{port} -n {input_node_idx} -g 1 --shm-id {shm_str}"
     return str_,shm_str
 
 def start_collectl(use_infiniband, csvfile_name):
@@ -137,7 +137,8 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files ,ts
         dtsa_command = "-D 1"
     else:
         dtsa_command = ""
-    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n=26 {dtsa_command}"
+    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n=29 {dtsa_command}"
+    print(tsclient_command)
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     while True:
         msg = tsclient_communicater.get()
@@ -157,7 +158,9 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
         thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
         thread_collectl.start()
         time.sleep(1)
+    print(use_flesnet)
     if use_flesnet == 0:
+        print('test1234')
         tsclient_communicater = queue.Queue()
         thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, shm_str, logfile_tsclient, use_dtsa_files, tsclient_communicater))
         thread_tsclient.start()
@@ -234,6 +237,5 @@ input_node_idx = arg["<input_node_idx>"]
 input_node_ip = arg["<input_node_ip>"]
 logfile_collectl = arg['<logfile_collectl>']
 logfile_tsclient = arg['<logfile_tsclient>']
-
 input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl,logfile)
 

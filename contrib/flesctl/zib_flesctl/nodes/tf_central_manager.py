@@ -36,7 +36,7 @@ import signal
 
 
 def calc_str(ip,port):
-    return f"-m {ip}:{port}"
+    return f"-c {ip}:{port}"
 
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == 1:

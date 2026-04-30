@@ -9,7 +9,7 @@ Created on Mon Mar 17 15:48:03 2025
 import configparser as cfg
 import os
 import sys
-
+import glob
 from influxdb_client import InfluxDBClient
 from influxdb_client.rest import ApiException
 
@@ -418,13 +418,17 @@ class params_checker:
                         self.exit_program()
         if not self.Par_.use_flesnet:
             if not self.Par_.input_tsa_files:
-                logger.critical('no .tsa input file for the tsclietn to reead from')
+                logger.critical('no .tsa input file for the tsclient to read from')
+                self.exit_program()
             else:
                 for elem in self.Par_.input_tsa_files:
-                    if not os.path.isfile(elem[1]):
-                        logger.critical(f'File {elem[1]} does not exist')
+                    matches = glob.glob(elem[1])
+            
+                    if not matches:
+                        logger.critical(f'No files found for {elem[1]}')
                         self.exit_program()
-    
+                        
+                        
     def check_program_exists(self):
         logger.debug('check if the path to flesnet is correct')
         for program in ['./mstool', './flesnet', './tsclient', './timeslice_forwarder','./archive_validator']:
