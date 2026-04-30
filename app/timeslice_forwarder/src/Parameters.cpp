@@ -17,55 +17,41 @@ void Parameters::parse_options(int argc, char** argv) {
     string connectors_option;
 
     general_add("help,h", "Print this help");
-    // general_add("central-manager", )
-    // general_add("connector,c",
-    //     po::value<vector<string>>(&connectors_option)->composing(),
-    //     "Add a connector with '--connector \"<name> <listen_addr> <UID>\"'. Note the quotation marks surrounding the argument. To use multiple connectors simply use this flag multiple times with the shown pattern.");
 
-    general_add("input,i",
-        po::value<string>(&input_listen_addr),
-        "Defines this node as a sender node. '-i <listen_address>");
+    general_add("listen-address,l",
+        po::value<string>(&listen_addr),
+        "Defines interface listen address to be used by other nodes to establish a connnection '-l <own_IB_ip>:<port>'");
 
-    general_add("output,o",
-        po::value<string>(&output_listen_addr),
-        "Defines this node as a receiver node. '-o <listen_address>");
-
-    // general_add("input,i",
-    //     po::value<vector<string>>(&input_option)->composing(),
-    //     "Defines this node as a sender node. '-i <listen_address> -c <central_manager_address>'");
-
-    // general_add("output,o",
-    //     po::value<vector<string>>(&output_option)->composing(),
-    //     "Defines this node as a receiver node. '-o <listen_address> -c <central_manager_address>'");
-
-    general_add("central-manager,m",
+    general_add("central-manager,c",
         po::value<string>(&central_manager_listen_addr),
-        "If this is defined by its own the node will run as the central manager. Otherwise combine it with -o or -i so the node can connect to the central manager.");
+        "IP and port of the IB interface of the CM manager '-c <CM_IB_ip>:<port>'");
+
+    general_add("monitor,m",
+        po::value<string>(&monitoring_uri),
+        "monitoring uri influxdb2:host:bucket:[auth_token]");
 
     general_add("node-id,n",
         po::value<uint32_t>(&node_id),
-        "Sets the node ID for this node");
+        "Sets the node ID for this node. Within one Group the node ID has to be unique.");
 
     general_add("group-id,g",
         po::value<uint32_t>(&group_id),
-        "Sets the group ID for this node");
+        "Sets the group ID for this node.\nGroup ID 1 = TS sender.\nGroup ID 2 = TS Receiver.");
 
     general_add("shm-id",
         po::value<std::string>(&shm_name),
-        "SHM name");
-
-    // general_add("address,a",
-    //     po::value<std::string>(&ib_address),
-    //     "IB address");
+        "SHM name with query parameters similar to tsclient and flesnet. eg. '--shm-id ts_in?n=16'");
 
     stringstream desc_sstr;
     desc_sstr << endl
         << "Start Central Manager: " << endl
-        << "\t" << "timeslice_forwarder --central-manager \"ConnectorInfiniband <ip>:<port>\"" << endl << endl
-        << "Start Input Node:" << endl
-        << "\t" << R"(timeslice_forwarder --node-id 1 --group-id 1 --central-manager "ConnectorInfiniband <ip>:<port>" --connector "ConnectorInfiniband <own_ip>:<port> 1" --input "ConnectorFromFlesnet <shm_id>")" << endl << endl
+        << "timeslice_forwarder --central-manager <CM_IB_ip>:<CM_port>" << endl << endl
+        << "Start TS Sender Node:" << endl
+        << "timeslice_forwarder --node-id <n> --group-id 1 -l <own_IB_ip>:<own_port> --central-manager <CM_IB_ip>:<CM_port> --shm-id <shm uri like in flesnet>" << endl << endl
+        << "Start TS Receiver Node:" << endl
+        << "timeslice_forwarder --node-id <n> --group-id 2 -l <own_IB_ip>:<own_port> --central-manager <CM_IB_ip>:<CM_port> --shm-id <shm uri like in flesnet>"
         << endl << endl;
-        // << "Command line options";
+
     po::variables_map vm;
     po::options_description desc(desc_sstr.str());
     desc
@@ -79,81 +65,7 @@ void Parameters::parse_options(int argc, char** argv) {
         exit(EXIT_SUCCESS);
     }
 
-    // if (vm.count("central-manager") != 0) {
-    //     vector<string> central_manager_option_splitted = split(central_manager_option[0], ' ');
-    //     central_manager.type = WorkItem::connector_config;
-    //     central_manager.name = central_manager_option_splitted[0];
-    //     central_manager.listen_addr = central_manager_option_splitted[1];
-    // }
-
-    // if (vm.count("group-id") != 0 || vm.count("node-id") != 0) {
-    //     is_node = true;
-    //     for (auto &connector_str : connectors_option) {
-    //         vector<string> connectors_option_splitted = split(connector_str, ' ');
-    //         if (connectors_option_splitted.size() != 3) {
-    //             cerr << "!!! Connector definition not valid: " << connector_str << endl;
-    //             exit(EXIT_FAILURE);
-    //         }
-    //         WiConnectorConfig c;
-    //         c.type = WorkItem::connector_config;
-    //         c.name = connectors_option_splitted[0];
-    //         c.listen_addr = connectors_option_splitted[1];
-    //         try {
-    //             c.connector_uid = stoull(connectors_option_splitted[2]);
-    //         } catch (...) {
-    //             cerr << "connector UID has to be an integer >= 0. Given was: " << connectors_option_splitted[2] << endl;
-    //             exit(EXIT_FAILURE);
-    //         }
-    //         connectors.push_back(c);
-    //     }
-
-    //     // if (shm_name.empty()) {
-    //     //     cerr << "!!! No SHM name provided" << endl;
-    //     //     exit(EXIT_FAILURE);
-    //     // }
-    // }
-
-    // if (vm.count("input") != 0) {
-    //     is_node = true;
-    //     // vector<string> input_option_splitted = split(input_option[0], ' ');
-    //     // // cout << "INPUT OPTION: " << input_option[0] << endl;
-    //     // if (input_option_splitted.size() < 2) {
-    //     //     cout << "!!! Input option not valid" << endl;
-    //     //     exit(EXIT_FAILURE);
-    //     // }
-
-    //     // input.type = WorkItem::connector_config;
-    //     // input.name = input_option_splitted[0];
-    //     // input.listen_addr = input_option_splitted[1];
-
-    //     input.type = WorkItem::connector_config;
-    //     // output.name = output_option_splitted[0];
-    //     input.listen_addr = input_option[0];
-
-    // }
-
-    // if (vm.count("output") != 0) {
-    //     is_node = true;
-    //     // vector<string> output_option_splitted = split(output_option[0], ' ');
-    //     // if (output_option_splitted.size() < 2) {
-    //     //     cerr << "!!! Output option not valid" << endl;
-    //     //     exit(EXIT_FAILURE);
-    //     // }
-
-    //     output.type = WorkItem::connector_config;
-    //     // output.name = output_option_splitted[0];
-    //     output.listen_addr = output_option[0];
-    // }
-
-
-    if (!input_listen_addr.empty()) {
-        is_sender = true;
-    } else if (!output_listen_addr.empty()) {
-        is_receiver = true;
-    } else if (!central_manager_listen_addr.empty()) {
-        is_central_manager = true;
-    }
-
+    is_monitoring_enabled = !monitoring_uri.empty(); // convinience variable
     return;
 }
 
