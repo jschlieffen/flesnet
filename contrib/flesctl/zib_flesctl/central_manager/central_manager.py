@@ -238,6 +238,9 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 #time.sleep(1)
+                if self.Par_.use_infiniband and node_ip is None:
+                    logger.critical(f'node: {node} does not have infiniband')
+                    sys.exit(1)
                 if node in Timeslice_forwarding_nodes:
                     continue
                 if entry_nodes_cnt < self.Par_.num_entrynodes and build_nodes_cnt < self.Par_.num_buildnodes and node not in self.Par_.exclude_entry_nodes + self.Par_.exclude_build_nodes:
@@ -276,6 +279,9 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 #time.sleep(1)
+                if self.Par_.use_infiniband and node_ip is None:
+                    logger.critical(f'node: {node} does not have infiniband')
+                    sys.exit(1)
                 if entry_nodes_cnt < self.Par_.num_entrynodes and node not in self.Par_.exclude_entry_nodes:
                     self.entry_nodes[node] = {
                         'node' : node,
@@ -312,7 +318,9 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 #time.sleep(1)
-                
+                if self.Par_.use_infiniband and node_ip is None:
+                    logger.critical(f'node: {node} does not have infiniband')
+                    sys.exit(1)
                 if node in self.Par_.entry_nodes_list and node in self.Par_.build_nodes_list and node not in self.Par_.exclude_entry_nodes + self.Par_.exclude_build_nodes:
                     self.overlap_nodes[node] = {
                         'node' : node,
@@ -347,6 +355,9 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 #time.sleep(1)
+                if self.Par_.use_infiniband and node_ip is None:
+                    logger.critical(f'node: {node} does not have infiniband')
+                    sys.exit(1)
                 if node in self.Par_.entry_nodes_list and node not in self.Par_.exclude_entry_nodes:
                     self.entry_nodes[node] = {
                         'node' : node,
@@ -394,6 +405,9 @@ class execution:
                     node_ip = infiniband_ip(node)
                     node_eth_ip = ethernet_ip(node)
                     #time.sleep(1)
+                    if self.Par_.use_infiniband and node_ip is None:
+                        logger.critical(f'node: {node} does not have infiniband')
+                        sys.exit(1)
                     self.sender_nodes[node] = {
                         'node' : node,
                         'sender_idx' : sender_cnt,
@@ -412,6 +426,9 @@ class execution:
                     node_ip = infiniband_ip(node)
                     node_eth_ip = ethernet_ip(node)
                     #time.sleep(1)
+                    if self.Par_.use_infiniband and node_ip is None:
+                        logger.critical(f'node: {node} does not have infiniband')
+                        sys.exit(1)
                     self.sender_nodes[node] = {
                         'node' : node,
                         'sender_idx' : sender_cnt,
@@ -532,6 +549,9 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 #time.sleep(1)
+                if self.Par_.use_infiniband and node_ip is None:
+                    logger.critical(f'node: {node} does not have infiniband')
+                    sys.exit(1)
                 self.central_manager[node] = {
                         'node' : node, 
                         'cm_idx' : cm_nodes_cnt,
@@ -544,6 +564,9 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 #time.sleep(1)
+                if self.Par_.use_infiniband and node_ip is None:
+                    logger.critical(f'node: {node} does not have infiniband')
+                    sys.exit(1)
                 self.input_nodes[node] = {
                         'node' : node,
                         'input_node_idx' : input_nodes_cnt,
@@ -556,6 +579,9 @@ class execution:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 #time.sleep(1)
+                if self.Par_.use_infiniband and node_ip is None:
+                    logger.critical(f'node: {node} does not have infiniband')
+                    sys.exit(1)
                 self.output_nodes[node] = {
                         'node' : node,
                         'output_node_idx' : output_nodes_cnt,
@@ -580,6 +606,9 @@ class execution:
             node_ip = infiniband_ip(node)
             node_eth_ip = ethernet_ip(node)
             #time.sleep(1)
+            if self.Par_.use_infiniband and node_ip is None:
+                logger.critical(f'node: {node} does not have infiniband')
+                sys.exit(1)
             if cm_nodes_cnt < self.Par_.num_central_manager and node not in self.Par_.exclude_central_manager:
                 self.central_manager[node] = {
                         'node' : node,
