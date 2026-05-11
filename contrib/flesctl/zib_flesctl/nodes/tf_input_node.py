@@ -142,7 +142,7 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, in
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '--monitor influx2:%s:8086:tsclient_status:' % (influx_node_ip)
     
-    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n=29 {dtsa_command} {grafana_string}"
+    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n=26 {dtsa_command} {grafana_string}"
     print(tsclient_command)
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     while True:

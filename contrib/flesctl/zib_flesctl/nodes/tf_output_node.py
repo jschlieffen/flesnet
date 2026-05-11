@@ -40,7 +40,7 @@ import signal
 
 def calc_str(output_node_ip,port,cm_node_ip,output_node_idx):
     shm_str = f"ts_in_{output_node_idx}"
-    str_ = f"-l {output_node_ip}:{port} -c {cm_node_ip}:{port} -n {output_node_idx} -g 2 --shm-id {shm_str}?n=29"
+    str_ = f"-l {output_node_ip}:{port} -c {cm_node_ip}:{port} -n {output_node_idx} -g 2 --shm-id {shm_str}?n=26"
     return str_,shm_str
 
 def start_collectl(use_infiniband, csvfile_name):
