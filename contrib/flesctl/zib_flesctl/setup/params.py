@@ -97,6 +97,7 @@ class Params:
         self.use_dtsa_files = 0
         self.ZIB_timesliceforwarding = 1
         self.use_flesnet = 1
+        self.num_components = 1
         self.num_central_manager = 1
         self.num_input_nodes = 1
         self.num_output_nodes = 1
@@ -235,12 +236,14 @@ class Params:
     def get_shm_commands(self):
         self.desc_size = self.get_value('shm_commands','desc_size','int',self.desc_size,False)
         self.data_size = self.get_value('shm_commands','data_size','int', self.data_size, False)
+        self.num_components = self.get_value('shm_commands', 'num_components','int',self.num_components,False)
     
     def get_tsclient_par(self):
         self.write_data_to_file = self.get_value('tsclient_commands', 'write_data_to_file', 'int', self.write_data_to_file, False)
         self.path_to_output_file = self.get_value('tsclient_commands', "path_to_output_file",'str', self.path_to_output_file, False)
         self.analyze_data = self.get_value('tsclient_commands', 'analyze_data', 'str', self.analyze_data, False)
         self.use_dtsa_files = self.get_value('tsclient_commands','use_dtsa_files','int',self.use_dtsa_files, False)
+
         
     def get_GSI_timesliceforwarding_par(self):
         self.port = self.get_value('GSI_timesliceforwarding', 'port', 'str', self.port, False)

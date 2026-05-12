@@ -132,7 +132,7 @@ def write_response(node_name, msg):
         f.flush()
         os.fsync(f.fileno())
 
-def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, influx_node_ip, influx_token, use_grafana ,tsclient_communicater):
+def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, num_components, influx_node_ip, influx_token, use_grafana ,tsclient_communicater):
     if use_dtsa_files == 1:
         dtsa_command = "-D 1"
     else:
@@ -142,7 +142,7 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, in
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '--monitor influx2:%s:8086:tsclient_status:' % (influx_node_ip)
     
-    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n=26 {dtsa_command} {grafana_string}"
+    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n={num_components} {dtsa_command} {grafana_string}"
     print(tsclient_command)
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     while True:
@@ -152,7 +152,7 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, in
             result_tsclient.wait()
             break
 
-def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl, 
+def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files, num_components ,logfile_collectl, 
                logfile,influx_node_ip, influx_token, use_grafana):
     str_,shm_str = calc_str(input_node_ip,port,cm_node_ip,input_node_idx)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
@@ -168,7 +168,7 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
     if use_flesnet == 0:
         print('test1234')
         tsclient_communicater = queue.Queue()
-        thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, shm_str, logfile_tsclient, use_dtsa_files,
+        thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, shm_str, logfile_tsclient, use_dtsa_files, num_components,
                                                                         influx_node_ip, influx_token, use_grafana, tsclient_communicater))
         thread_tsclient.start()
         time.sleep(1)
@@ -248,6 +248,6 @@ input_node_idx = arg["<input_node_idx>"]
 input_node_ip = arg["<input_node_ip>"]
 logfile_collectl = arg['<logfile_collectl>']
 logfile_tsclient = arg['<logfile_tsclient>']
-input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,logfile_collectl,
+input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,num_components,logfile_collectl,
            logfile,influx_node_ip, influx_token, use_grafana)
 

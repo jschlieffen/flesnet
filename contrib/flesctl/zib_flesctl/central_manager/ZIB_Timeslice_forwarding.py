@@ -58,6 +58,7 @@ class Timeslice_forwarding_ZIB:
                 "write_data_to_file",
                 "path_to_output_file",
                 "analyze_data",
+                "num_components",
                 "influx_node_ip",
                 "influx_token",
                 "use_grafana"
@@ -80,6 +81,7 @@ class Timeslice_forwarding_ZIB:
                 "use_collectl",
                 "use_flesnet", 
                 "use_dtsa_files",
+                "num_components",
                 "influx_node_ip",
                 "influx_token",
                 "use_grafana"
