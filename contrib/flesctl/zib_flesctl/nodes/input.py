@@ -135,7 +135,6 @@ def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_nod
         D_flag = "-D 1"
     if use_pattern_gen == 0:
         mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
-        print(mstool_commands)
         mstool_communicater = queue.Queue()
         thread_mstool = threading.Thread(target=start_mstool, args=(path, dmsa_file, entry_node_idx, D_flag, mstool_communicater))
         thread_mstool.start()
@@ -146,10 +145,10 @@ def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_nod
         % (path,transport_method,logfile,str(entry_node_idx), shm_string,ip_string,
           customize_string, grafana_string)
     )
-    print(flesnet_commands)
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
     msg,action = "", ""
     prev_action = ""
+    print(flesnet_commands)
     while True:
         time.sleep(0.5)
         try:
@@ -187,7 +186,6 @@ def entry_nodes(dmsa_file,ip, entry_nodes_ip,logfile, num_entry_nodes, entry_nod
 
 params = {}
 with open('tmp/entry_nodes_params.txt', 'r') as f:
-    print('test1')
     for line in f:
         if ':' in line:
             key, value = line.strip().split(':', 1)

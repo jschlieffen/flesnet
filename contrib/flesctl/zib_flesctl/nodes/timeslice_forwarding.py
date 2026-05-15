@@ -120,7 +120,7 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
     grafana_string = ''
     if use_grafana == 1:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '-m influx2:%s:8086:tsclient_status: ' % (influx_node_ip)
+        grafana_string = '--monitor influx2:%s:8086:tsclient_status: ' % (influx_node_ip)
     tsclient_commands = (
             '%s./tsclient -l 1 -L %s -i %s %s %s %s > /dev/null 2>&1 &'
             % (path,logfile,ip_string, analyze_data_string, output_file_string, grafana_string)

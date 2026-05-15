@@ -892,10 +892,7 @@ class params_checker:
             
     def monitoring_check(self):
         logger.debug('check monitoring params')
-        print('test123')
-        print(self.Par_.enable_progress_bar)
         if self.Par_.enable_progress_bar == 1:
-            print('test')
             if self.Par_.use_pattern_gen == 1:
                 logger.warning('Pattern Generator is used, thus there is no limit for the total data. Therefore progress bar is disabled')
                 return 0

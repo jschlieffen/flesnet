@@ -43,7 +43,6 @@ class Logfile:
             f.write(str(run_id))
         timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
         self.Run_id = f"Run_{str(run_id+1)}_{timestamp}"
-        print('test')
         
     def write(self):
         '''
@@ -85,14 +84,15 @@ class Logfile:
                     file.write(f'   {key} as index {idx} \n')
             if self.sender_node_list:
                 file.write('Sender nodes: \n')
-                for key,val in self.sender_nodes_list.items():
-                    idx = val['sender_node_idx']
+                for key,val in self.sender_node_list.items():
+                    idx = val['sender_idx']
                     file.write(f'   {key} as index {idx} \n')
             if self.receiving_node_list:
                 file.write('receiving nodes: \n')
                 for key,val in self.receiving_node_list.items():
                     #idx = val['receiving_node_idx']
-                    sender = val['sender_node']
+                    sender_node = val['sender_node']
+                    sender = sender_node['node']
                     file.write(f'   {sender} was connected to {key} \n')
             if self.input_node_list:
                 file.write('Input nodes: \n')

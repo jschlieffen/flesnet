@@ -1,4 +1,6 @@
-num_buildnodes: 2
-num_entrynodes: 2
+file_name: ../Runs/Run_19_2026-05-15-15-46-09/logs/collectl/entry_nodes/entry_node_htc-cmp007.csv, 88
+file_name: ../Runs/Run_19_2026-05-15-15-46-09/logs/collectl/build_nodes/build_node_htc-cmp011.csv, 88
+num_buildnodes: 1
+num_entrynodes: 1
 enable_graph: 1
-enable_progess_bar: 0
+enable_progess_bar: 1

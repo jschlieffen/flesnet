@@ -151,6 +151,7 @@ def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes,
     bar_width = 50
     for key, val in data_dict.items():
         progress = val['current_data'] / max(1e-6, val['total_data'])
+        progress = max(0.0, min(progress, 1.0))
         output_str = calc_outout_str(key)
 
         green_len = int(progress * bar_width)
@@ -575,11 +576,11 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable
     progress_scroll = 0
     graph_scroll = 0
     for file_name in file_names:
-        entry_or_build = calc_outout_str(file_name[0])
-        if 'entry node' in entry_or_build:
+        node_type = calc_outout_str(file_name[0])
+        if 'entry node' in node_type or 'input node' in node_type:
             USE_COLUMN = "[IB]OutKB"   
             COL_INDEX = COLUMN_MAP[USE_COLUMN]
-        elif 'build node' in entry_or_build:
+        elif 'build node' in node_type or 'output node' in node_type:
             USE_COLUMN = "[IB]InKB"   
             COL_INDEX = COLUMN_MAP[USE_COLUMN]
         data_dict[file_name[0]] = {

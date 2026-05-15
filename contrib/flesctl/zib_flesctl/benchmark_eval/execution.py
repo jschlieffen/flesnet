@@ -482,7 +482,7 @@ def main():
     modes = validate_params(logfile,modes,verbose)
 
     logger.info('starting with evaluation')
-    time.sleep(10)
+    time.sleep(1)
     #if 'prev_run' in modes:
         #exec_cls.prev_run = True
     change_dir(logfile)

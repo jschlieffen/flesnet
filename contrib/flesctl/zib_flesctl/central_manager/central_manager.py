@@ -393,8 +393,9 @@ class execution:
         else:
              unused_nodes = self.assemble_GSI_timeslice_forwarding_sender_nodes(unused_nodes)   
         self.assemble_GSI_timeslice_forwarding_receiver_nodes(unused_nodes)
-        Logfile.logfile.sender_nodes_list = self.sender_nodes
-        Logfile.logfile.receiver_nodes_list = self.receiver_nodes
+        if not self.Par_.use_flesnet:
+            Logfile.logfile.sender_node_list = self.sender_nodes
+        Logfile.logfile.receiving_node_list = self.receiver_nodes
                     
     def assemble_GSI_timeslice_forwarding_sender_nodes(self,unused_nodes):
         sender_cnt = 0
@@ -917,7 +918,6 @@ class execution:
                 alive_dict,dead_dict = self.revieve_nodes_fct_V2(alive_dict, dead_dict)
                 
     def kill_nodes_fct_V2(self,alive_dict,dead_dict):
-        print('tets')
         custom_adjustments = {
             'Entry nodes': self.Par_.num_min_entry_nodes_alive,
             'Build nodes': self.Par_.num_min_build_nodes_alive,
@@ -929,17 +929,12 @@ class execution:
         }
 
         weights = [max(len(alive_dict[k]) - custom_adjustments.get(k, 0), 0) for k in alive_dict]
-        print(weights)
         keys = list(alive_dict.keys())
-        print(keys)
         if all(w == 0 for w in weights):
             alive_dict, dead_dict = self.revieve_nodes_fct_V2(alive_dict, dead_dict)
             return alive_dict,dead_dict
         Node_type = random.choices(keys, weights=weights, k=1)[0]
-        
-        print(Node_type)
         to_kill_node = random.choice(list(alive_dict[Node_type].keys()))
-        print(to_kill_node)
         if Node_type == 'Entry nodes':
             self.entry_nodes_cls.kill_process(to_kill_node)
         elif Node_type == 'Build nodes':
@@ -960,7 +955,6 @@ class execution:
 
     
     def revieve_nodes_fct_V2(self,alive_dict,dead_dict):
-        print('goth baddie big tits')
         custom_adjustments = {
             'Entry nodes': (self.Par_.num_min_entry_nodes_alive,self.Par_.num_entrynodes),
             'Build nodes': (self.Par_.num_min_build_nodes_alive,self.Par_.num_buildnodes),
@@ -984,7 +978,6 @@ class execution:
                 weights.append(weight)
                 keys.append(k)
         if not keys:
-            print('schwingus dingus')
             alive_dict,dead_dict = self.kill_nodes_fct_V2(alive_dict, dead_dict)
             return alive_dict,dead_dict
         Node_type = random.choices(keys, weights=weights, k=1)[0]
@@ -1169,8 +1162,17 @@ class execution:
         cmd = "monitoring/monitoring_launcher.sh"
         subprocess.run(['tmux', 'send-keys', '-t', session_name, cmd,'Enter'])
         
-
-        
+# =============================================================================
+# =============================================================================
+# #     BAUSTELLE
+# =============================================================================
+# =============================================================================
+    def monitoring_V3(self):
+        file_names = []
+        nodes_cnt = {}
+        if self.Par_.use_flesnet:
+            print('test')
+            
     # =============================================================================
     # currently not used 
     # =============================================================================
