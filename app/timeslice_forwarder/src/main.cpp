@@ -11,7 +11,6 @@
 #include <sched.h>
 #include <sys/mman.h>
 #include "Parameters.hpp"
-#include <iostream>
 #include <thread>
 #include <log.hpp>
 
@@ -32,7 +31,7 @@ int start_sender() {
     auto node = make_shared<TsSender>(
         par.node_id,
         par.listen_addr,
-        par.shm_uri,
+        par.input_uri,
         par.central_manager_listen_addr,
         par.monitoring_uri
     );
@@ -45,10 +44,12 @@ int start_sender() {
 }
 
 int start_receiver() {
+    L_(info) << "Starting receiver...";
+
     auto node = make_shared<TsReceiver>(
         par.node_id,
         par.listen_addr,
-        par.shm_uri,
+        par.output_uri,
         par.central_manager_listen_addr,
         par.monitoring_uri
     );
@@ -61,7 +62,16 @@ int start_receiver() {
 }
 
 
+/**
+ * @brief Profiling data is only written if the program exits gracefully, that is why this minimal signal handler is here.
+ */
+void signalHandler(int sig) {
+    exit(sig);
+}
+
 int main (int argc, char** argv) {
+    signal(SIGINT, signalHandler);
+
     par.parse_options(argc, argv);
     if (FI_VERSION(FI_MAJOR_VERSION, FI_MINOR_VERSION) != fi_version()) {
         L_(fatal) << "Libfabric: Header version and library version do not match";
@@ -74,11 +84,11 @@ int main (int argc, char** argv) {
         exit(-1);
     }
 
-    if (par.group_id == 0) {
+    if (par.role == Parameters::CentralManager) {
         start_cm();
-    } else if (par.group_id == 1) {
+    } else if (par.role == Parameters::Sender) {
         start_sender();
-    } else if (par.group_id == 2) {
+    } else if (par.role == Parameters::Receiver) {
         start_receiver();
     } else { // Should never happen
         L_(fatal) << "! Was unable to determine if node is sender, receiver or central manager";

@@ -39,12 +39,13 @@ private:
     void on_node_connected(std::string address, uint64_t rem_group_id, uint64_t rem_node_id);
 
     void on_connection_refused(std::string address);
+    void send_latest_data(uint64_t group_id, uint64_t node_id);
 
 public:
     TsSender(
         uint64_t node_id,
         std::string listen_address,
-        std::string shm_uri,
+        std::string input_uri,
         std::string central_manager_address,
         std::string monitoring_uri = ""
     );
