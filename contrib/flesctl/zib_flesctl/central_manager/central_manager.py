@@ -138,7 +138,7 @@ class execution:
     # =============================================================================
     # gets the node list of the current allocations    
     # =============================================================================
-    def get_node_list(self):
+    def get_node_list_V2(self):
         node_str = os.environ.get('SLURM_NODELIST')
         node_list = []
         if node_str is None:
@@ -160,6 +160,53 @@ class execution:
         node_list = sorted(set(node_list))
         return node_list
     
+    
+    def get_node_list(self):
+        node_str = os.environ.get('SLURM_NODELIST')
+        node_list = []
+    
+        if node_str is None:
+            logger.critical(
+                'SLURM_NODELIST is not set, maybe you forgot to allocate the nodes'
+            )
+            sys.exit(1)
+    
+        # Match:
+        # htc-cmp[001-004]
+        # htc-cmp[001,005,010]
+        # ccexe0001
+        parts = re.findall(r'([a-zA-Z\-]+)(?:\[(.*?)\]|(\d+))', node_str)
+    
+        for prefix, bracket_content, single_number in parts:
+    
+            if single_number:
+                node_list.append(f"{prefix}{single_number}")
+                continue
+    
+            for item in bracket_content.split(','):
+                if '-' in item:
+                    start, end = item.split('-')
+    
+                    width = max(len(start), len(end))
+                    start, end = int(start), int(end)
+    
+                    for i in range(start, end + 1):
+                        if prefix == "ccexe" and i > 369:
+                            continue
+    
+                        node_list.append(f"{prefix}{i:0{width}d}")
+    
+                else:
+                    i = int(item)
+                    width = len(item)
+    
+                    if prefix == "ccexe" and i > 369:
+                        continue
+    
+                    node_list.append(f"{prefix}{i:0{width}d}")
+    
+        print(sorted(set(node_list)))
+        return sorted(set(node_list))
         
     # =============================================================================
     # These two functions forms the string of the entry/build node ips 

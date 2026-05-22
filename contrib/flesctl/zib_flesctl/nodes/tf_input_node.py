@@ -77,7 +77,7 @@ def get_node_ip(use_infiniband):
 def calc_str(input_node_ip,port,cm_node_ip,input_node_idx):
     ip = get_node_ip(1)
     shm_str = f"fles_out_b{input_node_idx}"
-    str_ = f"-l {input_node_ip}:{port} -c {cm_node_ip}:{port} -n {input_node_idx} -g 1 --shm-id {shm_str}"
+    str_ = f"-A {input_node_ip}:{port} -c {cm_node_ip}:{port} -N {input_node_idx} -i {shm_str}"
     return str_,shm_str
 
 def start_collectl(use_infiniband, csvfile_name):

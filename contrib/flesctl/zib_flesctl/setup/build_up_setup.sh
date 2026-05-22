@@ -43,6 +43,10 @@ function create_folders() {
     echo '0' > tmp/run_id.txt
 
     mkdir Runs
+
+    mkdir n_to_n_test
+
+    chmod -R 777 n_to_n_test
 }
 
 cd ..

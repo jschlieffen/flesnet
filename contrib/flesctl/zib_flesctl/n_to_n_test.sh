@@ -157,9 +157,10 @@ function move_folders () {
     local folder_name_GSI_tsclient="$3"
     local folder_name_GSI_flesnet="$4"
 
-    local folder_test="n_to_n_test/node_num_$num_nodes"
+    local folder_test="/scratch/htc/jschlieffen/n_to_n_test/node_num_$num_nodes"
 
     mkdir -p "$folder_test"
+
 
     cp -r "$folder_name_ZIB_tsclient" "$folder_test"
 
@@ -180,6 +181,8 @@ function move_folders () {
 
     mv "$folder_test/$(basename "$folder_name_GSI_flesnet")" \
        "$folder_test/GSI_Timeslice_forwarding_flesnet"
+
+    chmod -R 777 "$folder_test"
 }
 
 execute_iteration
