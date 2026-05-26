@@ -24,7 +24,10 @@ class Timeslice_forwarding:
         self.Run_folder = Run_folder
         self.pids = {}
         self.pids_sender = {}
-
+        if self.Par_.use_apptainer:
+            self.apptainer_command = f"--export=https_proxy,http_proxy,SSL_CERT_FILE,CURL_CA_BUNDLE --singularity-container={self.Par_.apptainer_file}"
+        else:
+            self.apptainer_command = ""
 
     def write_Params(self):
         param_names = [
@@ -85,8 +88,8 @@ class Timeslice_forwarding:
             else:
                 sender_node_ip = sender_node['eth_ip']
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s'
-                % (node_id, self.Par_.num_cpus ,file,logfile, sender_node_ip, logfile_collectl)
+                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s'
+                % (node_id, self.apptainer_command, self.Par_.num_cpus ,file,logfile, sender_node_ip, logfile_collectl)
             )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
@@ -117,8 +120,8 @@ class Timeslice_forwarding:
             else:
                 node_ip = node['eth_ip']
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s' 
-                % (node_id,self.Par_.num_cpus, file, input_file, logfile, node_cnt, logfile_collectl, node_ip)
+                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s %s' 
+                % (node_id, self.apptainer_command,self.Par_.num_cpus, file, input_file, logfile, node_cnt, logfile_collectl, node_ip)
             )
             try: 
                 result = subprocess.Popen(command,shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

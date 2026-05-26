@@ -28,6 +28,10 @@ class Timeslice_forwarding_ZIB:
         self.pids_i = {}
         self.Par_ = parameters
         self.Run_folder = Run_folder 
+        if self.Par_.use_apptainer:
+            self.apptainer_command = f"--export=https_proxy,http_proxy,SSL_CERT_FILE,CURL_CA_BUNDLE --singularity-container={self.Par_.apptainer_file}"
+        else:
+            self.apptainer_command = ""
     
     def write_params_cm(self):
         param_names = [
@@ -108,8 +112,8 @@ class Timeslice_forwarding_ZIB:
             logfile = "%s/logs/timeslice_forwarding/central_manager/central_manager_%s.log" % (self.Run_folder,node)
             logfile_collectl = "%s/logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % (self.Run_folder,node)
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s'
-                % (node, self.Par_.num_cpus ,file,logfile, logfile_collectl)
+                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s'
+                % (node, self.apptainer_command, self.Par_.num_cpus ,file,logfile, logfile_collectl)
             )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
@@ -136,8 +140,8 @@ class Timeslice_forwarding_ZIB:
             else:
                 ip = self.output_nodes[node]['eth_ip']
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s'
-                % (node, self.Par_.num_cpus ,file,logfile, self.output_nodes[node]['output_node_idx'], ip, logfile_collectl, logfile_tsclient)
+                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s %s'
+                % (node, self.apptainer_command, self.Par_.num_cpus ,file,logfile, self.output_nodes[node]['output_node_idx'], ip, logfile_collectl, logfile_tsclient)
             )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
@@ -167,8 +171,8 @@ class Timeslice_forwarding_ZIB:
             else:
                 ip = self.input_nodes[node]['eth_ip']
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s %s'
-                % (node, self.Par_.num_cpus ,file,input_file ,logfile, self.input_nodes[node]['input_node_idx'], ip, logfile_collectl, logfile_tsclient)
+                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s %s %s'
+                % (node, self.apptainer_command, self.Par_.num_cpus ,file,input_file ,logfile, self.input_nodes[node]['input_node_idx'], ip, logfile_collectl, logfile_tsclient)
             )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 

@@ -33,6 +33,8 @@ class Params:
         self.use_collectl = 0
         self.num_cpus = 2
         self.loglevel="DEBUG"
+        self.use_apptainer = 0
+        self.apptainer_file=''
         self.kill_nodes = 0
         self.timer_for_kill = timedelta(minutes=1)
         self.num_entrynodes_kills = 1 
@@ -157,6 +159,8 @@ class Params:
         self.loglevel = self.get_value('general','loglevel','str',required=True)
         self.check_log_lvl()
         self.overlap_usage_of_nodes = self.get_value('general', 'overlap_usage_of_nodes', 'int', self.overlap_usage_of_nodes, False)
+        self.use_apptainer = self.get_value('general','use_apptainer','int', self.use_apptainer, False)
+        self.apptainer_file = self.get_value('general', 'apptainer_file', self.apptainer_file, False)
         
     def get_mode(self):
         self.activate_timesliceforwarding = self.get_value('mode', 'GSI_Timesliceforwarding','int', True)

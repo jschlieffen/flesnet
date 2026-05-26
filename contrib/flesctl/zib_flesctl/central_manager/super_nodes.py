@@ -29,7 +29,10 @@ class Super_nodes:
         self.Par_ = parameters
         self.Run_folder = Run_folder 
         self.pids = {}
-        
+        if self.Par_.use_apptainer:
+            self.apptainer_command = f"--export=https_proxy,http_proxy,SSL_CERT_FILE,CURL_CA_BUNDLE --singularity-container={self.Par_.apptainer_file}"
+        else:
+            self.apptainer_command = ""
     
     def write_Params(self):
         param_names = [
@@ -89,8 +92,8 @@ class Super_nodes:
             else:
                 logfile_tf = '%s/logs/flesnet/tsclient/sender_node_%s.log' % (self.Run_folder,node)
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s %s %s %s %s'
-                % (node, self.Par_.num_cpus ,file,input_file,logfile_entry_node, logfile_build_node, self.node_list[node]['entry_node_idx'],
+                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s %s %s %s %s'
+                % (node, self.apptainer_command, self.Par_.num_cpus ,file,input_file,logfile_entry_node, logfile_build_node, self.node_list[node]['entry_node_idx'],
                    self.node_list[node]['build_node_idx'], logfile_collectl_entry_node, logfile_collectl_build_node, logfile_tf)
             )
             try:

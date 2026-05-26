@@ -27,6 +27,10 @@ class Entry_nodes:
         self.Run_folder = Run_folder
         self.Par_ = parameters
         self.pids = {}
+        if self.Par_.use_apptainer:
+            self.apptainer_command = f"--export=https_proxy,http_proxy,SSL_CERT_FILE,CURL_CA_BUNDLE --singularity-container={self.Par_.apptainer_file}"
+        else:
+            self.apptainer_command = ""
     
     
     def write_Params(self):
@@ -75,8 +79,8 @@ class Entry_nodes:
             logfile = "%s/logs/flesnet/entry_nodes/entry_node_%s.log" % (self.Run_folder,node)
             logfile_collectl = "%s/logs/collectl/entry_nodes/entry_node_%s.csv" % (self.Run_folder,node)
             command = (
-                'srun --nodelist=%s --exclusive -N 1 -c %s %s %s %s %s %s'
-                % (node, self.Par_.num_cpus ,file,input_file,logfile, self.node_list[node]['entry_node_idx'], logfile_collectl)
+                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s'
+                % (node, self.apptainer_command, self.Par_.num_cpus ,file,input_file,logfile, self.node_list[node]['entry_node_idx'], logfile_collectl)
             )
             try:
                 result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
