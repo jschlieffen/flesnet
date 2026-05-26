@@ -325,29 +325,73 @@ class Params:
             logger.warning(f'not required Param not set: {param}')
             return var
             
-    def get_node_list(self):
-        node_str = os.environ.get('SLURM_NODELIST')
-        node_list = []
+    def get_node_list_V2(self,section,param, var=None, required=False):
+         node_str = os.getenv(param)
+         node_list = []
+         if node_str is None:
+             if self.config.has_option(section, param):
+                 node_str = self.config.get(section,param)
+             elif required:
+                 logger.critical(f'required Param not set: {param}')
+                 sys.exit(1)
+             else:
+                 logger.warning(f'not required Param not set: {param}')
+                 return var
+         range_pattern = re.findall(r'(.*?)(\d+)-(\d+)', node_str)
+         list_pattern = re.findall(r'(.*?)(\d+(?:,\d+)*)', node_str)
+         for base, start, end in range_pattern:
+             start, end = int(start), int(end)
+             if start < 10:
+                 node_list.extend([f"htc-cmp00{i}" for i in range(start, end + 1)])
+             elif start < 100:    
+                 node_list.extend([f"htc-cmp0{i}" for i in range(start, end + 1)])
+             else:
+                 node_list.extend([f"htc-cmp{i}" for i in range(start, end + 1)])
+         for base, numbers in list_pattern:
+             num_list = numbers.split(",")
+             node_list.extend([f"htc-cmp{num.strip()}" for num in num_list])
+         node_list = sorted(set(node_list))
+         return node_list
+
+    
+    def get_node_list(self, section, param, var=None, required=False):
+        node_str = os.getenv(param)
     
         if node_str is None:
-            logger.critical(
-                'SLURM_NODELIST is not set, maybe you forgot to allocate the nodes'
-            )
-            sys.exit(1)
+            if self.config.has_option(section, param):
+                node_str = self.config.get(section, param)
+            elif required:
+                logger.critical(f"required Param not set: {param}")
+                sys.exit(1)
+            else:
+                logger.warning(f"not required Param not set: {param}")
+                return var
     
-        # Match:
+        node_list = []
+    
+        # Matches:
         # htc-cmp[001-004]
         # htc-cmp[001,005,010]
         # ccexe0001
-        parts = re.findall(r'([a-zA-Z\-]+)(?:\[(.*?)\]|(\d+))', node_str)
+        #
+        # Also supports multiple groups:
+        # htc-cmp[001-004],ccexe0001
+        parts = re.findall(r'([a-zA-Z0-9\-]+)(?:\[(.*?)\]|(\d+))', node_str)
     
         for prefix, bracket_content, single_number in parts:
     
+            # Case:
+            # ccexe0001
             if single_number:
                 node_list.append(f"{prefix}{single_number}")
                 continue
     
+            # Cases inside brackets
+            # 001-004
+            # 001,005,010
             for item in bracket_content.split(','):
+    
+                # Range
                 if '-' in item:
                     start, end = item.split('-')
     
@@ -355,23 +399,24 @@ class Params:
                     start, end = int(start), int(end)
     
                     for i in range(start, end + 1):
+    
+                        # Optional special rule
                         if prefix == "ccexe" and i > 369:
                             continue
     
                         node_list.append(f"{prefix}{i:0{width}d}")
     
+                # Single item
                 else:
-                    i = int(item)
                     width = len(item)
+                    i = int(item)
     
                     if prefix == "ccexe" and i > 369:
                         continue
     
                     node_list.append(f"{prefix}{i:0{width}d}")
     
-        #print(sorted(set(node_list)))
         return sorted(set(node_list))
-    
     
     def check_log_lvl(self):
         if self.loglevel not in ["DEBUG","CRITICAL","ERROR","WARNING","INFO","SUCCESS", "STATUS"]:
@@ -431,6 +476,53 @@ class params_checker:
             logger.error("Invalid config. Shutdown program")
             sys.exit(1)
         self.Params_valid = False
+        
+    def get_node_list_cluster(self):
+        node_str = os.environ.get('SLURM_NODELIST')
+        node_list = []
+    
+        if node_str is None:
+            logger.critical(
+                'SLURM_NODELIST is not set, maybe you forgot to allocate the nodes'
+            )
+            sys.exit(1)
+    
+        # Match:
+        # htc-cmp[001-004]
+        # htc-cmp[001,005,010]
+        # ccexe0001
+        parts = re.findall(r'([a-zA-Z\-]+)(?:\[(.*?)\]|(\d+))', node_str)
+    
+        for prefix, bracket_content, single_number in parts:
+    
+            if single_number:
+                node_list.append(f"{prefix}{single_number}")
+                continue
+    
+            for item in bracket_content.split(','):
+                if '-' in item:
+                    start, end = item.split('-')
+    
+                    width = max(len(start), len(end))
+                    start, end = int(start), int(end)
+    
+                    for i in range(start, end + 1):
+                        if prefix == "ccexe" and i > 369:
+                            continue
+    
+                        node_list.append(f"{prefix}{i:0{width}d}")
+    
+                else:
+                    i = int(item)
+                    width = len(item)
+    
+                    if prefix == "ccexe" and i > 369:
+                        continue
+    
+                    node_list.append(f"{prefix}{i:0{width}d}")
+    
+        print(sorted(set(node_list)))
+        return sorted(set(node_list))
     
     def check_validity_of_files(self):
         logger.debug('check if the input files exist')
@@ -607,7 +699,7 @@ class params_checker:
 
     def check_req_nodes_alloc(self):
         logger.debug('check if all nodes that are wished via the list are allocated')
-        node_list = self.Par_.get_node_list()
+        node_list = self.get_node_list_cluster()
         req_node_list = []
         if self.Par_.use_flesnet:
             req_node_list += [("Entry node", node) for node in self.Par_.entry_nodes_list]
@@ -630,7 +722,7 @@ class params_checker:
                 
     def check_excluded_nodes_alloc(self):
         logger.debug('check if excluded nodes are allocated')
-        node_list = self.Par_.get_node_list()
+        node_list = self.get_node_list_cluster()
         excluded_node_list = []
         if self.Par_.use_flesnet:
             excluded_node_list += [("Entry node",node) for node in self.Par_.exclude_entry_nodes]
