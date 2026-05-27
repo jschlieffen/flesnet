@@ -5,6 +5,7 @@
 #include <df/WorkItems/WiTransmission.hpp>
 #include <memory>
 #include "TsclientReader.hpp"
+#include "WorkItems.hpp"
 #include "df/WorkItems/WorkItem.hpp"
 #include <df/Connectors/ConnectorInfiniband.hpp>
 #include <df/Connectors/ConnectorInfiniband.hpp>
@@ -61,7 +62,7 @@ void TsSender::send_latest_data(uint64_t group_id, uint64_t node_id) {
                         sizes[i] = component_elements[i]->len;
                     }
 
-                    bool insert_successfull = rem_buffer_map_copy->insert(component_elements, dest_addresses, BufferMap::ListElement::RX);
+                    bool insert_successfull = rem_buffer_map_copy->insert(component_elements, dest_addresses, node_id_, group_id_, BufferMap::ListElement::RX);
                     if (!insert_successfull) {
                         L_(debug) << "Remote buffer map has no elements available";
                         node_connector_->unlock_remote_buffer_map(
@@ -136,7 +137,7 @@ void TsSender::on_new_work_item(std::string /*address*/, std::shared_ptr<char> w
 }
 
 void TsSender::on_node_connected(string address, uint64_t rem_group_id, uint64_t rem_node_id) {
-    L_(debug) << "Node connected: \n" <<
+    L_(info) << "Node connected: \n" <<
             "Group ID: " << rem_group_id << '\n' <<
             "Node ID: " << rem_node_id;
 
@@ -150,7 +151,6 @@ void TsSender::on_node_connected(string address, uint64_t rem_group_id, uint64_t
         //! @todo figure out the race condition that makes this timeout necessary
         std::this_thread::sleep_for(std::chrono::milliseconds(1500));
         ts_reader->start_timeslice_reading();
-        // is_cm_connected = true;
     } else { // Connected to some other node - tell the central manager about it
         auto const node_uid = MAKE_UID(rem_group_id, rem_node_id);
         auto wi_connection = make_shared<WiConnection>();
@@ -159,12 +159,13 @@ void TsSender::on_node_connected(string address, uint64_t rem_group_id, uint64_t
         wi_connection->from_node_id = node_id_;
         wi_connection->to_group_id = rem_group_id;
         wi_connection->to_node_id = rem_node_id;
-        unique_lock<shared_mutex> l(mtx_);
-        uid_address_map_[node_uid] = address;
+        {
+            unique_lock<shared_mutex> l(mtx_);
+            uid_address_map_[node_uid] = address;
+        }
         Node::send_work_item(cm_address_, wi_connection, [this] () {
             // Node::send_work_item(cm_address_, wi_buffer_status_);
         });
-        send_latest_data(rem_group_id, rem_node_id);
     }
 }
 
@@ -206,17 +207,17 @@ Node(node_id, 1), cm_address_(central_manager_address), node_listen_addr_(listen
     wi_buffer_status_ = make_shared<WorkItem>();
     wi_buffer_status_->type = WorkItem::buffer_status;
     ts_reader->on_new_timeslice([this] () {
-        // Node::send_work_item(cm_address_, wi_buffer_status_);
+        Node::send_work_item(cm_address_, wi_buffer_status_);
 
-        uint64_t node_uid;
-        {
-            shared_lock<shared_mutex> l(mtx_);
-            if (uid_address_map_.begin() == uid_address_map_.end()) {
-                return;
-            }
-            node_uid = (*uid_address_map_.begin()).first;
-        }
-        send_latest_data(GROUP_ID(node_uid), NODE_ID(node_uid));
+        // uint64_t node_uid;
+        // {
+        //     shared_lock<shared_mutex> l(mtx_);
+        //     if (uid_address_map_.begin() == uid_address_map_.end()) {
+        //         return;
+        //     }
+        //     node_uid = (*uid_address_map_.begin()).first;
+        // }
+        // send_latest_data(GROUP_ID(node_uid), NODE_ID(node_uid));
     });
 
     ts_reader->set_node_connector(node_connector_);
