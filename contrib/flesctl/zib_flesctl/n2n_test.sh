@@ -19,7 +19,7 @@ function execute_iteration () {
 
     flesctrl_pid=$!
 
-    sleep 120
+    sleep 180
 
     #kill -INT -"$flesctrl_pid"
 
@@ -35,7 +35,7 @@ function execute_iteration () {
 
     flesctrl_pid=$!
 
-    sleep 120
+    sleep 180
 
     #kill -INT -"$flesctrl_pid"
     pkill -INT -f "python3 execution.py"
@@ -50,7 +50,7 @@ function execute_iteration () {
 
     flesctrl_pid=$!
 
-    sleep 120
+    sleep 180
 
     #kill -INT -"$flesctrl_pid"
 
@@ -66,7 +66,7 @@ function execute_iteration () {
 
     flesctrl_pid=$!
 
-    sleep 120
+    sleep 180
 
     #kill -INT -"$flesctrl_pid"
     pkill -INT -f "python3 execution.py"

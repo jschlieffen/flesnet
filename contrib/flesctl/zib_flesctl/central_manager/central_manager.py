@@ -204,8 +204,6 @@ class execution:
                         continue
     
                     node_list.append(f"{prefix}{i:0{width}d}")
-    
-        print(sorted(set(node_list)))
         return sorted(set(node_list))
         
     # =============================================================================

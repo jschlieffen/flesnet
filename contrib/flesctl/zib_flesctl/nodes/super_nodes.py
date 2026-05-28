@@ -198,7 +198,7 @@ def entry_nodes(dmsa_file,build_nodes_ip,entry_nodes_ip,logfile_entry_node, logf
     grafana_string = ''
     if use_grafana:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '-m influx2:%s:8086:flesnet_status:' % (influx_node_ip) 
+        grafana_string = '-m influx2:%s:flesnet_status:' % (influx_node_ip) 
     D_flag = ""
     if use_dmsa_files == 1:
         D_flag = "-D 1"
@@ -351,7 +351,7 @@ def build_nodes(entry_nodes_ip, build_nodes_ip,logfile_build_nodes, num_build_no
     os.environ['CBM_INFLUX_TOKEN'] = influx_token
     grafana_string = ''
     if use_grafana:
-        grafana_string = '-m influx2:%s:8086:flesnet_status: ' % (influx_node_ip)
+        grafana_string = '-m influx2:%s:flesnet_status: ' % (influx_node_ip)
     flesnet_commands = (
         '%s./flesnet -t %s -L %s -l 1 -I %s -o %s -O %s %s %s > /dev/null 2>&1 &' 
         % (path, transport_method,logfile_build_nodes,ip_string, build_node_idx,

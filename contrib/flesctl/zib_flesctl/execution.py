@@ -86,7 +86,6 @@ class exec_:
     def build_up_run_folders(self):
         Logfile.logfile.get_run_id()
         run_id = Logfile.logfile.Run_id
-        print(run_id)
         self.Run_folder_name = f"Runs/{run_id}"
         with open('tmp/Run_folder_name.txt', "w") as file:
             file.write(run_id)

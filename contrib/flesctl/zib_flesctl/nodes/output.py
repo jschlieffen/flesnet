@@ -165,7 +165,7 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
     grafana_string = ''
     if use_grafana == 1:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '-m influx2:%s:8086:flesnet_status: ' % (influx_node_ip)
+        grafana_string = '-m influx2:%s:flesnet_status: ' % (influx_node_ip)
     flesnet_commands = (
         '%s./flesnet -t %s -L %s -l 1 -I %s -o %s -O %s %s %s > /dev/null 2>&1 &'
         % (path, transport_method, logfile, ip_string, build_node_idx, shm_string, 

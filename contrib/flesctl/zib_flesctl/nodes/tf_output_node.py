@@ -40,7 +40,7 @@ import signal
 
 def calc_str(output_node_ip,port,cm_node_ip,output_node_idx, num_components):
     shm_str = f"ts_in_{output_node_idx}"
-    str_ = f"-A {output_node_ip}:{port} -c {cm_node_ip}:{port} -N {output_node_idx} -o {shm_str}?n={num_components}"
+    str_ = f"-l 1 -A {output_node_ip}:{port} -c {cm_node_ip}:{port} -N {output_node_idx} -o {shm_str}?n={num_components}"
     return str_,shm_str
 
 def start_collectl(use_infiniband, csvfile_name):
@@ -110,7 +110,7 @@ def start_tsclient(path,shm_str,node_name,write_data_to_file,analyze_data, logfi
         str_ += f"-o file:{path_to_output_file}/{run_id}/tsa_files/output_node_{node_name}.tsa"
     if use_grafana:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        str_ += f" --monitor influx2:{influx_node_ip}:8086:tsclient_status:" 
+        str_ += f" --monitor influx2:{influx_node_ip}:tsclient_status:" 
     tsclient_command = f"{path}./tsclient -i shm:{shm_str} {str_}"
     print(tsclient_command)
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -141,7 +141,7 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
     grafana_string = ''
     if use_grafana == 1:
         #os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '-m influx2:%s:8086:timeslice_forwarder_state:%s' % (influx_node_ip, influx_token) 
+        grafana_string = '-m influx2:%s:timeslice_forwarder_state:%s' % (influx_node_ip, influx_token) 
 
         #tsclient_commands = '%s./tsclient -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
         #result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

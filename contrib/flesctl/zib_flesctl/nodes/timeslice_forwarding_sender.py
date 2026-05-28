@@ -105,7 +105,7 @@ def input_node(port, input_node_idx, use_collectl, path, input_file, use_flesnet
     grafana_string = ''
     if use_grafana == 1:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '--monitor influx2:%s:8086:tsclient_status:' % (influx_node_ip) 
+        grafana_string = '--monitor influx2:%s:tsclient_status:' % (influx_node_ip) 
     D_flag = ""
     if use_dtsa_files == 1:
         D_flag = "-D 1"

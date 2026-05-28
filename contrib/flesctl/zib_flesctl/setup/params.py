@@ -521,7 +521,6 @@ class params_checker:
     
                     node_list.append(f"{prefix}{i:0{width}d}")
     
-        print(sorted(set(node_list)))
         return sorted(set(node_list))
     
     def check_validity_of_files(self):
@@ -990,7 +989,7 @@ class params_checker:
                 
     def check_influxdb2_access(self):
         logger.debug('check influxdb access')
-        url = f"http://{self.Par_.influx_node_ip}:8086"
+        url = f"http://{self.Par_.influx_node_ip}"
         try:
             with InfluxDBClient(url=url, token=self.Par_.influx_token, org="CBM") as client:
                 buckets_api = client.buckets_api()

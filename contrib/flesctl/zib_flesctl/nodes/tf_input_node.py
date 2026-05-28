@@ -77,7 +77,7 @@ def get_node_ip(use_infiniband):
 def calc_str(input_node_ip,port,cm_node_ip,input_node_idx):
     ip = get_node_ip(1)
     shm_str = f"fles_out_b{input_node_idx}"
-    str_ = f"-A {input_node_ip}:{port} -c {cm_node_ip}:{port} -N {input_node_idx} -i {shm_str}"
+    str_ = f"-l 1 -A {input_node_ip}:{port} -c {cm_node_ip}:{port} -N {input_node_idx} -i {shm_str}"
     return str_,shm_str
 
 def start_collectl(use_infiniband, csvfile_name):
@@ -140,7 +140,7 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, nu
     grafana_string = ""
     if use_grafana:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '--monitor influx2:%s:8086:tsclient_status:' % (influx_node_ip)
+        grafana_string = '--monitor influx2:%s:tsclient_status:' % (influx_node_ip)
     
     tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n={num_components} {dtsa_command} {grafana_string}"
     print(tsclient_command)
@@ -175,7 +175,7 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
     grafana_string = ''
     if use_grafana == 1:
         #os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '-m influx2:%s:8086:timeslice_forwarder_state:%s' % (influx_node_ip, influx_token) 
+        grafana_string = '-m influx2:%s:timeslice_forwarder_state:%s' % (influx_node_ip, influx_token) 
     input_node_commands = (
         '%s./timeslice_forwarder %s %s > %s 2>&1 &' 
         % (path,str_, grafana_string,logfile)

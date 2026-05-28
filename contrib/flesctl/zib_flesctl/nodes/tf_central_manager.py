@@ -36,7 +36,7 @@ import signal
 
 
 def calc_str(ip,port):
-    return f"-c {ip}:{port}"
+    return f"-l 1 -c {ip}:{port}"
 
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == 1:
@@ -108,7 +108,7 @@ def central_manager(ip,port,logfile,logfile_collectl,use_collectl,use_infiniband
     grafana_string = ''
     if use_grafana == 1:
         #os.environ['CBM_INFLUX_TOKEN'] = influx_token
-        grafana_string = '-m influx2:%s:8086:timeslice_forwarder_state:%s' % (influx_node_ip, influx_token)
+        grafana_string = '-m influx2:%s:timeslice_forwarder_state:%s' % (influx_node_ip, influx_token)
     cm_commands = (
         '%s./timeslice_forwarder %s %s > %s 2>&1 &' 
         % (path, ip_string, grafana_string ,logfile)
