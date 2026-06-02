@@ -1,6 +1,13 @@
-file_name: ../Runs/Run_19_2026-05-15-15-46-09/logs/collectl/entry_nodes/entry_node_htc-cmp007.csv, 88
-file_name: ../Runs/Run_19_2026-05-15-15-46-09/logs/collectl/build_nodes/build_node_htc-cmp011.csv, 88
-num_buildnodes: 1
+use_flesnet: 1
+use_GSI_TS_forwarding: 0
+use_ZIB_TS_forwarding: 1
 num_entrynodes: 1
+num_buildnodes: 1
+num_receivers: 1
+num_inputnodes: 2
+num_outputnodes: 1
+enable_progess_bar: 0
 enable_graph: 1
-enable_progess_bar: 1
+file_name: ../Runs/Run_83_2026-05-28-18-25-10/logs/collectl/entry_nodes/entry_node_htc-cmp509.csv, 750
+file_name: ../Runs/Run_83_2026-05-28-18-25-10/logs/collectl/build_nodes/build_node_htc-cmp512.csv, 750
+file_name: Runs/Run_83_2026-05-28-18-25-10/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp518.csv, 0

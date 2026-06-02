@@ -78,7 +78,7 @@ set_exclude_node_list() {
 function allocate_nodes(){
     set_general_params
     NTASKS=4
-    MEM=16GB
+    MEM=32GB
     p="big"
     set_node_list
     set_exclude_node_list

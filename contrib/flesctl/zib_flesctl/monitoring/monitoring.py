@@ -54,7 +54,7 @@ def calculate_progress(current_data, total_data):
 # =============================================================================
 # Gives the prefix of the progress bars
 # =============================================================================
-def calc_outout_str(input_string):
+def calc_outout_str_V2(input_string):
     pattern = r"logs/collectl/(build|entry)_nodes/(build|entry)_node_(.+?)\.csv"
     match = re.search(pattern, input_string)
     if match:
@@ -66,7 +66,42 @@ def calc_outout_str(input_string):
     # Log unmatched string
     with open("debug.log", "a") as debug_log:
         debug_log.write(f"calc_outout_str: input={input_string}, no match, returning input\n")
-    #return input_string
+    #return input_strin
+
+def calc_outout_str(input_string):
+    patterns = [
+        (
+            r"logs/collectl/(build|entry)_nodes/(build|entry)_node_(.+?)\.csv",
+            lambda m: f"{m.group(1)} node: {m.group(3)}"
+        ),
+        (
+            r"logs/collectl/tsclient/sender_node_(.+?)\.csv",
+            lambda m: f"sender node: {m.group(1)}"
+        ),
+        (
+            r"logs/collectl/tsclient/receiving_node_(.+?)\.csv",
+            lambda m: f"receiving node: {m.group(1)}"
+        ),
+        (
+            r"logs/collectl/timeslice_forwarding/input_nodes/input_node_(.+?)\.csv",
+            lambda m: f"input node: {m.group(1)}"
+        ),
+        (
+            r"logs/collectl/timeslice_forwarding/output_nodes/output_node_(.+?)\.csv",
+            lambda m: f"output node: {m.group(1)}"
+        ),
+    ]
+
+    for pattern, formatter in patterns:
+        match = re.search(pattern, input_string)
+        if match:
+            return formatter(match)
+
+    # Log unmatched string
+    with open("debug.log", "a") as debug_log:
+        debug_log.write(
+            f"calc_outout_str: input={input_string}, no match, returning input\n"
+        )
 
 
 # =============================================================================
@@ -134,8 +169,8 @@ def draw_progress_bar_V3(stdscr, data_dict, num_entry_nodes, num_build_nodes,
 
     return content_height
 
-def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes,
-                      scroll_offset, height):
+def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes, num_sender_nodes, num_receiver_nodes, num_input_nodes, num_output_nodes, 
+                    use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding, scroll_offset, height):
     """
     Draws scrollable progress bars with original colors.
     """
@@ -144,13 +179,32 @@ def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes,
 
     # Build all lines as tuples (text, color)
     all_lines.append([("Number of nodes:", 0)])
-    all_lines.append([("  entry nodes: " + str(num_entry_nodes), 4)])
-    all_lines.append([("  build nodes: " + str(num_build_nodes), 5)])
+    if use_flesnet:
+        all_lines.append([("  entry nodes: " + str(num_entry_nodes), 4)])
+        all_lines.append([("  build nodes: " + str(num_build_nodes), 5)])
+    if use_GSI_TS_forwarding:
+        if not use_flesnet:
+            all_lines.append([("  sender nodes: " + str(num_sender_nodes), 4)])
+            all_lines.append([("  reciever nodes: " + str(num_receiver_nodes), 5)])
+        else:
+            all_lines.append([("  receiver nodes: " + str(num_receiver_nodes), 6)])
+    if use_ZIB_TS_forwarding:
+        if not use_flesnet:
+            all_lines.append([("  input nodes: " + str(num_input_nodes), 4)])
+            all_lines.append([("  output nodes: " + str(num_output_nodes), 5)])
+        else:
+            all_lines.append([("  output nodes: " + str(num_output_nodes), 6)])
+
 
     # Progress bars
     bar_width = 50
     for key, val in data_dict.items():
-        progress = val['current_data'] / max(1e-6, val['total_data'])
+        if 'build node' in output_str and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
+            progress = val['current_data_input'] / max(1e-6, val['total_data'])
+            progress_num = f" {val['current_data_input']:.2f}/{val['total_data']:.2f}"
+        else:
+            progress = val['current_data'] / max(1e-6, val['total_data'])
+            progress_num = f" {val['current_data']:.2f}/{val['total_data']:.2f}"
         progress = max(0.0, min(progress, 1.0))
         output_str = calc_outout_str(key)
 
@@ -160,18 +214,23 @@ def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes,
         red = u'\u2500' * red_len
 
         # Decide color for node label
-        if 'entry node' in output_str:
+        if 'entry node' in output_str or 'input node' in output_str or 'sender node' in output_str:
             node_color = 4
         elif 'build node' in output_str:
             node_color = 5
+        elif 'output node' in output_str or 'receiver node' in output_str:
+            node_color = 6
         else:
             node_color = 0
 
+        if 'build node' in output_str and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
+            progress_num = f" {val['current_data_input']:.2f}/{val['total_data']:.2f}"
+        
         line = [
             (f"{output_str}: ", node_color),
             (green, 2),
             (red, 1),
-            (f" {val['current_data']:.2f}/{val['total_data']:.2f}", 3)
+            (progress_num, 3)
         ]
         all_lines.append(line)
 
@@ -356,7 +415,9 @@ def draw_Graph_V3(stdscr, data_dict, scroll_offset):
 
     return content_height
 
-
+# =============================================================================
+# TODO: make this here for input and output
+# =============================================================================
 def draw_Graph(stdscr, data_dict, scroll_offset, start_y, height):
     """
     Draws the graphs in two columns: entry nodes (left) and build nodes (right)
@@ -551,7 +612,8 @@ def tail_csv(file_path):
 # the current data rate to the data dict and the starts the functions
 # draw_Graph and draw_progress_bar
 # =============================================================================
-def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable_progress_bar):
+def main(stdscr,file_names, num_entry_nodes, num_build_nodes, num_receiver_nodes, num_input_nodes, num_output_nodes, 
+         use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding,enable_graph,enable_progress_bar):
     global terminate_program
     signal.signal(signal.SIGINT, lambda signum, frame: signal_handler(signum, frame))
     signal.signal(signal.SIGTERM, lambda signum, frame: signal_handler(signum, frame))
@@ -577,20 +639,47 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable
     graph_scroll = 0
     for file_name in file_names:
         node_type = calc_outout_str(file_name[0])
-        if 'entry node' in node_type or 'input node' in node_type:
+        if 'entry node' in node_type or 'input node' in node_type or 'sender node' in node_type:
             USE_COLUMN = "[IB]OutKB"   
             COL_INDEX = COLUMN_MAP[USE_COLUMN]
-        elif 'build node' in node_type or 'output node' in node_type:
+        elif 'output node' in node_type or 'receiver node' in node_type:
             USE_COLUMN = "[IB]InKB"   
             COL_INDEX = COLUMN_MAP[USE_COLUMN]
-        data_dict[file_name[0]] = {
-            'current_data' : 0.0,
-            #'tail' : tail_file(file_name[0]),
-            'tail' : tail_csv(file_name[0]),
-            'total_data' : file_name[1], 
-            'data_array' : [],
-            'COL_INDEX' : COL_INDEX
-            }
+        if 'build node' in node_type:
+            if use_GSI_TS_forwarding or use_ZIB_TS_forwarding:
+                USE_COLUMN_1 = "[IB]InKB"
+                USE_COLUMN_2 = "[IB]OutKB"
+                COL_INDEX = (COLUMN_MAP[USE_COLUMN_1], COLUMN_MAP[USE_COLUMN_2])
+                data_dict[file_name[0]] = {
+                    'current_data_input' : 0.0,
+                    'current_data_output' : 0.0,
+                    #'tail' : tail_file(file_name[0]),
+                    'tail' : tail_csv(file_name[0]),
+                    'total_data' : file_name[1], 
+                    'data_array_input' : [],
+                    'date_array_output' : [],
+                    'COL_INDEX' : COL_INDEX
+                    }
+            else:
+                USE_COLUMN = "[IB]InKB"   
+                COL_INDEX = COLUMN_MAP[USE_COLUMN]
+                data_dict[file_name[0]] = {
+                    'current_data' : 0.0,
+                    #'tail' : tail_file(file_name[0]),
+                    'tail' : tail_csv(file_name[0]),
+                    'total_data' : file_name[1], 
+                    'data_array' : [],
+                    'COL_INDEX' : COL_INDEX
+                    }
+        else:
+            data_dict[file_name[0]] = {
+                'current_data' : 0.0,
+                #'tail' : tail_file(file_name[0]),
+                'tail' : tail_csv(file_name[0]),
+                'total_data' : file_name[1], 
+                'data_array' : [],
+                'COL_INDEX' : COL_INDEX
+                }
     last_update = time.time() -1
     max_y, max_x = stdscr.getmaxyx()
     try: 
@@ -626,9 +715,15 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable
                 for key,val in data_dict.items():
                     try:
                         parts = next(val['tail'])
-                        data_rate = get_data_rate(parts, val['COL_INDEX'])
-                        data_dict[key]['current_data'] += data_rate
-                        data_dict[key]['data_array'].append(data_rate)
+                        if 'build node' in key and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
+                            data_rate_input = get_data_rate(parts, val['COL_INDEX'][0])
+                            date_rate_output = get_data_rate(parts, val['COL_INDEX'][1])
+                            data_dict[key]['current_data_input'] += data_rate_input
+                            data_dict[key]['current_data_output'] += data_rate_output
+                        else:
+                            data_rate = get_data_rate(parts, val['COL_INDEX'])
+                            data_dict[key]['current_data'] += data_rate
+                            data_dict[key]['data_array'].append(data_rate)
                     except StopIteration:
                         data_rate = 0.0
                 last_update = time.time()
@@ -646,7 +741,8 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable
                 # Draw progress bar
             if enable_progress_bar:
                 content_height = draw_progress_bar(
-                    stdscr, data_dict, num_entry_nodes, num_build_nodes,
+                    stdscr, data_dict, num_entry_nodes, num_build_nodes, num_sender_nodes, num_receiver_nodes, num_input_nodes, num_output_nodes, 
+                    use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding,
                     progress_scroll, progress_height
                 )
                 progress_scroll = max(0, min(progress_scroll, content_height - progress_height))
@@ -654,7 +750,7 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes,enable_graph,enable
             # Draw graphs
             if enable_graph:
                 content_height = draw_Graph(
-                    stdscr, data_dict, graph_scroll,
+                    stdscr, data_dict, graph_scroll, use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding
                     start_y=progress_height, height=graph_height
                 )
                 graph_scroll = max(0, min(graph_scroll, content_height - graph_height))

@@ -240,7 +240,6 @@ void Application::try_delay(std::chrono::nanoseconds sleep_duration) const {
 std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t*& content_ptr,uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts,
                                                                 long long& acc_size){
   size_t data_size = 1;
-
   uint64_t ts_index = ts->index();
   uint64_t ts_pos = ts->tpos(); //noch hinzufügen
   uint64_t ts_num_corems = ts->num_core_microslices();
@@ -277,10 +276,15 @@ std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& con
     uint64_t num_ms = ts->num_microslices(tsc);
     TSDescBuild.append_component(num_ms);
     uint64_t size_component = (ts->num_microslices(tsc)*sizeof(fles::MicrosliceDescriptor));
-    for (uint64_t msc = 0; msc < (ts->num_core_microslices()) + 1; msc++){ //overlap berücksichtigen
+    for (uint64_t msc = 0; msc < (ts->num_microslices(tsc)); msc++){ //overlap berücksichtigen
       fles::MicrosliceDescriptor ms_desc = ts->descriptor(tsc, msc);  
       data_size = ms_desc.size;
       if (acc_size+data_size >= par_.malloc_size()){
+        if (acc_size == 0){
+           std::cout<<"insufficient memory allocated"<<std::endl;
+          throw std::bad_alloc();
+        }       
+        //std::cout<<"tets"<<std::endl;
         content_ptr = original_ptr;
         acc_size = 0;
       }
@@ -288,14 +292,19 @@ std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& con
       TSDescBuild.append_microslice(tsc,msc,*ms);
       size_component += data_size;
       acc_size += data_size;
+      //std::cout<<acc_size<<std::endl;
       if (par_.jump_val() == -1){
         content_ptr += data_size;
       } else {
         content_ptr += par_.jump_val();
       }
-    TSDescBuild.set_size_component(tsc, size_component);
+
     } 
+    //std::cout<<"set size component:: "<<size_component<<std::endl;
+    TSDescBuild.set_size_component(tsc, size_component);
+    //std::cout<<"test component"<<std::endl;
   }
+  //std::cout<<"test12345"<<std::endl;
   auto TSDesc = std::make_shared<fles::TDescriptor>(std::move(TSDescBuild)); 
   return std::static_pointer_cast<fles::TDescriptor>(TSDesc);
 }
@@ -312,17 +321,19 @@ void Application::run() {
   
   if (par_.descriptor_source()){
     uint8_t* free_ptr = nullptr;
+    L_(info)<<"start with malloc call";
+    std::cout<<par_.malloc_size()<<std::endl;
     free_ptr = static_cast<uint8_t*>(malloc(sizeof(uint8_t)*par_.malloc_size()));
     if (free_ptr == nullptr){
         std::cout<<"malloc call failed, probably insufficient mem"<<std::endl;
         throw std::bad_alloc();
     }
     
-    for (size_t i = 0; i < 1000000000; ++i) {
+    for (size_t i = 0; i < par_.malloc_size(); ++i) {
       free_ptr[i] = static_cast<uint8_t>(rand());
     }
     
-    long long acc_size;
+    long long acc_size = 0;
     //std::cout<<"test"<<std::endl;
     L_(info)<<"start";
     uint8_t* content_ptr = free_ptr;
@@ -339,6 +350,7 @@ void Application::run() {
 
         std::shared_ptr<fles::TDescriptor> timeslice = create_ms_cpointer(content_ptr, free_ptr, 
                                                                       std::move(TDesc), acc_size);
+        //std::cout<<"test1234"<<std::endl;
         std::shared_ptr<const fles::TDescriptor> ts;
         if (par_.release_mode()) {
           ts = std::make_shared<const fles::StorableTimesliceDescriptor>(*timeslice);
@@ -360,7 +372,7 @@ void Application::run() {
         timeslice.reset();
         test_vec.push_back(ts);
       }
-      std::cout<<"test123"<<std::endl;
+      //std::cout<<"test123"<<std::endl;
       auto t1 = std::chrono::high_resolution_clock::now();
       for (std::shared_ptr<const fles::TDescriptor> ts : test_vec){
         for (auto& sink : sinks_descriptor){

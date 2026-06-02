@@ -76,12 +76,14 @@ def ethernet_ip(node_id):
     
 def infiniband_ip(node_id):
     command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
+    #print(node_id)
     try:
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         stdout,stderr = result.communicate()
     except subprocess.CalledProcessError as e:
         logger.error(f'ERROR: {e} Error occurred at reading ips')
         sys.exit(1)
+    #print(stdout)
     match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
     content = match.group(1)
     match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
@@ -754,7 +756,9 @@ class execution:
             try: 
                 self.monitoring()
             except Exception as e:
-                logger.critical(f'Error {e} occured during monotoring. Terminating')
+                logger.critical(f'Error {e} occured during monotoring. Terminating',exc_info=True)
+                self.stop_program()
+                sys.exit(1)
         if self.Par_.kill_nodes:
             try:
                 self.robustness_test()
@@ -764,12 +768,14 @@ class execution:
             except Exception as e:
                 logger.critical(f'Error {e} occured during robustness test. Terminating')
                 self.stop_program()
+                sys.exit(1)
         elif self.Par_.activate_robustness_test_V2:
             try:
                 self.robustness_test_V2()
             except Exception as e:
                 logger.critical(f'Error {e} occured during robustness test V2. Terminating')
                 self.stop_program()
+                sys.exit(1)
         else:
             while True:
                 time.sleep(1)
@@ -1151,7 +1157,7 @@ class execution:
     #   tmux kill-session -t monitoring
     # TODO: use collectl rather than flesnet logs...
     # =============================================================================
-    def monitoring(self):
+    def monitoring_V3(self):
         file_names = []
         if self.overlap_nodes:
             entry_nodes_cnt = 0
@@ -1212,12 +1218,133 @@ class execution:
 # #     BAUSTELLE
 # =============================================================================
 # =============================================================================
-    def monitoring_V3(self):
+    def monitoring(self):
         file_names = []
         nodes_cnt = {}
-        if self.Par_.use_flesnet:
-            print('test')
+        print('test12')
+        with open('monitoring/mon_parameters.txt','w') as f:
+            f.write(f"use_flesnet: {self.Par_.use_flesnet}\n")
+            f.write(f"use_GSI_TS_forwarding: {self.Par_.activate_timesliceforwarding}\n")
+            f.write(f"use_ZIB_TS_forwarding: {self.Par_.ZIB_timesliceforwarding}\n")
+            f.write(f"num_entrynodes: {self.Par_.num_entrynodes}\n")
+            f.write(f"num_buildnodes: {self.Par_.num_buildnodes}\n")
+            f.write(f"num_receivers: {self.Par_.num_receivers}\n")
+            f.write(f"num_inputnodes: {self.Par_.num_input_nodes}\n")
+            f.write(f"num_outputnodes: {self.Par_.num_output_nodes}\n")
+            f.write(f"enable_progess_bar: {self.Par_.enable_progress_bar}\n")
+            f.write(f"enable_graph: {self.Par_.enable_graph}\n")
+
             
+            f.close()
+        print('test123')
+        if self.Par_.use_flesnet:
+            self.get_monitoring_flesnet_parameters()
+        print('test1234')
+        if self.Par_.activate_timesliceforwarding:
+            self.get_monitoring_GSI_TS_parameters()
+        print('test12345')
+        if self.Par_.ZIB_timesliceforwarding:
+            self.get_monitoring_ZIB_TS_parameters()
+        print('test123456')
+
+        logger.info('starting monitoring')
+        session_name = 'monitoring'
+        session_exists = subprocess.run(
+            ['tmux', 'has-session', '-t', session_name],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        if session_exists.returncode != 0:
+            subprocess.run(['tmux', 'new-session', '-d', '-s', session_name])
+        cmd = "monitoring/monitoring_launcher.sh"
+        subprocess.run(['tmux', 'send-keys', '-t', session_name, cmd,'Enter'])   
+            
+        
+    def get_monitoring_flesnet_parameters(self):
+        file_names = []
+        if self.overlap_nodes:
+            entry_nodes_cnt = 0
+            total_file_data = 0
+            for super_node in self.overlap_nodes.keys():
+                logfile = '../%s/logs/collectl/entry_nodes/entry_node_%s.csv' % (self.Run_folder,super_node)
+                #total_data = 1000
+                file_data = 0
+                file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
+                if file_data is None:
+                    file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == 'e_remaining'), None)
+                file_names.append((logfile,file_data))
+                entry_nodes_cnt += 1
+                total_file_data += file_data
+            for super_node in self.overlap_nodes.keys():
+                if not self.Par_.show_only_entry_nodes:
+                    logfile_build = '../%s/logs/collectl/build_nodes/build_node_%s.csv' % (self.Run_folder,super_node)
+                    total_data = total_file_data
+                    file_names.append((logfile_build,total_data))
+        entry_nodes_cnt = 0
+        total_file_data = 0
+        for entry_node in self.entry_nodes.keys():
+            logfile = '../%s/logs/collectl/entry_nodes/entry_node_%s.csv' % (self.Run_folder,entry_node)
+            file_data = 0
+            file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
+            if file_data is None:
+                file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == 'e_remaining'), None)
+            
+            file_names.append((logfile,file_data))
+            entry_nodes_cnt += 1
+            total_file_data += file_data
+        if not self.Par_.show_only_entry_nodes:
+            for build_node in self.build_nodes.keys():
+                logfile = '../%s/logs/collectl/build_nodes/build_node_%s.csv' % (self.Run_folder, build_node)
+                file_data = total_file_data
+                file_names.append((logfile,file_data))
+        with open('monitoring/mon_parameters.txt', 'a') as f:
+            for logfile, file_data in file_names:
+                f.write(f"file_name: {logfile}, {file_data}\n")
+                    
+    def get_monitoring_GSI_TS_parameters(self):
+        filenames = []
+        sender_nodes_cnt = 0
+        total_file_data = 0
+        if not self.Par_.use_flesnet:
+            for sender_node in self.sender_nodes.keys():
+                logfile = '%s/logs/collectl/tsclient/sender_node_%s.csv' % (self.Run_folder,node_id)
+                file_data = 0
+                file_data = next((tup))
+                input_file = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(node_cnt))), None)
+                if input_file is None:
+                    input_file = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
+                filenames.append((logfile,file_data))
+                sender_nodes_cnt += 1
+                total_file_data += file_data
+        for receiver_node in self.receiver_nodes.keys():
+            logfile = '%s/logs/collectl/tsclient/receiving_node_%s.csv' % (self.Run_folder,receiver_node)
+            filenames.append((logfile,total_file_data))
+        with open('monitoring/mon_parameters.txt','a') as f:
+            for logfile, file_data in file_names:
+                f.write(f"file_name: {logfile}, {file_data}\n")
+            
+        
+    def get_monitoring_ZIB_TS_parameters(self):
+        filenames = []
+        input_nodes_cnt = 0
+        total_file_data = 0
+        if not self.Par_.use_flesnet:
+            for input_node in self.input_nodes.keys():
+                logfile_collectl = "%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,input_node)
+                file_data = 0
+                input_file = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(nodes_cnt))), None)
+                if input_file is None:
+                    input_file = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
+                filenames.append((logfile,file_data))
+                sender_nodes_cnt += 1
+                total_file_data += file_data
+        for output_node in self.output_nodes.keys():
+            logfile = "%s/logs/collectl/timeslice_forwarding/output_nodes/output_node_%s.csv" % (self.Run_folder,output_node)
+            filenames.append((logfile,total_file_data))
+            with open('monitoring/mon_parameters.txt','a') as f:
+                for logfile,file_data in filenames:
+                    f.write(f'file_name: {logfile}, {file_data}\n')
+
     # =============================================================================
     # currently not used 
     # =============================================================================

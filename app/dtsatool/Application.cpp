@@ -221,8 +221,9 @@ void Application::run() {
         for (unsigned long j = 0; j < par_.num_ts(); j++){
             fles::TDescriptor TD = create_new_descriptor_ts(ts_index, ts_pos, par_.timeslice_size() - 1, i);
             i += par_.timeslice_size() - 1;
-            std::shared_ptr<fles::TDescriptor> test = std::make_shared<fles::TDescriptor> (TD);
+            //std::shared_ptr<fles::TDescriptor> test = std::make_shared<fles::TDescriptor> (TD);
             sink->put(std::make_shared<fles::TDescriptor> (TD));
+            //TD.reset();
             ++count_;
         };
     }

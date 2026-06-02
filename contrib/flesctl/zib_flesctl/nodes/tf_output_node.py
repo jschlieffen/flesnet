@@ -38,9 +38,9 @@ import signal
 #       flesnet manually
 # =============================================================================
 
-def calc_str(output_node_ip,port,cm_node_ip,output_node_idx, num_components):
+def calc_str(output_node_ip,port,cm_node_ip,output_node_idx, num_components, desc_size, data_size):
     shm_str = f"ts_in_{output_node_idx}"
-    str_ = f"-l 1 -A {output_node_ip}:{port} -c {cm_node_ip}:{port} -N {output_node_idx} -o {shm_str}?n={num_components}"
+    str_ = f"-l 1 -A {output_node_ip}:{port} -c {cm_node_ip}:{port} -N {output_node_idx} -o {shm_str}?n={num_components}\\&descsize={desc_size}\\&datasize={data_size}"
     return str_,shm_str
 
 def start_collectl(use_infiniband, csvfile_name):
@@ -123,9 +123,9 @@ def start_tsclient(path,shm_str,node_name,write_data_to_file,analyze_data, logfi
             result_tsclient.wait()
             break
 
-def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_infiniband, path, write_data_to_file, analyze_data, num_components, logfile_tsclient,
-                path_to_output_file, influx_node_ip, influx_token, use_grafana):
-    str_,shm_str = calc_str(output_node_ip,port,cm_node_ip,output_node_idx, num_components)
+def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_infiniband, path, write_data_to_file, analyze_data, num_components, desc_size, data_size,
+                logfile_tsclient,path_to_output_file, influx_node_ip, influx_token, use_grafana):
+    str_,shm_str = calc_str(output_node_ip,port,cm_node_ip,output_node_idx, num_components, desc_size, data_size)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
@@ -245,5 +245,5 @@ logfile_collectl = arg['<logfile_collectl>']
 logfile_tsclient = arg['<logfile_tsclient>']
 #customize_string = "--timeslice-size 100 --processor-instances 0 -e \"../../../build/./tsclient -i shm:%s -o tcp://*:5556\""
 
-output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_infiniband, path, write_data_to_file, analyze_data, num_components, logfile_tsclient,
-            path_to_output_file,influx_node_ip, influx_token, use_grafana)
+output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_infiniband, path, write_data_to_file, analyze_data, num_components, desc_size, data_size,
+            logfile_tsclient,path_to_output_file,influx_node_ip, influx_token, use_grafana)

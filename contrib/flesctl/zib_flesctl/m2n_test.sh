@@ -76,7 +76,10 @@ function start_flesctrl () {
 
     #kill -INT -"$flesctrl_pid"
 
-    pkill -INT -f "python3 execution.py"
+    #pkill -INT -f "python3 execution.py"
+    python_pid=$(pgrep -P "$flesctrl_pid" -f "^python3 execution.py$")
+
+    kill -INT "$python_pid"
 
     wait "$flesctrl_pid"
 
@@ -102,7 +105,7 @@ function move_folders () {
     local folder_name_GSI_tsclient="$3"
     local folder_name_GSI_flesnet="$4"
 
-    local folder_test="/scratch/htc/jschlieffen/m_to_n_test/node_num_$num_nodes_sender_$num_nodes_receiver"
+    local folder_test="/scratch/htc/jschlieffen/m_to_n_test/node_num_"$num_nodes_sender"_$num_nodes_receiver"
 
     mkdir -p "$folder_test"
 

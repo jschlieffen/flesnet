@@ -15,67 +15,31 @@ function execute_iteration () {
 
     set_config_ZIB_tsclient $num_nodes
 
-    $flesctrl &
-
-    flesctrl_pid=$!
-
-    sleep 180
-
-    #kill -INT -"$flesctrl_pid"
-
-    pkill -INT -f "python3 execution.py"
-
-    wait "$flesctrl_pid"
+    start_flesctrl
 
     folder_name_ZIB_tsclient=$(get_run_folder)
 
-    set_config_ZIB_flesnet $num_nodes
+    # set_config_ZIB_flesnet $num_nodes
 
-    $flesctrl &
+    # start_flesctrl
 
-    flesctrl_pid=$!
-
-    sleep 180
-
-    #kill -INT -"$flesctrl_pid"
-    pkill -INT -f "python3 execution.py"
-
-    wait "$flesctrl_pid"
-
-    folder_name_ZIB_flesnet=$(get_run_folder)
+    # folder_name_ZIB_flesnet=$(get_run_folder)
 
     set_config_GSI_tsclient $num_nodes
 
-    $flesctrl &
-
-    flesctrl_pid=$!
-
-    sleep 180
-
-    #kill -INT -"$flesctrl_pid"
-
-    pkill -INT -f "python3 execution.py"
-    wait "$flesctrl_pid"
+    start_flesctrl
 
     folder_name_GSI_tsclient=$(get_run_folder)
 
 
-    set_config_GSI_flesnet $num_nodes
+    # set_config_GSI_flesnet $num_nodes
 
-    $flesctrl &
+    # start_flesctrl
 
-    flesctrl_pid=$!
+    # folder_name_GSI_flesnet=$(get_run_folder)
 
-    sleep 180
-
-    #kill -INT -"$flesctrl_pid"
-    pkill -INT -f "python3 execution.py"
-
-    wait "$flesctrl_pid"
-
-    folder_name_GSI_flesnet=$(get_run_folder)
-
-    move_folders $folder_name_ZIB_tsclient $folder_name_ZIB_flesnet $folder_name_GSI_tsclient $folder_name_GSI_flesnet
+    #move_folders $folder_name_ZIB_tsclient $folder_name_ZIB_flesnet $folder_name_GSI_tsclient $folder_name_GSI_flesnet
+    move_folders $folder_name_ZIB_tsclient  $folder_name_GSI_tsclient 
 }
 
 function set_config_ZIB_tsclient () {
@@ -138,6 +102,25 @@ function set_config_GSI_flesnet () {
 }
 
 
+function start_flesctrl () {
+
+    $flesctrl &
+
+    flesctrl_pid=$!
+
+    sleep 600
+
+    #kill -INT -"$flesctrl_pid"
+
+    #pkill -INT -f "python3 execution.py"
+    python_pid=$(pgrep -P "$flesctrl_pid" -f "^python3 execution.py$")
+
+    kill -INT "$python_pid"
+
+    wait "$flesctrl_pid"
+
+}
+
 function get_run_folder () {
     
     local Logfile=$(cat tmp/file_name.txt)
@@ -150,7 +133,7 @@ function get_run_folder () {
 }
 
 
-function move_folders () {
+function move_folders_V2 () {
 
     local folder_name_ZIB_tsclient="$1"
     local folder_name_ZIB_flesnet="$2"
@@ -181,6 +164,30 @@ function move_folders () {
 
     mv "$folder_test/$(basename "$folder_name_GSI_flesnet")" \
        "$folder_test/GSI_Timeslice_forwarding_flesnet"
+
+    chmod -R 777 "$folder_test"
+}
+
+function move_folders () {
+
+    local folder_name_ZIB_flesnet="$2"
+    local folder_name_GSI_flesnet="$4"
+
+    local folder_test="/scratch/htc/jschlieffen/n_to_n_test/node_num_$num_nodes"
+
+    mkdir -p "$folder_test"
+
+
+    cp -r "$folder_name_ZIB_tsclient" "$folder_test"
+
+    mv "$folder_test/$(basename "$folder_name_ZIB_tsclient")" \
+       "$folder_test/ZIB_Timeslice_forwarding_tsclient"
+
+
+    cp -r "$folder_name_GSI_tsclient" "$folder_test"
+
+    mv "$folder_test/$(basename "$folder_name_GSI_tsclient")" \
+       "$folder_test/GSI_Timeslice_forwarding_tsclient"
 
     chmod -R 777 "$folder_test"
 }

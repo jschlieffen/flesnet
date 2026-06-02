@@ -30,15 +30,27 @@ def get_params():
                 num_buildnodes = int(line.split(": ")[1])
             elif line.startswith("num_entrynodes:"):
                 num_entrynodes = int(line.split(": ")[1])
+            elif line.startswith("num_receivers: "):
+                num_receivers = int(line.split(": ")[1])
+            elif line.startswith("num_inputnodes: "):
+                num_inputnodes = int(line.split(": ")[1])
+            elif line.startswith("num_outputnodes: "):
+                num_outputnodes = int(line.split(": ")[1])
             elif line.startswith("enable_graph:"):
                 enable_graph = line.split(": ")[1] == '1'
             elif line.startswith("enable_progess_bar:"):
                 enable_progess_bar = line.split(": ")[1] == '1'
-    return file_names, num_buildnodes, num_entrynodes, enable_graph, enable_progess_bar
+            elif line.startswith("use_flesnet:"):
+                use_flesnet = line.split(": ")[1] == '1'
+            elif line.startswith("use_GSI_TS_forwarding: "):
+                use_GSI_TS_forwarding = line.split(": ")[1] == '1'
+            elif line.startswith("use_ZIB_TS_forwarding: "):
+                use_ZIB_TS_forwarding = line.split(": ")[1] == '1'
+    return file_names, num_buildnodes, num_entrynodes, num_receivers, num_inputnodes, num_outputnodes, enable_graph, enable_progess_bar, use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding
 
 with open("monitoring.log", "w") as log_file:
     try:
-        file_names, num_buildnodes, num_entrynodes, enable_graph, enable_progress_bar = get_params()
+        file_names, num_buildnodes, num_entrynodes, num_receivers, num_inputnodes, num_outputnodes, enable_graph, enable_progress_bar, use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding = get_params()
         #log_file.write(file_names)
         #log_file.write('test123 \n')
         #for file in file_names:    
