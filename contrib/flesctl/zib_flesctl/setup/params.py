@@ -97,6 +97,7 @@ class Params:
         self.analyze_data = 0
         self.port = 0
         self.use_dtsa_files = 0
+        self.malloc_size = 1000000000
         self.ZIB_timesliceforwarding = 1
         self.use_flesnet = 1
         self.num_components = 1
@@ -247,6 +248,7 @@ class Params:
         self.path_to_output_file = self.get_value('tsclient_commands', "path_to_output_file",'str', self.path_to_output_file, False)
         self.analyze_data = self.get_value('tsclient_commands', 'analyze_data', 'str', self.analyze_data, False)
         self.use_dtsa_files = self.get_value('tsclient_commands','use_dtsa_files','int',self.use_dtsa_files, False)
+        self.malloc_size = self.get_value('tsclient_commands', 'malloc_size', 'int', self.malloc_size, False)
 
         
     def get_GSI_timesliceforwarding_par(self):

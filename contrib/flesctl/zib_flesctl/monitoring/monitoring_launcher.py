@@ -46,6 +46,8 @@ def get_params():
                 use_GSI_TS_forwarding = line.split(": ")[1] == '1'
             elif line.startswith("use_ZIB_TS_forwarding: "):
                 use_ZIB_TS_forwarding = line.split(": ")[1] == '1'
+                print(use_ZIB_TS_forwarding)
+
     return file_names, num_buildnodes, num_entrynodes, num_receivers, num_inputnodes, num_outputnodes, enable_graph, enable_progess_bar, use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding
 
 with open("monitoring.log", "w") as log_file:
@@ -58,11 +60,19 @@ with open("monitoring.log", "w") as log_file:
             #log_file.write(str(os.path.isfile(file[0])))
         #log_file.write(str(os.getcwd()) + '\n')
         #log_file.write(str(enable_graph) + '\n')
+        log_file.write(str(use_ZIB_TS_forwarding))
         total_data, avg_data_rate = curses.wrapper(monitoring.main,file_names, 
                                                    num_buildnodes, 
-                                                   num_entrynodes, 
+                                                   num_entrynodes,
+                                                   num_receivers,
+                                                   num_inputnodes,
+                                                   num_outputnodes, 
+                                                   use_flesnet,
+                                                   use_GSI_TS_forwarding,
+                                                   use_ZIB_TS_forwarding,
                                                    enable_graph, 
-                                                   enable_progress_bar)
+                                                   enable_progress_bar,
+                                                   )
         log_file.write(f'total_data: {total_data} \n')
         log_file.write(f'avg_data_rate: {avg_data_rate} \n')
     except Exception as e:

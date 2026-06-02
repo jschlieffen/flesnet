@@ -92,7 +92,8 @@ class Timeslice_forwarding_ZIB:
                 "data_size",
                 "influx_node_ip",
                 "influx_token",
-                "use_grafana"
+                "use_grafana",
+                "malloc_size"
             ]   
         with open('tmp/tf_input_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_infiniband:

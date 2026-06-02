@@ -133,9 +133,9 @@ def write_response(node_name, msg):
         os.fsync(f.fileno())
 
 def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, num_components, desc_size, data_size,
-                  influx_node_ip, influx_token, use_grafana ,tsclient_communicater):
+                  influx_node_ip, influx_token, use_grafana , malloc_size,tsclient_communicater):
     if use_dtsa_files == 1:
-        dtsa_command = "-D 1"
+        dtsa_command = f"-D 1 --malloc_size {malloc_size}"
     else:
         dtsa_command = ""
     grafana_string = ""
@@ -143,7 +143,7 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, nu
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '--monitor influx2:%s:tsclient_status:' % (influx_node_ip)
     
-    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n={num_components}\\&descsize={desc_size}\\&datasize={data_size} {dtsa_command} --malloc_size 10000000000 {grafana_string}"
+    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n={num_components}\\&descsize={desc_size}\\&datasize={data_size} {dtsa_command} {grafana_string}"
     print(tsclient_command)
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     while True:
@@ -154,7 +154,7 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, nu
             break
 
 def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files, num_components , desc_size, data_size,
-               logfile_collectl,logfile,influx_node_ip, influx_token, use_grafana):
+               logfile_collectl,logfile,influx_node_ip, influx_token, use_grafana, malloc_size):
     str_,shm_str = calc_str(input_node_ip,port,cm_node_ip,input_node_idx)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
     if use_collectl == 1:
@@ -170,7 +170,7 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
         print('test1234')
         tsclient_communicater = queue.Queue()
         thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, shm_str, logfile_tsclient, use_dtsa_files, num_components, desc_size, data_size,
-                                                                        influx_node_ip, influx_token, use_grafana, tsclient_communicater))
+                                                                        influx_node_ip, influx_token, use_grafana, malloc_size, tsclient_communicater))
         thread_tsclient.start()
         time.sleep(1)
     grafana_string = ''
@@ -250,5 +250,5 @@ input_node_ip = arg["<input_node_ip>"]
 logfile_collectl = arg['<logfile_collectl>']
 logfile_tsclient = arg['<logfile_tsclient>']
 input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_infiniband, path, input_file, use_flesnet, logfile_tsclient, use_dtsa_files,num_components, desc_size,data_size,
-           logfile_collectl, logfile,influx_node_ip, influx_token, use_grafana)
+           logfile_collectl, logfile,influx_node_ip, influx_token, use_grafana, malloc_size)
 

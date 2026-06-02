@@ -218,13 +218,10 @@ def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes, num_s
             node_color = 4
         elif 'build node' in output_str:
             node_color = 5
-        elif 'output node' in output_str or 'receiver node' in output_str:
+        elif 'output node' in output_str or 'receiving node' in output_str:
             node_color = 6
         else:
             node_color = 0
-
-        if 'build node' in output_str and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
-            progress_num = f" {val['current_data_input']:.2f}/{val['total_data']:.2f}"
         
         line = [
             (f"{output_str}: ", node_color),
@@ -418,30 +415,41 @@ def draw_Graph_V3(stdscr, data_dict, scroll_offset):
 # =============================================================================
 # TODO: make this here for input and output
 # =============================================================================
-def draw_Graph(stdscr, data_dict, scroll_offset, start_y, height):
+def draw_Graph(stdscr, data_dict, use_flesnet,use_GSI_TS_forwarding, use_ZIB_TS_forwarding, scroll_offset, start_y, height):
     """
     Draws the graphs in two columns: entry nodes (left) and build nodes (right)
     with unified scrolling.
     """
     max_y, max_x = stdscr.getmaxyx()
+    
+    columns = []
     padding = 2  # space between columns
-    col_width = (max_x - padding) // 2
-
-    # Separate nodes
-    entry_nodes = [(key,val) for key, val in data_dict.items() if 'entry node' in calc_outout_str(key)]
-    build_nodes = [(key,val) for key, val in data_dict.items() if 'build node' in calc_outout_str(key)]
-
-    # Generate all graph lines per node
+    if (use_flesnet and use_GSI_TS_forwarding) or (use_flesnet and use_ZIB_TS_forwarding):
+        num_cols = 3
+    else:
+        num_cols = 2
+    col_width = (max_x - padding * (num_cols - 1)) // num_cols
     def generate_graph_lines(node_list):
         all_lines = []
         for key,val in node_list:
             plt.clf()
-            data = val['data_array'][:]
-            if len(data) > 20:
-                data = data[-20:]
             lbl = calc_outout_str(key)
-
-            plt.plot(data, label=lbl)
+            if 'build node' in lbl and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
+                data_input = val['data_array_input'][:]
+                data_output = val['data_array_output'][:]
+                if len(data_input) > 20:
+                    data_input = data_input[-20:]
+                if len(data_output) > 20:
+                    data_output = data_output[-20:]
+                lbl_input = 'in'
+                lbl_output ='out'
+                plt.plot(data_input, label=lbl_input)
+                plt.plot(data_output, label=lbl_output)
+            else:
+                data = val['data_array'][:]
+                if len(data) > 20:
+                    data = data[-20:]
+                plt.plot(data)
             plt.theme("dark")
             plt.title(lbl)
             plt.plot_size(min(60, col_width), min(10, height))
@@ -452,18 +460,51 @@ def draw_Graph(stdscr, data_dict, scroll_offset, start_y, height):
             lines = buf.getvalue().splitlines()
             all_lines.append(lines)
         return all_lines
+    # Separate nodes
+    columns = []
+    if use_flesnet:
+    
+        entry_nodes = [(key,val) for key, val in data_dict.items() if 'entry node' in calc_outout_str(key)]
+        build_nodes = [(key,val) for key, val in data_dict.items() if 'build node' in calc_outout_str(key)]
+        entry_lines = generate_graph_lines(entry_nodes)
+        build_lines = generate_graph_lines(build_nodes)
+        columns.append(("Entry Nodes", entry_lines))
+        columns.append(("Build Nodes", build_lines))
+    if use_GSI_TS_forwarding:
+        if not use_flesnet:
+            sender_nodes = [(key,val) for key, val in data_dict.items() if 'sender node' in calc_outout_str(key)]
+            sender_lines = generate_graph_lines(sender_nodes)
+            columns.append(("Sender Nodes", sender_lines))
+        receiver_nodes = [(key,val) for key, val in data_dict.items() if 'receiving node' in calc_outout_str(key)]
+        receiver_lines = generate_graph_lines(receiver_nodes)
+        columns.append(("Receiver Nodes", receiver_lines))
 
-    entry_lines = generate_graph_lines(entry_nodes)
-    build_lines = generate_graph_lines(build_nodes)
+    if use_ZIB_TS_forwarding:
+        if not use_flesnet:
+            input_nodes = [(key,val) for key, val in data_dict.items() if 'input node' in calc_outout_str(key)]
+            input_lines = generate_graph_lines(input_nodes)
+            columns.append(("Input Nodes", input_lines))
+        output_nodes = [(key,val) for key, val in data_dict.items() if 'output node' in calc_outout_str(key)]
+        output_lines = generate_graph_lines(output_nodes)
+        columns.append(("Output Nodes", output_lines))
+
+
+
 
     # Determine max lines for each row
-    max_rows = max(len(entry_lines), len(build_lines))
+    #max_rows = max(len(entry_lines), len(build_lines))
+    max_rows = max(len(lines) for _, lines in columns)
     all_lines_combined = []
     
+    
+    label_line = (" " * padding).join(
+        label.center(col_width)
+        for label, _ in columns
+    )
     # Add overall bottom title
     all_lines_combined.append(' ' * ((max_x - len("Data rate in GB/s")) // 2) + "Data rate in GB/s")
     all_lines_combined.append("")  # extra blank line below
-    
+    """
     # Add column labels centered over their columns
     entry_label = "Entry Nodes"
     build_label = "Build Nodes"
@@ -472,6 +513,11 @@ def draw_Graph(stdscr, data_dict, scroll_offset, start_y, height):
     col_labels = entry_centered + ' ' * padding + build_centered
     all_lines_combined.append(col_labels)
     all_lines_combined.append("")  # extra blank line below
+    """
+    all_lines_combined.append("")
+    all_lines_combined.append(label_line)
+    all_lines_combined.append("")
+    """
     for i in range(max_rows):
         left_lines = entry_lines[i] if i < len(entry_lines) else []
         right_lines = build_lines[i] if i < len(build_lines) else []
@@ -486,7 +532,32 @@ def draw_Graph(stdscr, data_dict, scroll_offset, start_y, height):
             l_line = l_line.ljust(col_width)
             combined = l_line + ' ' * padding + r_line.ljust(col_width)
             all_lines_combined.append(combined)
-            
+    """
+    for row_idx in range(max_rows):
+    
+        # Find tallest graph block in this row
+        row_height = 0
+        row_columns = []
+    
+        for _, lines in columns:
+            graph = lines[row_idx] if row_idx < len(lines) else []
+            row_columns.append(graph)
+            row_height = max(row_height, len(graph))
+    
+        # Pad all graphs to same height
+        padded_columns = []
+        for graph in row_columns:
+            padded_columns.append(
+                graph + [''] * (row_height - len(graph))
+            )
+    
+        # Emit line-by-line
+        for line_idx in range(row_height):
+            combined = (" " * padding).join(
+                graph[line_idx].ljust(col_width)
+                for graph in padded_columns
+            )
+            all_lines_combined.append(combined)
             
 
     # Clamp scroll
@@ -642,7 +713,7 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes, num_receiver_nodes
         if 'entry node' in node_type or 'input node' in node_type or 'sender node' in node_type:
             USE_COLUMN = "[IB]OutKB"   
             COL_INDEX = COLUMN_MAP[USE_COLUMN]
-        elif 'output node' in node_type or 'receiver node' in node_type:
+        elif 'output node' in node_type or 'receiving node' in node_type:
             USE_COLUMN = "[IB]InKB"   
             COL_INDEX = COLUMN_MAP[USE_COLUMN]
         if 'build node' in node_type:
@@ -657,7 +728,7 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes, num_receiver_nodes
                     'tail' : tail_csv(file_name[0]),
                     'total_data' : file_name[1], 
                     'data_array_input' : [],
-                    'date_array_output' : [],
+                    'data_array_output' : [],
                     'COL_INDEX' : COL_INDEX
                     }
             else:
@@ -715,11 +786,13 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes, num_receiver_nodes
                 for key,val in data_dict.items():
                     try:
                         parts = next(val['tail'])
-                        if 'build node' in key and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
+                        if ('build_nodes' in key) and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
                             data_rate_input = get_data_rate(parts, val['COL_INDEX'][0])
-                            date_rate_output = get_data_rate(parts, val['COL_INDEX'][1])
+                            data_rate_output = get_data_rate(parts, val['COL_INDEX'][1])
                             data_dict[key]['current_data_input'] += data_rate_input
                             data_dict[key]['current_data_output'] += data_rate_output
+                            data_dict[key]['data_array_input'].append(data_rate_input)
+                            data_dict[key]['data_array_output'].append(data_rate_output)
                         else:
                             data_rate = get_data_rate(parts, val['COL_INDEX'])
                             data_dict[key]['current_data'] += data_rate
@@ -741,7 +814,7 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes, num_receiver_nodes
                 # Draw progress bar
             if enable_progress_bar:
                 content_height = draw_progress_bar(
-                    stdscr, data_dict, num_entry_nodes, num_build_nodes, num_sender_nodes, num_receiver_nodes, num_input_nodes, num_output_nodes, 
+                    stdscr, data_dict, num_entry_nodes, num_build_nodes, num_receiver_nodes, num_input_nodes, num_output_nodes, 
                     use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding,
                     progress_scroll, progress_height
                 )
@@ -750,7 +823,7 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes, num_receiver_nodes
             # Draw graphs
             if enable_graph:
                 content_height = draw_Graph(
-                    stdscr, data_dict, graph_scroll, use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding
+                    stdscr, data_dict, use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding, graph_scroll, 
                     start_y=progress_height, height=graph_height
                 )
                 graph_scroll = max(0, min(graph_scroll, content_height - graph_height))

@@ -58,7 +58,11 @@ class Timeslice_forwarding:
                 "use_collectl",
                 "use_flesnet",
                 "use_dtsa_files",
-                "use_infiniband"
+                "use_infiniband",
+                "num_components",
+                "desc_size",
+                "data_size",
+                "malloc_size"
         ]
         with open('tmp/sender_nodes_params.txt', 'w') as Params_file:
             if self.Par_.use_flesnet:
@@ -115,13 +119,14 @@ class Timeslice_forwarding:
             logger.info(f"start timeslice sender: {node_id}")
             logfile = '%s/logs/flesnet/tsclient/sender_node_%s.log' % (self.Run_folder,node_id)
             logfile_collectl = '%s/logs/collectl/tsclient/sender_node_%s.csv' % (self.Run_folder,node_id)
+            logfile_tsclient = '%s/logs/flesnet/tsclient/sender_node_%s_input_file_reader_tsclient.log' % (self.Run_folder,node_id)
             if self.Par_.use_infiniband:
                 node_ip = node['inf_ip']
             else:
                 node_ip = node['eth_ip']
             command = (
-                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s %s' 
-                % (node_id, self.apptainer_command,self.Par_.num_cpus, file, input_file, logfile, node_cnt, logfile_collectl, node_ip)
+                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s %s %s' 
+                % (node_id, self.apptainer_command,self.Par_.num_cpus, file, input_file, logfile, node_cnt, logfile_collectl, node_ip, logfile_tsclient)
             )
             try: 
                 result = subprocess.Popen(command,shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

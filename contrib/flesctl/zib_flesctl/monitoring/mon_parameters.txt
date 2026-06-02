@@ -4,10 +4,10 @@ use_ZIB_TS_forwarding: 1
 num_entrynodes: 1
 num_buildnodes: 1
 num_receivers: 1
-num_inputnodes: 2
+num_inputnodes: 1
 num_outputnodes: 1
-enable_progess_bar: 0
+enable_progess_bar: None
 enable_graph: 1
-file_name: ../Runs/Run_83_2026-05-28-18-25-10/logs/collectl/entry_nodes/entry_node_htc-cmp509.csv, 750
-file_name: ../Runs/Run_83_2026-05-28-18-25-10/logs/collectl/build_nodes/build_node_htc-cmp512.csv, 750
-file_name: Runs/Run_83_2026-05-28-18-25-10/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp518.csv, 0
+file_name: ../Runs/Run_172_2026-06-02-18-56-02/logs/collectl/entry_nodes/entry_node_htc-cmp133.csv, 750
+file_name: ../Runs/Run_172_2026-06-02-18-56-02/logs/collectl/build_nodes/build_node_htc-cmp134.csv, 750
+file_name: ../Runs/Run_172_2026-06-02-18-56-02/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp137.csv, 0

@@ -1307,20 +1307,20 @@ class execution:
         total_file_data = 0
         if not self.Par_.use_flesnet:
             for sender_node in self.sender_nodes.keys():
-                logfile = '%s/logs/collectl/tsclient/sender_node_%s.csv' % (self.Run_folder,node_id)
+                logfile = '../%s/logs/collectl/tsclient/sender_node_%s.csv' % (self.Run_folder,sender_node)
                 file_data = 0
-                file_data = next((tup))
-                input_file = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(node_cnt))), None)
-                if input_file is None:
-                    input_file = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
+                #file_data = next((tup))
+                file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(sender_nodes_cnt))), None)
+                if file_data is None:
+                    file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
                 filenames.append((logfile,file_data))
                 sender_nodes_cnt += 1
                 total_file_data += file_data
         for receiver_node in self.receiver_nodes.keys():
-            logfile = '%s/logs/collectl/tsclient/receiving_node_%s.csv' % (self.Run_folder,receiver_node)
+            logfile = '../%s/logs/collectl/tsclient/receiving_node_%s.csv' % (self.Run_folder,receiver_node)
             filenames.append((logfile,total_file_data))
         with open('monitoring/mon_parameters.txt','a') as f:
-            for logfile, file_data in file_names:
+            for logfile, file_data in filenames:
                 f.write(f"file_name: {logfile}, {file_data}\n")
             
         
@@ -1330,20 +1330,20 @@ class execution:
         total_file_data = 0
         if not self.Par_.use_flesnet:
             for input_node in self.input_nodes.keys():
-                logfile_collectl = "%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,input_node)
+                logfile = "../%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,input_node)
                 file_data = 0
-                input_file = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(nodes_cnt))), None)
+                input_file = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(input_nodes_cnt))), None)
                 if input_file is None:
                     input_file = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
                 filenames.append((logfile,file_data))
-                sender_nodes_cnt += 1
+                input_nodes_cnt += 1
                 total_file_data += file_data
         for output_node in self.output_nodes.keys():
-            logfile = "%s/logs/collectl/timeslice_forwarding/output_nodes/output_node_%s.csv" % (self.Run_folder,output_node)
+            logfile = "../%s/logs/collectl/timeslice_forwarding/output_nodes/output_node_%s.csv" % (self.Run_folder,output_node)
             filenames.append((logfile,total_file_data))
-            with open('monitoring/mon_parameters.txt','a') as f:
-                for logfile,file_data in filenames:
-                    f.write(f'file_name: {logfile}, {file_data}\n')
+        with open('monitoring/mon_parameters.txt','a') as f:
+            for logfile,file_data in filenames:
+                f.write(f'file_name: {logfile}, {file_data}\n')
 
     # =============================================================================
     # currently not used 

@@ -1,19 +1,16 @@
-Error: argument of type 'NoneType' is not iterable
+TrueError: endwin() returned ERR
 Traceback (most recent call last):
-  File "/home/htc/jschlieffen/flesnet_flesctl/flesnet/contrib/flesctl/zib_flesctl/monitoring/monitoring_launcher.py", line 49, in <module>
+  File "/home/htc/jschlieffen/flesnet_flesctl/flesnet/contrib/flesctl/zib_flesctl/monitoring/monitoring_launcher.py", line 64, in <module>
     total_data, avg_data_rate = curses.wrapper(monitoring.main,file_names,
                                 ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^
                                                num_buildnodes,
                                                ^^^^^^^^^^^^^^^
-                                               num_entrynodes,
-                                               ^^^^^^^^^^^^^^^
-                                               enable_graph,
-                                               ^^^^^^^^^^^^^
-                                               enable_progress_bar)
+    ...<8 lines>...
+                                               enable_progress_bar,
                                                ^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.13/curses/__init__.py", line 94, in wrapper
-    return func(stdscr, *args, **kwds)
-  File "/home/htc/jschlieffen/flesnet_flesctl/flesnet/contrib/flesctl/zib_flesctl/monitoring/monitoring.py", line 580, in main
-    if 'entry node' in node_type or 'input node' in node_type:
-       ^^^^^^^^^^^^^^^^^^^^^^^^^
-TypeError: argument of type 'NoneType' is not iterable
+                                               )
+                                               ^
+  File "/usr/lib/python3.13/curses/__init__.py", line 101, in wrapper
+    endwin()
+    ~~~~~~^^
+_curses.error: endwin() returned ERR
