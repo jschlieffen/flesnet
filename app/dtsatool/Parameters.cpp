@@ -23,7 +23,11 @@ void Parameters::parse_options(int argc, char* argv[]){
         << " into a seperat file" <<std::endl
         << "It can also create dtsa files without an input ms-Archive. For this execute:"<<std::endl<<std::endl
         << "\t dtsatool -d 1 -O output.dtsa"<<std::endl<<std::endl
-        << "This line will create an dtsa file for 10000 ts and timeslice-size 100 where each microslice has the size of 1MB"<<std::endl
+        << "This line will create an dtsa file for 10000 ts and timeslice-size 100 where each microslice has the size of 1MB"
+        << "General formula for the size of the data: num_ts*num_components* timeslice_size* (content_size_min + content_size_max)/2"
+        << "For the average size of one timeslice it holds: num_components* timeslice_size* (content_size_min + content_size_max)/2"
+        << "example default sizes: num_ts = 10000 num_components = 1; timeslice_size = 100; content_size_min = content_size_max = 1000000"
+        << "This gives the fixed microslice size of 1 MB, the timeslice size of 100 MB and the total size of the file fo 1TB" <<std::endl
         << "Furthermore the program can transform .dtsa files in .dmsa files. For this execute:"<<std::endl<<std::endl
         << "\t dtsatool -D 1 -i input.dtsa";
     po::options_description general("General options");
@@ -48,9 +52,9 @@ void Parameters::parse_options(int argc, char* argv[]){
     sink_add("output-archive,O",po::value<std::string>(&output_archive_)
                                                 ->implicit_value(output_archive_),
             "name of an output archive to write");
-    sink_add("create-dmsa,d",po::value<bool>(&create_dtsa_)
+    sink_add("create-dtsa,d",po::value<bool>(&create_dtsa_)
                                                 ->implicit_value(create_dtsa_),
-            "enable/disable if the dmsa-files should be created, rather than transformed");
+            "enable/disable if the dtsa-files should be created, rather than transformed");
     sink_add("dtsa2dmsa,D", po::value<bool>(&dtsa2dmsa_)
                                                 ->implicit_value(dtsa2dmsa_),
             "enable/ disable if a dtsa should be transformed into a a dmsa");
@@ -59,7 +63,7 @@ void Parameters::parse_options(int argc, char* argv[]){
             "vector for the components of a timeslice. Microslices are distributed randomly");
     sink_add("timeslice-size,N", po::value<int>(&timeslice_size_)
                                                 ->implicit_value(timeslice_size_),
-            "Size of the timeslices");
+            "gives the number of microslices per component. Overlap is not implemented in this program.");
     sink_add("num-ts,n",po::value<unsigned long>(&num_ts_)
                                                 ->implicit_value(num_ts_),
             "gives the number of timeslices."

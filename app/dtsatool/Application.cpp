@@ -50,7 +50,7 @@ Application::Application(Parameters const& par) : par_(par){
     }
         if (par_.create_dtsa()){
         uint64_t offset = 0;
-        for (uint64_t i = 0; i <= par_.num_ts()*(par_.timeslice_size()-1); i++){
+        for (uint64_t i = 0; i <= par_.num_ts()*(par_.timeslice_size()); i++){
             generated_descriptors.push_back(std::make_shared<fles::MicrosliceDescriptor>(
                 static_cast<fles::MicrosliceDescriptor>(PatternGenerator(i,
                                                                         par_.content_size_min(),
@@ -111,16 +111,16 @@ fles::TDescriptor Application::create_descriptor_ts(std::shared_ptr<const fles::
 fles::TDescriptor Application::create_new_descriptor_ts(uint64_t ts_index, uint64_t ts_pos, 
                                                         uint64_t ts_num_corems, int i){
   fles::TDescriptor TD(ts_num_corems, ts_index,ts_pos);
-  std::vector component_sizes(par_.components(), par_.timeslice_size()/par_.components());
-  uint64_t remainder = par_.timeslice_size() % par_.components();
+  //std::vector component_sizes(par_.components(), par_.timeslice_size()/par_.components());
+  //uint64_t remainder = par_.timeslice_size() % par_.components();
   for (uint64_t tsc = 0; tsc < par_.components(); tsc++){
-    uint64_t num_ms;
-    if (tsc < remainder){
-        num_ms = component_sizes[tsc]++;
-    }
-    else{
-        num_ms = component_sizes[tsc];
-    }
+    uint64_t num_ms = par_.timeslice_size();
+    // if (tsc < remainder){
+    //     num_ms = component_sizes[tsc]++;
+    // }
+    // else{
+    //     num_ms = component_sizes[tsc];
+    // }
     TD.append_component(num_ms);
     for (uint64_t msc = 0; msc < num_ms; msc++){
       fles::MicrosliceDescriptor ms_desc= *generated_descriptors[i];
