@@ -169,7 +169,7 @@ def draw_progress_bar_V3(stdscr, data_dict, num_entry_nodes, num_build_nodes,
 
     return content_height
 
-def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes, num_sender_nodes, num_receiver_nodes, num_input_nodes, num_output_nodes, 
+def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes, num_receiver_nodes, num_input_nodes, num_output_nodes, 
                     use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding, scroll_offset, height):
     """
     Draws scrollable progress bars with original colors.
@@ -184,13 +184,13 @@ def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes, num_s
         all_lines.append([("  build nodes: " + str(num_build_nodes), 5)])
     if use_GSI_TS_forwarding:
         if not use_flesnet:
-            all_lines.append([("  sender nodes: " + str(num_sender_nodes), 4)])
+            all_lines.append([("  sender nodes:   " + str(num_receiver_nodes), 4)])
             all_lines.append([("  reciever nodes: " + str(num_receiver_nodes), 5)])
         else:
             all_lines.append([("  receiver nodes: " + str(num_receiver_nodes), 6)])
     if use_ZIB_TS_forwarding:
         if not use_flesnet:
-            all_lines.append([("  input nodes: " + str(num_input_nodes), 4)])
+            all_lines.append([("  input nodes:  " + str(num_input_nodes), 4)])
             all_lines.append([("  output nodes: " + str(num_output_nodes), 5)])
         else:
             all_lines.append([("  output nodes: " + str(num_output_nodes), 6)])
@@ -199,6 +199,7 @@ def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes, num_s
     # Progress bars
     bar_width = 50
     for key, val in data_dict.items():
+        output_str = calc_outout_str(key)
         if 'build node' in output_str and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
             progress = val['current_data_input'] / max(1e-6, val['total_data'])
             progress_num = f" {val['current_data_input']:.2f}/{val['total_data']:.2f}"
@@ -206,7 +207,7 @@ def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes, num_s
             progress = val['current_data'] / max(1e-6, val['total_data'])
             progress_num = f" {val['current_data']:.2f}/{val['total_data']:.2f}"
         progress = max(0.0, min(progress, 1.0))
-        output_str = calc_outout_str(key)
+
 
         green_len = int(progress * bar_width)
         red_len = bar_width - green_len
@@ -412,9 +413,7 @@ def draw_Graph_V3(stdscr, data_dict, scroll_offset):
 
     return content_height
 
-# =============================================================================
-# TODO: make this here for input and output
-# =============================================================================
+
 def draw_Graph(stdscr, data_dict, use_flesnet,use_GSI_TS_forwarding, use_ZIB_TS_forwarding, scroll_offset, start_y, height):
     """
     Draws the graphs in two columns: entry nodes (left) and build nodes (right)
@@ -504,35 +503,9 @@ def draw_Graph(stdscr, data_dict, use_flesnet,use_GSI_TS_forwarding, use_ZIB_TS_
     # Add overall bottom title
     all_lines_combined.append(' ' * ((max_x - len("Data rate in GB/s")) // 2) + "Data rate in GB/s")
     all_lines_combined.append("")  # extra blank line below
-    """
-    # Add column labels centered over their columns
-    entry_label = "Entry Nodes"
-    build_label = "Build Nodes"
-    entry_centered = entry_label.center(col_width)
-    build_centered = build_label.center(col_width)
-    col_labels = entry_centered + ' ' * padding + build_centered
-    all_lines_combined.append(col_labels)
-    all_lines_combined.append("")  # extra blank line below
-    """
     all_lines_combined.append("")
     all_lines_combined.append(label_line)
     all_lines_combined.append("")
-    """
-    for i in range(max_rows):
-        left_lines = entry_lines[i] if i < len(entry_lines) else []
-        right_lines = build_lines[i] if i < len(build_lines) else []
-
-        # Pad shorter one to match length
-        max_len = max(len(left_lines), len(right_lines))
-        left_lines += [''] * (max_len - len(left_lines))
-        right_lines += [''] * (max_len - len(right_lines))
-
-        # Combine line by line with padding
-        for l_line, r_line in zip(left_lines, right_lines):
-            l_line = l_line.ljust(col_width)
-            combined = l_line + ' ' * padding + r_line.ljust(col_width)
-            all_lines_combined.append(combined)
-    """
     for row_idx in range(max_rows):
     
         # Find tallest graph block in this row
@@ -843,9 +816,9 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes, num_receiver_nodes
 def calc_output_msg(data_dict):
     total_data = 0
     avg_data_rate = 0
-    it_counter = 0
+    it_counter = 1
     for key,val in data_dict.items():
-        if 'entry_node' in key:
+        if 'entry_node' in key or 'sender_node' in key or 'input_node' in key:
             total_data += val['current_data']
             for data_rate in val['data_array']:
                 if data_rate > 0:
@@ -885,8 +858,8 @@ def cleanup(stdscr):
             curses.echo()
         except:
             pass
-        finally:
-            curses.endwin()
+        #finally:
+        #    curses.endwin()
             
 def cleanup_V2(stdscr):
     global terminate_program

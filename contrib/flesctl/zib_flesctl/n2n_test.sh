@@ -19,11 +19,11 @@ function execute_iteration () {
 
     folder_name_ZIB_tsclient=$(get_run_folder)
 
-    # set_config_ZIB_flesnet $num_nodes
+    set_config_ZIB_flesnet $num_nodes
 
-    # start_flesctrl
+    start_flesctrl
 
-    # folder_name_ZIB_flesnet=$(get_run_folder)
+    folder_name_ZIB_flesnet=$(get_run_folder)
 
     set_config_GSI_tsclient $num_nodes
 
@@ -32,14 +32,14 @@ function execute_iteration () {
     folder_name_GSI_tsclient=$(get_run_folder)
 
 
-    # set_config_GSI_flesnet $num_nodes
+    set_config_GSI_flesnet $num_nodes
 
-    # start_flesctrl
+    start_flesctrl
 
-    # folder_name_GSI_flesnet=$(get_run_folder)
+    folder_name_GSI_flesnet=$(get_run_folder)
 
-    #move_folders $folder_name_ZIB_tsclient $folder_name_ZIB_flesnet $folder_name_GSI_tsclient $folder_name_GSI_flesnet
-    move_folders $folder_name_ZIB_tsclient  $folder_name_GSI_tsclient 
+    move_folders $folder_name_ZIB_tsclient $folder_name_ZIB_flesnet $folder_name_GSI_tsclient $folder_name_GSI_flesnet
+    #move_folders $folder_name_ZIB_tsclient  $folder_name_GSI_tsclient 
 }
 
 function set_config_ZIB_tsclient () {
@@ -133,7 +133,7 @@ function get_run_folder () {
 }
 
 
-function move_folders_V2 () {
+function move_folders () {
 
     local folder_name_ZIB_tsclient="$1"
     local folder_name_ZIB_flesnet="$2"
@@ -168,7 +168,7 @@ function move_folders_V2 () {
     chmod -R 777 "$folder_test"
 }
 
-function move_folders () {
+function move_folders_v2 () {
 
     local folder_name_ZIB_flesnet="$2"
     local folder_name_GSI_flesnet="$4"

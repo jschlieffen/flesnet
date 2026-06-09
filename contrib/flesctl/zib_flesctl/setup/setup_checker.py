@@ -33,7 +33,6 @@ class system_checker:
                 '../central_manager/central_manager.py',
                 '../central_manager/entry_nodes.py',
                 '../central_manager/build_nodes.py',
-                '../central_manager/super_nodes.py',
                 '../central_manager/Timeslice_forwarding.py',
                 '../central_manager/ZIB_Timeslice_forwarding.py',
                 '../execution.py',

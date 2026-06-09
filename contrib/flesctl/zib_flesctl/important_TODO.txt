@@ -1,1 +1,1 @@
-adding param timeslice-size to ts_forwarder
+allocate more RAM for the tests

@@ -91,7 +91,7 @@ def write_response(node_name, msg):
         os.fsync(f.fileno())
 
 
-def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, num_components, desc_size, data_size,
+def start_tsclient(path,input_file,input_node_idx, logfile_tsclient, use_dtsa_files, num_components, desc_size, data_size,
                   influx_node_ip, influx_token, use_grafana, malloc_size ,tsclient_communicater):
     if use_dtsa_files == 1:
         dtsa_command = f"-D 1 --malloc_size {malloc_size}"
@@ -102,7 +102,7 @@ def start_tsclient(path,input_file,shm_str, logfile_tsclient, use_dtsa_files, nu
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '--monitor influx2:%s:tsclient_status:' % (influx_node_ip)
     
-    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:{shm_str}?n={num_components}\\&descsize={desc_size}\\&datasize={data_size} {dtsa_command} {grafana_string}"
+    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:fles_out_b{input_node_idx}?n={num_components}\\&descsize={desc_size}\\&datasize={data_size} {dtsa_command} {grafana_string}"
     print(tsclient_command)
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     while True:
@@ -128,10 +128,11 @@ def input_node(port, input_node_idx, use_collectl, path, input_file, use_flesnet
     if use_grafana == 1:
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '--monitor influx2:%s:tsclient_status:' % (influx_node_ip) 
-    tsclient_communicater = queue.Queue()
-    thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, shm_str, logfile_tsclient, use_dtsa_files, num_components, desc_size, data_size,
-                                                                    influx_node_ip, influx_token, use_grafana, malloc_size, tsclient_communicater))
-    thread_tsclient.start()
+    if use_flesnet == 0:
+        tsclient_communicater = queue.Queue()
+        thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, input_node_idx, logfile_tsclient, use_dtsa_files, num_components, desc_size, data_size,
+                                                                        influx_node_ip, influx_token, use_grafana, malloc_size, tsclient_communicater))
+        thread_tsclient.start()
     time.sleep(1)
     input_node_commands = (
         '%s./tsclient -L %s %s %s %s' 
@@ -168,8 +169,9 @@ def input_node(port, input_node_idx, use_collectl, path, input_file, use_flesnet
     if use_collectl == 1:
         collectl_communicater.put("exit")
         thread_collectl.join()
-    tsclient_communicater.put("exit")
-    thread_tsclient.join()
+    if use_flesnet == 0:
+        tsclient_communicater.put("exit")
+        thread_tsclient.join()
     result_input_node.terminate()
     result_input_node.wait()
     write_response(node_name, "terminating")

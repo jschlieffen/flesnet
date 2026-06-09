@@ -24,9 +24,10 @@
 | check for signal handler behavior during monitoring | $${\color{green}Done}$$ |
 | collectl for monitoring | $${\color{green}Done}$$ |
 | redefine layout for monitoring/ make multiple Graphs and different windows | $${\color{green} Done}$$ |
-| make monitoring also for timeslice-forwarding | $${\color{yellow}In \space Progress}$$|
+| make monitoring also for timeslice-forwarding | $${\color{green} Done}$$|
 | make implementation for gsi cluster | $${\color{green} Done}$$ |
-| make sbatch implementation ready | $${\color{red}Open}$$ |
+| make sbatch implementation ready |$${\color{blue}Canceled}$$  |
+| check for blocking in monitoring | $${\color{yellow} In \space Progress} $$ |
 | make the implementation more robust. e.g. communication between nodes, iterating through pids for cancelation | $${\color{red}Open}$$ |
 | make configs that are bools actual bools | $${\color{red}Open}$$|
 | write Documentation for full scale test and test |$${\color{red}Open}$$ |

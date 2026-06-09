@@ -25,7 +25,7 @@ def get_params():
             if line.startswith("file_name:"):
                 _, data = line.split("file_name: ")
                 logfile, file_data = data.split(", ")
-                file_names.append((logfile, int(file_data)))
+                file_names.append((logfile, float(file_data)))
             elif line.startswith("num_buildnodes:"):
                 num_buildnodes = int(line.split(": ")[1])
             elif line.startswith("num_entrynodes:"):

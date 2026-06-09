@@ -145,8 +145,9 @@ def start_timeslice_forwarded_input(logfile_tf,build_node_idx,use_infiniband):
 def start_timeslice_forwarded_input_GSI(logfile_tf, build_node_idx, use_infiniband):
     logfile_collectl = "dwdw"
     input_file = "efefd"
+    logfile_tsclient="sifew"
     node_ip = get_node_ip(use_infiniband)
-    tf_input_command = "nodes/./timeslice_forwarding_sender.py %s %s %s %s %s" % (input_file,logfile_tf, build_node_idx, logfile_collectl, node_ip)
+    tf_input_command = "nodes/./timeslice_forwarding_sender.py %s %s %s %s %s %s" % (input_file,logfile_tf, build_node_idx, logfile_collectl, node_ip,logfile_tsclient)
     result_tf_input = subprocess.Popen(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
     return result_tf_input
     
