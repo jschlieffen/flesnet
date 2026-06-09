@@ -5,23 +5,11 @@ FLESCTRL
 
 Flesctrl aims to automize the flesnet routine on the cluster at the ZIB. It also provides some monotoring and logging features, that may be extended in the future.
 
-Requirements
-------------
-
-To execute the code one needs at least Python 3.6 and in addition the libaries
-
-* docopt
-* plotext
-
-If you use a virtual env. it is recommended to name it flesctrl_venv, since the file ./exec.sh starts it automatically then. 
-
 First usage
 -----------
 
 
 The code itself reads the params from the file **`config.cfg`**. This has to be structered just as the file **`config_example.cfg`**. The usage of each parameter is explained also there.
-
-NOTE: After the first execution of the program flesctrl removes the comments, that explain the usage of the params. Thus it is recommended to create a new config, rather than just renaming **`config_example.cfg`**.
 
 In order to create all necessary folders, setting up the virtual enviroment, downloading all used libaries, one can execute the file 
 
@@ -44,6 +32,16 @@ To start flesctrl one needs to firstly allocate the nodes required. This can be 
 
   `./exec.sh`
 
+After this is done, one can start with flesctrl by using the command
+
+  `./execution.py`
+
+The program needs to be terminated manually by using ctrl+c. \
+If one wants to additionaly evaluate the Run, the program 
+
+`./execution_flesctrl.sh`
+
+executes the flesctrl and evaluates the Run afterwards. The logfiles and respective plots can be found inside folder Runs. There each run has a seperate folder. The foldernames are named after the run_id (you can look up the current one inside the file tmp/run_id.txt)
 
 Monitoring
 ----------
@@ -58,8 +56,3 @@ This will connect your terminal to the tmux session created by flesctrl. If a bu
 
 
 
-After this is done, one can start with flesctrl by using the command
-
-  `./execution.py`
-
-The program needs to be terminated manually by using ctrl+c
