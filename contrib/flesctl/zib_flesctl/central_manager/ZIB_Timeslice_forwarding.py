@@ -165,9 +165,9 @@ class Timeslice_forwarding_ZIB:
         for node in self.input_nodes.keys():
             input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(nodes_cnt))), None)
             if input_file is None:
-                input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
+                input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
             
-            logger.info(f'start input node for timeslice-forwarding: {node}')
+            logger.info(f'start input node for timeslice-forwarding: {node} with input file: {input_file}')
             logfile = "%s/logs/timeslice_forwarding/input_nodes/input_node_%s.log" % (self.Run_folder,node)
             logfile_collectl = "%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,node)
             logfile_tsclient = "%s/logs/timeslice_forwarding/tsclient/input_nodes/input_node_%s.log" % (self.Run_folder,node)

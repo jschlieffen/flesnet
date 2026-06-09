@@ -115,8 +115,8 @@ class Timeslice_forwarding:
         for node_id,node in self.sender.items():
             input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(node_cnt))), None)
             if input_file is None:
-                input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
-            logger.info(f"start timeslice sender: {node_id}")
+                input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
+            logger.info(f"start timeslice sender: {node_id} with input file: {input_file}")
             logfile = '%s/logs/flesnet/tsclient/sender_node_%s.log' % (self.Run_folder,node_id)
             logfile_collectl = '%s/logs/collectl/tsclient/sender_node_%s.csv' % (self.Run_folder,node_id)
             logfile_tsclient = '%s/logs/flesnet/tsclient/sender_node_%s_input_file_reader_tsclient.log' % (self.Run_folder,node_id)

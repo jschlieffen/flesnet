@@ -344,10 +344,11 @@ class execution:
                     sender_cnt += 1
                     unused_nodes.remove(node)
         if sender_cnt < self.Par_.num_receivers:
-            logger.warning(f'The number of nodes assigned for the sender nodes does not match the number '
-                            f'of sender nodes. Expected {self.Par_.num_receivers}, got {sender_cnt}'
-                            f'Proceed by assembling the missing entry/build nodes randomly'
-                        )
+            if self.Par_.set_node_list:
+                logger.warning(f'The number of nodes assigned for the sender nodes does not match the number '
+                                f'of sender nodes. Expected {self.Par_.num_receivers}, got {sender_cnt}'
+                                f'Proceed by assembling the missing entry/build nodes randomly'
+                            )
             unused_nodes_iter = unused_nodes[ :]
             for node in unused_nodes_iter: 
                 if sender_cnt < self.Par_.num_receivers:
@@ -843,7 +844,7 @@ class execution:
             file_data = 0
             file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
             if file_data is None:
-                file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == 'e_remaining'), None)
+                file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == 'e_default'), None)
             
             file_names.append((logfile,file_data))
             entry_nodes_cnt += 1
@@ -869,7 +870,7 @@ class execution:
                 #file_data = next((tup))
                 file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(sender_nodes_cnt))), None)
                 if file_data is None:
-                    file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
+                    file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
                 filenames.append((logfile,file_data))
                 sender_nodes_cnt += 1
                 total_file_data += file_data
@@ -891,7 +892,7 @@ class execution:
                 file_data = 0
                 file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(input_nodes_cnt))), None)
                 if file_data is None:
-                    file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_remaining'), None)
+                    file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
                 filenames.append((logfile,file_data))
                 input_nodes_cnt += 1
                 total_file_data += file_data

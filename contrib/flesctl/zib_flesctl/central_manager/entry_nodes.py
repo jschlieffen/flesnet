@@ -71,7 +71,7 @@ class Entry_nodes:
         for node in self.node_list.keys():
             input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(node_cnt))), None)
             if input_file is None:
-                input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == 'e_remaining'), None)
+                input_file = next((tup[1] for tup in self.Par_.input_files if tup[0] == 'e_default'), None)
             if not self.Par_.use_pattern_gen:
                 logger.info(f'start entry node: {node}, with input file {input_file}')
             else:
