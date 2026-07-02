@@ -207,11 +207,14 @@ class execution:
                 if "-" in item:
                     start, end = item.split("-")
     
-                    width = max(len(start), len(end))
+                    width = len(start)
                     start, end = int(start), int(end)
     
                     for i in range(start, end + 1):
-                        node_list.append(f"{prefix}{i:0{width}d}")
+                        if width > 1:
+                            node_list.append(f"{prefix}{i:0{width}d}")
+                        else:
+                            node_list.append(f"{prefix}{i}")
     
                 else:
                     i = int(item)
