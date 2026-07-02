@@ -511,6 +511,12 @@ class execution:
         input_nodes_cnt = 0
         output_nodes_cnt = 0
         cm_nodes_cnt = 0
+        if self.Par_.use_flescluster:
+            if self.Par_.is_flescluster:
+                cm_nodes_cnt = self.Par_.num_central_manager
+                output_nodes_cnt = self.Par_.num_output_nodes
+            else:
+                input_nodes_cnt = self.Par_.num_input_nodes
         for node in unused_nodes_iter:
 
             if cm_nodes_cnt < self.Par_.num_central_manager and node in self.Par_.central_manager_list:            
