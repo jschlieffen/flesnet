@@ -241,7 +241,7 @@ class execution:
             self.entry_nodes_ips += val['inf_ip'] + "sep"
         for key,val in self.build_nodes.items():
             self.build_nodes_ips += val['inf_ip'] + "sep"
-        if self.use_flescluster and self.is_flescluster:
+        if self.Par_.use_flescluster and self.Par_.is_flescluster:
             self.central_manager_ips += self.Par_.cm_ip
         else:
             for key,val in self.central_manager.items():
