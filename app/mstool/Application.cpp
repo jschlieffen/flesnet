@@ -17,6 +17,7 @@
 #include "shm_device_provider.hpp"
 #include "log.hpp"
 #include "shm_channel_client.hpp"
+#include "Utility.hpp"
 #include <chrono>
 #include <cstdint>
 #include <cstdlib>
@@ -86,12 +87,23 @@ Application::Application(Parameters const& par) : par_(par) {
 
   if (!par_.output_shm.empty()) {
     L_(info) << "providing output in shared memory: " << par_.output_shm;
-
-    constexpr std::size_t desc_buffer_size_exp = 19; // 512 ki entries
-    constexpr std::size_t data_buffer_size_exp = 27; // 128 MiB
-
+    UriComponents uri{par_.output_shm};
+    uint32_t desc_buffer_size_exp = 19; // 512 ki entries
+    uint32_t data_buffer_size_exp = 27; // 128 MiB
+      for (auto& [key, value] : uri.query_components) {
+        if (key == "datasize") {
+          data_buffer_size_exp = std::stoul(value);
+        } else if (key == "descsize") {
+          desc_buffer_size_exp = std::stoul(value);
+        } else {
+          throw std::runtime_error(
+              "query parameter not implemented for scheme " + uri.scheme +
+              ": " + key);
+        }
+      }
+            const auto shm_identifier = split(uri.path, "/").at(0);
     output_shm_device_ = std::make_unique<flib_shm_device_provider>(
-        par_.output_shm, 1, data_buffer_size_exp, desc_buffer_size_exp);
+        shm_identifier, 1, data_buffer_size_exp, desc_buffer_size_exp);
     InputBufferWriteInterface* data_sink = output_shm_device_->channels().at(0);
     sinks_.push_back(std::unique_ptr<fles::MicrosliceSink>(
         new fles::MicrosliceTransmitter(*data_sink)));

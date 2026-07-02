@@ -289,13 +289,14 @@ bool TimesliceAnalyzer::check_microslice(const fles::Timeslice& ts,
     print_microslice_content(ts, c, m);
   }
 
-  bool pattern_error = !pattern_checkers_.at(c)->check(mv);
-  if (pattern_error && output_active()) {
-    auto location = location_string(ts.index(), c, m);
-    print("error in " + location + ": pattern error");
-    print_microslice_descriptor(ts, c, m);
-    print_microslice_content(ts, c, m);
-  }
+  // bool pattern_error = !pattern_checkers_.at(c)->check(mv);
+  // if (pattern_error && output_active()) {
+  //   auto location = location_string(ts.index(), c, m);
+  //   print("error in " + location + ": pattern error");
+  //   print_microslice_descriptor(ts, c, m);
+  //   print_microslice_content(ts, c, m);
+  // }
+  bool pattern_error = true;
 
   bool crc_error =
       ((d.flags & static_cast<uint16_t>(fles::MicrosliceFlags::CrcValid)) !=

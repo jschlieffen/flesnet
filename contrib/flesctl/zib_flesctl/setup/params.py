@@ -94,6 +94,9 @@ class Params:
         self.use_grafana = 0
         self.influx_node_ip = ""
         self.influx_token = ""
+        self.use_flescluster = 0
+        self.is_flescluster = 0
+        self.cm_ip = ""
         self.config = cfg.ConfigParser(interpolation=None)
         self.config.read(config_file)
         self.get_params(config_file)
@@ -143,7 +146,9 @@ class Params:
         self.activate_timesliceforwarding = self.get_value('mode', 'GSI_Timesliceforwarding','int', True)
         self.ZIB_timesliceforwarding = self.get_value('mode', 'ZIB_Timesliceforwarding','int',True)
         self.use_flesnet = self.get_value('mode','use_flesnet' ,'int', True)
-    
+        self.use_flescluster = self.get_value('mode', 'use_flescluster','int',required=True)
+        self.is_flescluster = self.get_value('mode','is_flescluster','int',required=True)
+        self.cm_ip = self.get_value('mode', 'cm_ip', 'str',required=False)
 
     def get_kill_par(self):
         self.activate_robustness_test = self.get_value('robustness_test','activate_robustness_test','int', self.activate_robustness_test, required=True)
@@ -205,7 +210,6 @@ class Params:
         self.use_dtsa_files = self.get_value('tsclient_commands','use_dtsa_files','int',self.use_dtsa_files, False)
         self.malloc_size = self.get_value('tsclient_commands', 'malloc_size', 'int', self.malloc_size, False)        
         self.port = self.get_value('tsclient_commands', 'port', 'str', self.port, False)
-
         
     def get_ts_forwarding_par(self):
         self.input_tsa_files = self.get_input_file_list('ts_input_files')
@@ -428,7 +432,7 @@ class params_checker:
             sys.exit(1)
         self.Params_valid = False
         
-    def get_node_list_cluster(self):
+    def get_node_list_cluster_2(self):
         node_str = os.environ.get('SLURM_NODELIST')
         node_list = []
     
@@ -473,6 +477,50 @@ class params_checker:
                     node_list.append(f"{prefix}{i:0{width}d}")
     
         return sorted(set(node_list))
+    
+    def get_node_list_cluster(self):
+        node_str = os.environ.get("SLURM_NODELIST")
+        node_list = []
+    
+        if node_str is None:
+            logger.critical(
+                "SLURM_NODELIST is not set, maybe you forgot to allocate the nodes"
+            )
+            sys.exit(1)
+    
+        # Matches:
+        # htc-cmp[001-004]
+        # htc-cmp[001,005,010]
+        # ccexe0001
+        # en[01-16]
+        # en01
+        # node[1-8]
+        # node01
+        parts = re.findall(r"([a-zA-Z\-]+)(?:\[(.*?)\]|(\d+))", node_str)
+    
+        for prefix, bracket_content, single_number in parts:
+    
+            if single_number:
+                node_list.append(f"{prefix}{single_number}")
+                continue
+    
+            for item in bracket_content.split(","):
+                if "-" in item:
+                    start, end = item.split("-")
+    
+                    width = max(len(start), len(end))
+                    start, end = int(start), int(end)
+    
+                    for i in range(start, end + 1):
+                        node_list.append(f"{prefix}{i:0{width}d}")
+    
+                else:
+                    i = int(item)
+                    width = len(item)
+                    node_list.append(f"{prefix}{i:0{width}d}")
+    
+        return sorted(set(node_list))
+    
     
     def check_validity_of_files(self):
         logger.debug('check if the input files exist')

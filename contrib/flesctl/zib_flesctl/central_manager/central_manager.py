@@ -131,7 +131,7 @@ class execution:
         return node_list
     
     
-    def get_node_list(self):
+    def get_node_list_V3(self):
         node_str = os.environ.get('SLURM_NODELIST')
         node_list = []
     
@@ -176,6 +176,51 @@ class execution:
                     node_list.append(f"{prefix}{i:0{width}d}")
         return sorted(set(node_list))
         
+    
+    def get_node_list(self):
+        node_str = os.environ.get("SLURM_NODELIST")
+        node_list = []
+    
+        if node_str is None:
+            logger.critical(
+                "SLURM_NODELIST is not set, maybe you forgot to allocate the nodes"
+            )
+            sys.exit(1)
+    
+        # Matches:
+        # htc-cmp[001-004]
+        # htc-cmp[001,005,010]
+        # ccexe0001
+        # en[01-16]
+        # en01
+        # node[1-8]
+        # node01
+        parts = re.findall(r"([a-zA-Z\-]+)(?:\[(.*?)\]|(\d+))", node_str)
+    
+        for prefix, bracket_content, single_number in parts:
+    
+            if single_number:
+                node_list.append(f"{prefix}{single_number}")
+                continue
+    
+            for item in bracket_content.split(","):
+                if "-" in item:
+                    start, end = item.split("-")
+    
+                    width = max(len(start), len(end))
+                    start, end = int(start), int(end)
+    
+                    for i in range(start, end + 1):
+                        node_list.append(f"{prefix}{i:0{width}d}")
+    
+                else:
+                    i = int(item)
+                    width = len(item)
+                    node_list.append(f"{prefix}{i:0{width}d}")
+    
+        return sorted(set(node_list))
+    
+    
     # =============================================================================
     # These two functions forms the string of the entry/build node ips 
     # Note: They don't read it out the just forms the string
@@ -514,6 +559,12 @@ class execution:
         input_nodes_cnt = 0
         output_nodes_cnt = 0
         cm_nodes_cnt = 0
+        if self.Par_.use_flescluster:
+            if self.Par_.is_flescluster:
+                cm_nodes_cnt = self.Par_.num_central_manager
+                output_nodes_cnt = self.Par_.num_output_nodes
+            else:
+                input_nodes_cnt = self.Par_.num_input_nodes
         if self.Par_.use_flesnet:
             self.input_nodes = self.build_nodes 
         unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes]
