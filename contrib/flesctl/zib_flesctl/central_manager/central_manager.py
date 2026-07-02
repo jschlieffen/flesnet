@@ -581,6 +581,8 @@ class execution:
                 logger.critical(f'node: {node} does not have infiniband')
                 sys.exit(1)
             if cm_nodes_cnt < self.Par_.num_central_manager and node not in self.Par_.exclude_central_manager:
+                if self.Par_.use_flescluster:
+                    logger.info(f"central manager: {node} has ip: {node_ip}")
                 self.central_manager[node] = {
                         'node' : node,
                         'cm_idx' : cm_nodes_cnt,
