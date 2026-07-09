@@ -43,6 +43,7 @@ function set_node_list() {
     INPUT_NODE_LIST=$(grep '^input_node_list=' setup/config.cfg | cut -d'=' -f2)
     OUTPUT_NODE_LIST=$(grep '^output_node_list=' setup/config.cfg | cut -d'=' -f2)
     NODELIST=""
+    NODELIST_COMMAND=""
     if [ "$USE_FLESNET" -eq 1 ]; then
         NODELIST="$ENTRY_NODES_LIST,$OUTPUT_NODE_LIST"
     fi
@@ -51,6 +52,10 @@ function set_node_list() {
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
         NODELIST="$NODELIST,$INPUT_NODE_LIST,$CENTRAL_MANAGER_NODE_LIST,$OUTPUT_NODE_LIST"
     fi
+    if [ "$SET_NODE_LIST" -eq 1 ]; then
+        NODELIST_COMMAND="--nodelist=$NODELIST "
+    fi
+
 }
 
 set_exclude_node_list() {
@@ -61,6 +66,7 @@ set_exclude_node_list() {
     EXCLUDE_INPUT_NODES=$(grep "^exclude_input_nodes" setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_OUTPUT_NODES=$(grep "^exclude_output_nodes" setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_NODE_LIST=""
+    EXCLUDE_COMMAND=""
     if [ "$USE_FLESNET" -eq 1 ]; then
         EXCLUDE_NODE_LIST="$EXCLUDE_NODE_LIST,$EXCLUDE_ENTRY_NODES,$EXCLUDE_BUILD_NODES"
     fi
@@ -68,6 +74,24 @@ set_exclude_node_list() {
         EXCLUDE_NODE_LIST="$EXCLUDE_NODE_LIST,$EXCLUDE_PROCESS_NODES"
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
         EXCLUDE_NODE_LIST="$EXCLUDE_NODE_LIST,$EXCLUDE_CENTRAL_MANAGER,$EXCLUDE_INPUT_NODES,$EXCLUDE_OUTPUT_NODES"
+    fi
+    if [ "$EXCLUDE_NODES" -eq 1 ]; then
+        EXCLUDE_COMMAND="--exclude=$EXCLUDE_NODE_LIST"
+    fi 
+}
+
+set_cluster_commands() {
+    USE_FLESCLUSTER=$(grep "^use_flescluster" setup/config.cfg | cut -d'=' -f2)
+    IS_FLESCLUSTER=$(grep "^is_flescluster" setup/config.cfg | cut -d'=' -f2)
+    CLUSTER_COMMAND=""
+    if [ "$USE_FLESCLUSTER" -eq 1 ]; then 
+        if [ "$IS_FLESCLUSTER" -eq 1 ]; then
+            CLUSTER_COMMAND=""
+        else
+            CLUSTER_COMMAND="--singularity-container=container_flesctrl.sif"
+        fi
+    else
+        CLUSTER_COMMAND="-p big --constraint=Infiniband"
     fi
 }
 
@@ -78,25 +102,11 @@ function allocate_nodes(){
     p="big"
     set_node_list
     set_exclude_node_list
+    set_cluster_commands
     echo $NODELIST
     source flesctrl_venv/bin/activate
-    if [ "$SET_NODE_LIST" -eq 1 ]; then
-        if [ "$EXCLUDE_NODES" -eq 1 ]; then 
-            echo salloc --mem=$MEM --ntasks-per-node=1 -c $NUM_CPUS -p $p --nodes=$NODES --nodelist=$NODELIST --exclude=$EXCLUDE_NODE_LIST --constraint=Infiniband --time=$TIME
-            salloc --mem=$MEM --ntasks-per-node=1 -c $NUM_CPUS -p $p --nodes=$NODES --nodelist=$NODELIST --exclude=$EXCLUDE_NODE_LIST --constraint=Infiniband --time=$TIME 
-        else 
-            echo salloc --mem=$MEM --ntasks-per-node=1 -c $NUM_CPUS -p $p --nodes=$NODES --nodelist=$NODELIST --constraint=Infiniband --time=$TIME 
-            salloc --mem=$MEM --ntasks-per-node=1 -c $NUM_CPUS -p $p --nodes=$NODES --nodelist=$NODELIST --constraint=Infiniband --time=$TIME 
-        fi
-    else
-        if [ "$EXCLUDE_NODES" -eq 1 ]; then 
-            echo salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 --cpus-per-task=$NUM_CPUS -p $p --exclude=$EXCLUDE_NODE_LIST --constraint=Infiniband --time=$TIME 
-            salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 --cpus-per-task=$NUM_CPUS -p $p --exclude=$EXCLUDE_NODE_LIST --constraint=Infiniband --time=$TIME 
-        else
-            echo salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 --cpus-per-task=$NUM_CPUS -p $p --constraint=Infiniband --time=$TIME 
-            salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 --cpus-per-task=$NUM_CPUS -p $p --constraint=Infiniband --time=$TIME 
-        fi 
-    fi
+    echo salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 --cpus-per-task=$NUM_CPUS $CLUSTER_COMMAND $NODELIST_COMMAND $EXCLUDE_COMMAND --time=$TIME 
+    salloc --nodes=$NODES --mem=$MEM --ntasks-per-node=1 --cpus-per-task=$NUM_CPUS $CLUSTER_COMMAND $NODELIST_COMMAND $EXCLUDE_COMMAND --time=$TIME 
 }
 
 allocate_nodes

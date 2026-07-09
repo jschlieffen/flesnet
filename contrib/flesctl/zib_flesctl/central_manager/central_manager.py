@@ -39,7 +39,7 @@ def ethernet_ip(node_id):
         sys.exit(1)
     match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
     content = match.group(1)
-    match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
+    match2 = re.search(r'inet (.*?)/',content,re.DOTALL)
     content2 = match2.group(1)
     return content2
     
@@ -56,7 +56,7 @@ def infiniband_ip(node_id):
     #print(stdout)
     match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
     content = match.group(1)
-    match2 = re.search(r'inet (.*?)/23',content,re.DOTALL)
+    match2 = re.search(r'inet (.*?)/',content,re.DOTALL)
     content2 = match2.group(1)
     return content2
             
