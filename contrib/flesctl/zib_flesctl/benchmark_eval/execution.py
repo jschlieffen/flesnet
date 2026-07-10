@@ -515,7 +515,7 @@ class execution:
         # =============================================================================
         #     input nodes    
         # =============================================================================
-        cp_cls = plots.create_plots_ts_forwarding(self.data_rates_input_nodes, starttime,endtime)
+        cp_cls = plots.create_plots_ts_forwarding(self.data_rates_input_nodes,"input_nodes", starttime,endtime)
         cp_cls.plot_total_data_rate()
         cp_cls.plot_avg_data_rate()
         cp_cls.plot_data_rate_single()
@@ -528,7 +528,7 @@ class execution:
         # =============================================================================
         #      output nodes   
         # =============================================================================
-        cp_cls = plots.create_plots_ts_forwarding(self.data_rates_output_nodes, starttime, endtime)
+        cp_cls = plots.create_plots_ts_forwarding(self.data_rates_output_nodes, "output_nodes", starttime, endtime)
         cp_cls.plot_total_data_rate()
         cp_cls.plot_avg_data_rate()
         cp_cls.plot_data_rate_single()

@@ -719,9 +719,10 @@ class create_plots_build_nodes:
 
 class create_plots_ts_forwarding:
     
-     def __init__(self,data_rates, time_start = "00:00:00" , time_end = "00:00:00"):
+     def __init__(self,data_rates, node_type, time_start = "00:00:00" , time_end = "00:00:00"):
          self.time_stmps = []
          self.data_rates = data_rates
+         self.node_type = node_type
          if time_start != "00:00:00":
              time_start_dt = parser.parse(time_start)
              time_end_dt = parser.parse(time_end)
@@ -785,7 +786,7 @@ class create_plots_ts_forwarding:
          plt.xticks(rotation=45)
          plt.grid(True)
          plt.tight_layout()
-         plt.savefig(path + 'total_data_rate.png')
+         plt.savefig(path + f'total_data_rate_{self.node_type}.png')
          plt.close()
          
      def plot_avg_data_rate(self):
@@ -810,7 +811,7 @@ class create_plots_ts_forwarding:
          plt.xticks(rotation=45)
          plt.grid(True)
          plt.tight_layout()
-         plt.savefig(path + 'avg_data_rate.png')
+         plt.savefig(path + f'avg_data_rate_{self.node_type}.png')
          plt.close()
          
      def box_plot_data_rates(self):
@@ -839,7 +840,7 @@ class create_plots_ts_forwarding:
         plt.ylabel("Data Rate in GB")
         plt.tight_layout()
         plt.xticks(rotation=45)
-        plt.savefig(path + 'box_plot_data_rate_ts_forwarding.png')
+        plt.savefig(path + f'box_plot_data_rate_ts_forwarding_{self.node_type}.png')
         plt.close()
          
      def box_plot_data_rates_v2(self):
@@ -857,7 +858,7 @@ class create_plots_ts_forwarding:
         plt.xlabel("entry nodes")
         plt.ylabel("Data rate in GB")
         plt.tight_layout()
-        plt.savefig(path + 'box_plot_data_rate_ts_forwarding.png')
+        plt.savefig(path + f'box_plot_data_rate_ts_forwarding_{self.node_type}.png')
         plt.close()
         
      def plot_data_rate_mean_max_min(self):
@@ -897,7 +898,7 @@ class create_plots_ts_forwarding:
         plt.xticks(rotation=45)
         plt.grid(True)
         plt.tight_layout()
-        plt.savefig(path + 'avg_data_rate_max_min.png')
+        plt.savefig(path + f'avg_data_rate_max_min_{self.node_type}.png')
         plt.close()
         
      def bar_plots_data_rates(self):
@@ -930,7 +931,7 @@ class create_plots_ts_forwarding:
         plt.ylabel('Data Rate in GB')
         plt.xticks(rotation=45)
         plt.tight_layout()
-        plt.savefig(path + 'bar_plot_data_rate_ts_forwarding.png')
+        plt.savefig(path + f'bar_plot_data_rate_ts_forwarding_{self.node_type}.png')
         plt.close()
         
      def plot_data_rate_single(self):
