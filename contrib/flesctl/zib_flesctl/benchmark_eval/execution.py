@@ -203,7 +203,7 @@ class execution:
             self.mode_flesctrl.append('flesnet')
         if self.receiving_nodes != []:
             self.mode_flesctrl.append('timeslice_forwarding')
-        if self.output_nodes != []:
+        if self.output_nodes != [] or self.input_nodes != []:
             self.mode_flesctrl.append('ZIB_timeslice_forwarding')
         if "Infiniband" in flesctl_logfile:
             self.infiniband_used = True
