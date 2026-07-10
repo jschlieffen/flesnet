@@ -1,6 +1,6 @@
 use_flesnet: 0
-use_GSI_TS_forwarding: 1
-use_ZIB_TS_forwarding: 0
+use_GSI_TS_forwarding: 0
+use_ZIB_TS_forwarding: 1
 num_entrynodes: 5
 num_buildnodes: 5
 num_receivers: 4
@@ -8,11 +8,13 @@ num_inputnodes: 5
 num_outputnodes: 5
 enable_progess_bar: 1
 enable_graph: 1
-file_name: ../Runs/Run_286_2026-07-09-19-32-06/logs/collectl/tsclient/sender_node_htc-cmp134.csv, 1000000
-file_name: ../Runs/Run_286_2026-07-09-19-32-06/logs/collectl/tsclient/sender_node_htc-cmp137.csv, 1000000
-file_name: ../Runs/Run_286_2026-07-09-19-32-06/logs/collectl/tsclient/sender_node_htc-cmp139.csv, 1000000
-file_name: ../Runs/Run_286_2026-07-09-19-32-06/logs/collectl/tsclient/sender_node_htc-cmp143.csv, 1000000
-file_name: ../Runs/Run_286_2026-07-09-19-32-06/logs/collectl/tsclient/receiving_node_htc-cmp144.csv, 1000000.0
-file_name: ../Runs/Run_286_2026-07-09-19-32-06/logs/collectl/tsclient/receiving_node_htc-cmp145.csv, 1000000.0
-file_name: ../Runs/Run_286_2026-07-09-19-32-06/logs/collectl/tsclient/receiving_node_htc-cmp146.csv, 1000000.0
-file_name: ../Runs/Run_286_2026-07-09-19-32-06/logs/collectl/tsclient/receiving_node_htc-cmp147.csv, 1000000.0
+file_name: ../Runs/Run_307_2026-07-10-19-10-15/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp012.csv, 1000000
+file_name: ../Runs/Run_307_2026-07-10-19-10-15/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp013.csv, 1000000
+file_name: ../Runs/Run_307_2026-07-10-19-10-15/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp024.csv, 1000000
+file_name: ../Runs/Run_307_2026-07-10-19-10-15/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp101.csv, 1000000
+file_name: ../Runs/Run_307_2026-07-10-19-10-15/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp106.csv, 1000000
+file_name: ../Runs/Run_307_2026-07-10-19-10-15/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp109.csv, 1000000.0
+file_name: ../Runs/Run_307_2026-07-10-19-10-15/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp110.csv, 1000000.0
+file_name: ../Runs/Run_307_2026-07-10-19-10-15/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp111.csv, 1000000.0
+file_name: ../Runs/Run_307_2026-07-10-19-10-15/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp512.csv, 1000000.0
+file_name: ../Runs/Run_307_2026-07-10-19-10-15/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp529.csv, 1000000.0

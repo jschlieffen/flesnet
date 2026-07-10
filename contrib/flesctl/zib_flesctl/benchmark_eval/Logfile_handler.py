@@ -46,8 +46,12 @@ class serialize_data:
         dir = os.getcwd()
         if self.node_type == "e":
             path = os.path.join(dir,'data/data_rates/entry_nodes')
-        else:
+        elif self.node_type == "b":
             path = os.path.join(dir,'data/data_rates/build_nodes')
+        elif self.node_type == "i": 
+            path = os.path.join(dir, 'data/data_rates/input_nodes')
+        elif self.node_type == 'o':
+            path = os.path.join(dir, 'data/data_rates/output_nodes')
         if not os.path.exists(path):
             os.makedirs(path)
         path = path + '/'
@@ -55,8 +59,12 @@ class serialize_data:
         Run_id = Run_id.removesuffix(".log")
         if self.node_type == "e":
             csv_file_name = f"{path}/data_rates_entry_nodes_{Run_id}.csv"
-        else:
+        elif self.node_type == "b":
             csv_file_name = f"{path}/data_rates_build_nodes_{Run_id}.csv"
+        elif self.node_type == "i":
+            csv_file_name = f"{path}/data_rates_input_nodes_{Run_id}.csv"
+        elif self.node_type == "o":
+            csv_file_name = f"{path}/data_rates_output_nodes_{Run_id}.csv"
         return csv_file_name
     
     def serialize_data_rates(self):
@@ -185,8 +193,13 @@ class deserialize_data:
         dir = os.getcwd()
         if self.node_type == "e":
             path = os.path.join(dir,'data/data_rates/entry_nodes')
-        else:
+        elif self.node_type == "b":
             path = os.path.join(dir,'data/data_rates/build_nodes')
+        elif self.node_type == "i":
+            path = os.path.join(dir,'data/data_rates/input_nodes')
+        elif self.node_type == "o":
+            path = os.path.join(dir,'data/data_rates/output_nodes')    
+        
         if not os.path.exists(path):
             os.makedirs(path)
         path = path + '/'
@@ -194,8 +207,13 @@ class deserialize_data:
         Run_id = Run_id.removesuffix(".log")
         if self.node_type == "e":
             csv_file_name = f"{path}/data_rates_entry_nodes_{Run_id}.csv"
-        else:
+        elif self.node_type == "b":
             csv_file_name = f"{path}/data_rates_build_nodes_{Run_id}.csv"
+        elif self.node_type == "i":
+            csv_file_name = f"{path}/data_rates_input_nodes_{Run_id}.csv"
+        elif self.node_type == "o":
+            csv_file_name = f"{path}/data_rates_output_nodes_{Run_id}.csv"    
+        
         return csv_file_name
 
     def deserialize_data_rates(self):
@@ -204,6 +222,7 @@ class deserialize_data:
     
         with open(csv_file_name, "r", newline='') as csvfile:
             reader = csv.DictReader(csvfile)
+            print(self.node_type)
             for row in reader:
                 timestamp_str = row['timestamps']
                 try:

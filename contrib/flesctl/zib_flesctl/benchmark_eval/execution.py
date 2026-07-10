@@ -132,6 +132,8 @@ class execution:
         self.shm_usages_entry_nodes = {}
         self.data_rates_build_nodes = {}
         self.shm_usages_build_nodes = {}
+        self.data_rates_input_nodes = {}
+        self.data_rates_output_nodes = {}
         self.data_rates_collectl = {}
         self.cpu_usage_collectl = {}
         self.timeslice_forwarding_activated = False
@@ -228,7 +230,14 @@ class execution:
             Logfile_reader_cls.extract_data_shms_build_node()
             self.data_rates_build_nodes[f"build_node_{build_node[0]}"] = Logfile_reader_cls.data_rate
             self.shm_usages_build_nodes[f"build_node_{build_node[0]}"] = Logfile_reader_cls.data_shms
-
+        for input_node in self.input_nodes:
+            Logfile_reader_cls = LR.logfile_reader_ts_forwarding(f"../logs/timeslice_forwarding/input_nodes/input_node_{input_node[0]}.log")
+            Logfile_reader_cls.extract_data_rates()
+            self.data_rates_input_nodes[f"input_node_{input_node[0]}"] = Logfile_reader_cls.data_rate
+        for output_node in self.output_nodes:
+            Logfile_reader_cls = LR.logfile_reader_ts_forwarding(f"../logs/timeslice_forwarding/output_nodes/output_node_{output_node[0]}.log")
+            Logfile_reader_cls.extract_data_rates()
+            self.data_rates_output_nodes[f"output_node_{output_node[0]}"] = Logfile_reader_cls.data_rate
     def get_data_collectl(self):
         if 'flesnet' in self.mode_flesctrl:
             self.data_rates_collectl['entry_nodes'] = {}
@@ -305,13 +314,19 @@ class execution:
             self.cpu_usage_collectl['output_nodes'][f"output_nodes_{output_node[0]}"] = Logfile_reader_cls.cpu_usage
             
     def serialize_data_rates(self):
-        Logfile_serializer_entry_nodes = LH.serialize_data("e",self.data_rates_entry_nodes, self.shm_usages_entry_nodes, self.flesctl_logfile)
-        Logfile_serializer_entry_nodes.serialize_data_rates()
-        Logfile_serializer_entry_nodes.serialize_shm_usage_entry_nodes()
-        Logfile_serializer_build_nodes = LH.serialize_data("b", self.data_rates_build_nodes, self.shm_usages_build_nodes, self.flesctl_logfile)
-        if not self.zeromq_used:
-            Logfile_serializer_build_nodes.serialize_data_rates()
-            Logfile_serializer_build_nodes.serialize_shm_usage_build_nodes()
+        if "flesnet" in self.mode_flesctrl:
+            Logfile_serializer_entry_nodes = LH.serialize_data("e",self.data_rates_entry_nodes, self.shm_usages_entry_nodes, self.flesctl_logfile)
+            Logfile_serializer_entry_nodes.serialize_data_rates()
+            Logfile_serializer_entry_nodes.serialize_shm_usage_entry_nodes()
+            Logfile_serializer_build_nodes = LH.serialize_data("b", self.data_rates_build_nodes, self.shm_usages_build_nodes, self.flesctl_logfile)
+            if not self.zeromq_used:
+                Logfile_serializer_build_nodes.serialize_data_rates()
+                Logfile_serializer_build_nodes.serialize_shm_usage_build_nodes()
+        if "ZIB_timeslice_forwarding" in self.mode_flesctrl:
+            Logfile_serializer_input_nodes = LH.serialize_data("i", self.data_rates_input_nodes, {}, self.flesctl_logfile)
+            Logfile_serializer_input_nodes.serialize_data_rates()
+            Logfile_serializer_output_nodes = LH.serialize_data("o", self.data_rates_output_nodes, {}, self.flesctl_logfile)
+            Logfile_serializer_output_nodes.serialize_data_rates()
         logger.success('serialization process finished')
         
     
@@ -322,17 +337,25 @@ class execution:
         Logfile_serializer.serialize_cpu_usage()
     
     def deserialize_data(self):
-        deserializer_entry_nodes = LH.deserialize_data("e",self.flesctl_logfile)
-        deserializer_entry_nodes.deserialize_data_rates()
-        self.data_rates_entry_nodes = deserializer_entry_nodes.data_rate
-        deserializer_entry_nodes.deserialize_shm_usage_entry_nodes()
-        self.shm_usages_entry_nodes = deserializer_entry_nodes.shm_usage
-        deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
-        deserialzer_build_nodes.deserialize_data_rates()
-        if not self.zeromq_used:
-            self.data_rates_build_nodes = deserialzer_build_nodes.data_rate
-            deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
-        self.shm_usages_build_nodes = deserialzer_build_nodes.shm_usage
+        if "flesnet" in self.mode_flesctrl:
+            deserializer_entry_nodes = LH.deserialize_data("e",self.flesctl_logfile)
+            deserializer_entry_nodes.deserialize_data_rates()
+            self.data_rates_entry_nodes = deserializer_entry_nodes.data_rate
+            deserializer_entry_nodes.deserialize_shm_usage_entry_nodes()
+            self.shm_usages_entry_nodes = deserializer_entry_nodes.shm_usage
+            deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
+            deserialzer_build_nodes.deserialize_data_rates()
+            if not self.zeromq_used:
+                self.data_rates_build_nodes = deserialzer_build_nodes.data_rate
+                deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
+            self.shm_usages_build_nodes = deserialzer_build_nodes.shm_usage
+        if "ZIB_timeslice_forwarding" in self.mode_flesctrl:
+            deserializer_input_nodes = LH.deserialize_data("i", self.flesctl_logfile)
+            deserializer_input_nodes.deserialize_data_rates()
+            self.data_rates_input_nodes = deserializer_input_nodes.data_rate
+            deserializer_output_nodes = LH.deserialize_data("o", self.flesctl_logfile)
+            deserializer_output_nodes.deserialize_data_rates()
+            self.data_rates_output_nodes = deserializer_output_nodes.data_rate
     
     def deserialize_data_collectl(self):
         Logfile_deserializer = CLH.deserialize_data(self.flesctl_logfile, self.mode_flesctrl)
@@ -344,62 +367,92 @@ class execution:
         
     def check_deserialization(self):
         self.serialize_data_rates()
-        deserializer_entry_nodes = LH.deserialize_data("e",self.flesctl_logfile)
-        deserializer_entry_nodes.deserialize_data_rates()
-        data_rates = deserializer_entry_nodes.data_rate
-        if data_rates == self.data_rates_entry_nodes:
-            logger.success('serialization process succeeded')
-        else:
-            
-            
-            diff = DeepDiff(self.data_rates_entry_nodes, data_rates, ignore_type_in_groups=[(int,float)])
-            if not diff:
+        if "flesnet" in self.mode_flesctrl:
+            deserializer_entry_nodes = LH.deserialize_data("e",self.flesctl_logfile)
+            deserializer_entry_nodes.deserialize_data_rates()
+            data_rates = deserializer_entry_nodes.data_rate
+            if data_rates == self.data_rates_entry_nodes:
                 logger.success('serialization process succeeded')
             else:
-                logger.error('serialization process not succeeded')
-                print(diff)
-        deserializer_entry_nodes.deserialize_shm_usage_entry_nodes()
-        shm_usage = deserializer_entry_nodes.shm_usage
-        if shm_usage == self.shm_usages_entry_nodes:
-            logger.success('serialization process succeeded')
-        else:
-            logger.error('serialization process not succeeded')
-            diff = DeepDiff(self.shm_usages_entry_nodes, shm_usage, ignore_type_in_groups=[(int,float)])
-            if not diff:
-                logger.success('serialization process succeeded')
-            else:
-                logger.error('serialization process not succeeded')
                 
-                print(diff)
-            #print(diff)
-        deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
-        if not self.zeromq_used:
-            deserialzer_build_nodes.deserialize_data_rates()
-            data_rates_build_nodes = deserialzer_build_nodes.data_rate
-            if data_rates_build_nodes == self.data_rates_build_nodes:
-                logger.success('serialization process succeeded')
-            else:
-                logger.error('serialization process not succeeded')
-                diff = DeepDiff(self.data_rates_build_nodes, data_rates_build_nodes, ignore_type_in_groups=[(int,float)])
+                
+                diff = DeepDiff(self.data_rates_entry_nodes, data_rates, ignore_type_in_groups=[(int,float)])
                 if not diff:
                     logger.success('serialization process succeeded')
                 else:
                     logger.error('serialization process not succeeded')
                     print(diff)
-            deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
-            shm_usage_build_nodes = deserialzer_build_nodes.shm_usage
-            if shm_usage_build_nodes == self.shm_usages_build_nodes:
+            deserializer_entry_nodes.deserialize_shm_usage_entry_nodes()
+            shm_usage = deserializer_entry_nodes.shm_usage
+            if shm_usage == self.shm_usages_entry_nodes:
                 logger.success('serialization process succeeded')
             else:
                 logger.error('serialization process not succeeded')
-                diff = DeepDiff(self.shm_usages_build_nodes, shm_usage_build_nodes, ignore_type_in_groups=[(int,float)])
+                diff = DeepDiff(self.shm_usages_entry_nodes, shm_usage, ignore_type_in_groups=[(int,float)])
                 if not diff:
                     logger.success('serialization process succeeded')
                 else:
                     logger.error('serialization process not succeeded')
+                    
                     print(diff)
                 #print(diff)
+            deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
+            if not self.zeromq_used:
+                deserialzer_build_nodes.deserialize_data_rates()
+                data_rates_build_nodes = deserialzer_build_nodes.data_rate
+                if data_rates_build_nodes == self.data_rates_build_nodes:
+                    logger.success('serialization process succeeded')
+                else:
+                    logger.error('serialization process not succeeded')
+                    diff = DeepDiff(self.data_rates_build_nodes, data_rates_build_nodes, ignore_type_in_groups=[(int,float)])
+                    if not diff:
+                        logger.success('serialization process succeeded')
+                    else:
+                        logger.error('serialization process not succeeded')
+                        print(diff)
+                deserialzer_build_nodes.deserialize_shm_usage_build_nodes()
+                shm_usage_build_nodes = deserialzer_build_nodes.shm_usage
+                if shm_usage_build_nodes == self.shm_usages_build_nodes:
+                    logger.success('serialization process succeeded')
+                else:
+                    logger.error('serialization process not succeeded')
+                    diff = DeepDiff(self.shm_usages_build_nodes, shm_usage_build_nodes, ignore_type_in_groups=[(int,float)])
+                    if not diff:
+                        logger.success('serialization process succeeded')
+                    else:
+                        logger.error('serialization process not succeeded')
+                        print(diff)
+                #print(diff)
+        elif "ZIB_timeslice_forwarding" in self.mode_flesctrl:
+            deserializer_input_nodes = LH.deserialize_data("i",self.flesctl_logfile)
+            deserializer_input_nodes.deserialize_data_rates()
+            data_rates = deserializer_input_nodes.data_rate
+            if data_rates == self.data_rates_input_nodes:
+                logger.success('serialization process succeeded')
+            else:
+                
+                
+                diff = DeepDiff(self.data_rates_input_nodes, data_rates, ignore_type_in_groups=[(int,float)])
+                if not diff:
+                    logger.success('serialization process succeeded')
+                else:
+                    logger.error('serialization process not succeeded')
+                    print(diff)
 
+            deserializer_output_nodes = LH.deserialize_data("o",self.flesctl_logfile)
+            deserializer_output_nodes.deserialize_data_rates()
+            data_rates = deserializer_output_nodes.data_rate
+            if data_rates == self.data_rates_output_nodes:
+                logger.success('serialization process succeeded')
+            else:
+                
+                
+                diff = DeepDiff(self.data_rates_output_nodes, data_rates, ignore_type_in_groups=[(int,float)])
+                if not diff:
+                    logger.success('serialization process succeeded')
+                else:
+                    logger.error('serialization process not succeeded')
+                    print(diff)
 
     def check_deserialization_collectl(self):
         self.serialize_data_rates_collectl()
@@ -458,6 +511,32 @@ class execution:
         cp_cls.plot_shm_usage_single_node_single_entry_node()
         logger.success('created plots for build nodes')
         
+    def start_plots_ts_forwarding(self,starttime,endtime):
+        # =============================================================================
+        #     input nodes    
+        # =============================================================================
+        cp_cls = plots.create_plots_ts_forwarding(self.data_rates_input_nodes, starttime,endtime)
+        cp_cls.plot_total_data_rate()
+        cp_cls.plot_avg_data_rate()
+        cp_cls.plot_data_rate_single()
+        cp_cls.plot_data_rate_mean_max_min()
+        #cp_cls.box_plot_data_rates()
+        cp_cls.bar_plots_data_rates()
+        logger.success('created plots for input nodes')
+        
+                
+        # =============================================================================
+        #      output nodes   
+        # =============================================================================
+        cp_cls = plots.create_plots_ts_forwarding(self.data_rates_output_nodes, starttime, endtime)
+        cp_cls.plot_total_data_rate()
+        cp_cls.plot_avg_data_rate()
+        cp_cls.plot_data_rate_single()
+        cp_cls.plot_data_rate_mean_max_min()
+        #cp_cls.box_plot_data_rates()
+        cp_cls.bar_plots_data_rates()
+        logger.success('created plots for output nodes')
+        
     def start_plots_collectl(self,starttime,endtime):
         
         cp_cls = Cplots.create_plots_collectl(self.data_rates_collectl, self.cpu_usage_collectl ,self.mode_flesctrl, starttime,endtime)
@@ -501,6 +580,9 @@ def main():
             exec_cls.start_plots_entry_nodes(starttime,endtime)
             if not exec_cls.zeromq_used:
                 exec_cls.start_plots_build_nodes(starttime,endtime)
+        if 'ZIB_timeslice_forwarding' in exec_cls.mode_flesctrl:
+            exec_cls.start_plots_ts_forwarding(starttime, endtime)
+            
         if collectl_used:
             exec_cls.start_plots_collectl(starttime, endtime)
     

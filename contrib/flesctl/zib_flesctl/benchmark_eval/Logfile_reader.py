@@ -7,6 +7,7 @@ Created on Fri Apr 25 12:39:46 2025
 """
 
 import re
+import os
 from datetime import datetime
 
 
@@ -147,6 +148,51 @@ class Logfile_reader_build_node:
             return int(match.group(1))
         else:
             return None
+        
+        
+class logfile_reader_ts_forwarding:
+    
+    def __init__(self,Logfile_name):
+        self.Logfile = self.read_file(Logfile_name)
+        self.data_rate = {}
+        self.data_shms = {}
+        
+        
+    def read_file(self, Logfile_name):
+        print(os.path.abspath(Logfile_name))
+        with open(Logfile_name, "r") as file:
+            return file.readlines()
+        
+    def extract_timestamp(self,log_line):
+        match = re.search(r"\[(\d{2}:\d{2}:\d{2})\]", log_line)
+        if match:
+            timestamp_str = match.group(1)
+            return datetime.strptime(timestamp_str, "%H:%M:%S")
+        else:
+            return None
+        
+        
+    def extract_data_rates(self):
+        for line in self.Logfile:
+            if "STATUS:" in line or "INFO:" in line:
+                
+                data_rate = self.get_data_rate(line)
+                if data_rate is not None:
+                    time_stmp = self.extract_timestamp(line)
+                    self.data_rate[time_stmp] = data_rate 
+                
+                
+    def get_data_rate(self, log_line):
+        match = re.search(r'GB/s:\s*(\d+(?:\.\d+)?)', log_line)
+        if match:
+            return float(match.group(1))
+    
+        match = re.search(r'MB/s:\s*(\d+(?:\.\d+)?)', log_line)
+        if match:
+            return float(match.group(1)) / 1000
+    
+        return 0
+        
 
 def main():
     Logfile_reader_cls = Logfile_reader_entry_node("../logs/flesnet/entry_nodes/entry_node_htc-cmp108.log")
