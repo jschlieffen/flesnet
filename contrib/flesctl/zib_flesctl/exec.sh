@@ -18,8 +18,6 @@ function set_general_params(){
     IS_FLESCLUSTER=$(grep "^is_flescluster" setup/config.cfg | cut -d'=' -f2)
     USE_INPUT_NODES=$(( !USE_FLESNET && ( !USE_FLESCLUSTER || IS_FLESCLUSTER ) ))
     USE_OUTPUT_NODES=$(( !USE_FLESCLUSTER || !IS_FLESCLUSTER ))
-    echo $USE_INPUT_NODES
-    echo $USE_OUTPUT_NODES
     NODES=0
     if [ "$USE_FLESNET" -eq 1 ]; then
 
@@ -34,11 +32,9 @@ function set_general_params(){
         fi
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
         if (( !$USE_INPUT_NODES )); then
-            echo "test "
             INPUT_NODES_CNT=0
         fi 
         if (( !$USE_OUTPUT_NODES )); then
-            echo "test123"
             CENTRAL_MANAGER_CNT=0
             OUTPUT_NODES_CNT=0
         fi
@@ -110,15 +106,15 @@ set_cluster_commands() {
     USE_FLESCLUSTER=$(grep "^use_flescluster" setup/config.cfg | cut -d'=' -f2)
     IS_FLESCLUSTER=$(grep "^is_flescluster" setup/config.cfg | cut -d'=' -f2)
     CLUSTER_COMMAND=""
-    # if [ "$USE_FLESCLUSTER" -eq 1 ]; then 
-    #     if [ "$IS_FLESCLUSTER" -eq 1 ]; then
-    #         CLUSTER_COMMAND=""
-    #     else
-    #         CLUSTER_COMMAND="--singularity-container=container_flesctrl.sif"
-    #     fi
-    #else
+    if [ "$USE_FLESCLUSTER" -eq 1 ]; then 
+        if [ "$IS_FLESCLUSTER" -eq 1 ]; then
+            CLUSTER_COMMAND=""
+        else
+            CLUSTER_COMMAND="--singularity-container=container_flesctrl.sif"
+        fi
+    else
         CLUSTER_COMMAND="-p big --constraint=Infiniband"
-    #fi
+    fi
 }
 
 function allocate_nodes(){
