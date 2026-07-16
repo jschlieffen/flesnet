@@ -6,3 +6,4 @@ config.cfg
 *.cfg
 __pycache__/
 .nfs*
+tmp
