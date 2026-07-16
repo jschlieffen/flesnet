@@ -8,13 +8,8 @@ num_inputnodes: 5
 num_outputnodes: 5
 enable_progess_bar: 1
 enable_graph: 1
-file_name: ../Runs/Run_309_2026-07-10-21-58-28/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp012.csv, 1000000
-file_name: ../Runs/Run_309_2026-07-10-21-58-28/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp013.csv, 1000000
-file_name: ../Runs/Run_309_2026-07-10-21-58-28/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp024.csv, 1000000
-file_name: ../Runs/Run_309_2026-07-10-21-58-28/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp101.csv, 1000000
-file_name: ../Runs/Run_309_2026-07-10-21-58-28/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp106.csv, 1000000
-file_name: ../Runs/Run_309_2026-07-10-21-58-28/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp109.csv, 1000000.0
-file_name: ../Runs/Run_309_2026-07-10-21-58-28/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp110.csv, 1000000.0
-file_name: ../Runs/Run_309_2026-07-10-21-58-28/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp111.csv, 1000000.0
-file_name: ../Runs/Run_309_2026-07-10-21-58-28/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp512.csv, 1000000.0
-file_name: ../Runs/Run_309_2026-07-10-21-58-28/logs/collectl/timeslice_forwarding/output_nodes/output_node_htc-cmp529.csv, 1000000.0
+file_name: ../Runs/Run_311_2026-07-16-16-28-50/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp008.csv, 1000000
+file_name: ../Runs/Run_311_2026-07-16-16-28-50/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp106.csv, 1000000
+file_name: ../Runs/Run_311_2026-07-16-16-28-50/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp108.csv, 1000000
+file_name: ../Runs/Run_311_2026-07-16-16-28-50/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp110.csv, 1000000
+file_name: ../Runs/Run_311_2026-07-16-16-28-50/logs/collectl/timeslice_forwarding/input_nodes/input_node_htc-cmp111.csv, 1000000

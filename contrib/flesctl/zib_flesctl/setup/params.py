@@ -578,7 +578,9 @@ class params_checker:
                     if sender_node in self.Par_.process_nodes_list:
                         logger.critical(f'sender node: {sender_node} is also an receiver node. This is not allowed')
         if self.Par_.ZIB_timesliceforwarding:
-            if not self.Par_.use_flesnet:
+            use_input_nodes = not self.Par_.use_flesnet and (not self.Par_.use_flescluster or (self.Par_.use_flescluster and self.Par_.is_flescluster))
+            use_output_nodes = not self.Par_.use_flescluster or (self.Par_.use_flescluster and not self.Par_.is_flescluster)
+            if self.Par_.use_input_nodes:
                 for input_node in self.Par_.input_node_list:
                     if input_node in self.Par_.output_node_list:
                         logger.critical(f'input node: {input_node} is also an output node. This is not allowed')
@@ -586,23 +588,24 @@ class params_checker:
                     if input_node in self.Par_.central_manager_list:
                         logger.critical(f'input node: {input_node} is also a central manager. This is not allowed')
                         self.exit_program()
-            for central_manager in self.Par_.central_manager_list:
-                if central_manager in self.Par_.entry_nodes_list and self.Par_.use_flesnet:
-                    logger.critical(f'central manager: {central_manager} is also an entry node. This is not allowed')
-                    self.exit_program()
-                if central_manager in self.Par_.build_nodes_list and self.Par_.use_flesnet:
-                    logger.critical(f'central manager: {central_manager} is also an build node. This is not allowed')
-                    self.exit_program()
-                if central_manager in self.Par_.output_node_list:
-                    logger.critical(f'central manager: {central_manager} is also an output node. This is not allowed')
-                    self.exit_program()
-            for output_node in self.Par_.output_node_list:
-                if output_node in self.Par_.entry_nodes_list and self.Par_.use_flesnet:
-                    logger.critical(f'output node: {output_node} is also an entry node. This is not allowed')
-                    self.exit_program()
-                if output_node in self.Par_.build_nodes_list and self.Par_.use_flesnet:
-                    logger.critical(f'output node: {output_node} is also an build node. This is not allowed')
-                    self.exit_program()
+            if self.Par_.use_output_nodes:
+                for central_manager in self.Par_.central_manager_list:
+                    if central_manager in self.Par_.entry_nodes_list and self.Par_.use_flesnet:
+                        logger.critical(f'central manager: {central_manager} is also an entry node. This is not allowed')
+                        self.exit_program()
+                    if central_manager in self.Par_.build_nodes_list and self.Par_.use_flesnet:
+                        logger.critical(f'central manager: {central_manager} is also an build node. This is not allowed')
+                        self.exit_program()
+                    if central_manager in self.Par_.output_node_list:
+                        logger.critical(f'central manager: {central_manager} is also an output node. This is not allowed')
+                        self.exit_program()
+                for output_node in self.Par_.output_node_list:
+                    if output_node in self.Par_.entry_nodes_list and self.Par_.use_flesnet:
+                        logger.critical(f'output node: {output_node} is also an entry node. This is not allowed')
+                        self.exit_program()
+                    if output_node in self.Par_.build_nodes_list and self.Par_.use_flesnet:
+                        logger.critical(f'output node: {output_node} is also an build node. This is not allowed')
+                        self.exit_program()
         
     def check_num_nodes(self):
         logger.debug('check the number of nodes')
@@ -621,10 +624,13 @@ class params_checker:
             if self.Par_.set_node_list:
                 num_nodes_req_list += len(self.Par_.process_nodes_list) + len(self.Par_.sender_node_list)
         elif self.Par_.ZIB_timesliceforwarding:
-            num_tot_nodes_req += self.Par_.num_central_manager + self.Par_.num_output_nodes
-            if self.Par_.set_node_list:
-                num_nodes_req_list += len(set(self.Par_.output_node_list + self.Par_.central_manager_list))
-            if not self.Par_.use_flesnet:
+            use_input_nodes = not self.Par_.use_flesnet and (not self.Par_.use_flescluster or (self.Par_.use_flescluster and self.Par_.is_flescluster))
+            use_output_nodes = not self.Par_.use_flescluster or (self.Par_.use_flescluster and not self.Par_.is_flescluster)
+            if use_output_nodes:
+                num_tot_nodes_req += self.Par_.num_central_manager + self.Par_.num_output_nodes
+                if self.Par_.set_node_list:
+                    num_nodes_req_list += len(set(self.Par_.output_node_list + self.Par_.central_manager_list))
+            if use_input_nodes:
                 num_tot_nodes_req += self.Par_.num_input_nodes
                 if self.Par_.set_node_list:
                     num_nodes_req_list += len((self.Par_.input_node_list))
@@ -667,10 +673,13 @@ class params_checker:
                 req_node_list += [("Sender node", node) for node in self.Par_.sender_node_list]
             req_node_list += [("Process node", node) for node in self.Par_.process_nodes_list]
         elif self.Par_.ZIB_timesliceforwarding:
-            if self.Par_.use_flesnet:
+            use_input_nodes = not self.Par_.use_flesnet and (not self.Par_.use_flescluster or (self.Par_.use_flescluster and self.Par_.is_flescluster))
+            use_output_nodes = not self.Par_.use_flescluster or (self.Par_.use_flescluster and not self.Par_.is_flescluster)
+            if use_input_nodes:
                 req_node_list += [("Input node", node) for node in self.Par_.input_node_list]
-            req_node_list += [("Central manager", node) for node in self.Par_.central_manager_list]
-            req_node_list += [("Output node", node) for node in self.Par_.output_node_list]
+            if use_output_nodes:
+                req_node_list += [("Central manager", node) for node in self.Par_.central_manager_list]
+                req_node_list += [("Output node", node) for node in self.Par_.output_node_list]
         for node_type,node in req_node_list:
             if node not in node_features:
                 logger.critical(f"{node_type}: {node} not found on the cluster")
@@ -695,10 +704,13 @@ class params_checker:
                 req_node_list += [("Sender node", node) for node in self.Par_.sender_node_list]
             req_node_list += [("Process node", node) for node in self.Par_.process_nodes_list]
         elif self.Par_.ZIB_timesliceforwarding:
-            if self.Par_.use_flesnet:
+            use_input_nodes = not self.Par_.use_flesnet and (not self.Par_.use_flescluster or (self.Par_.use_flescluster and self.Par_.is_flescluster))
+            use_output_nodes = not self.Par_.use_flescluster or (self.Par_.use_flescluster and not self.Par_.is_flescluster)
+            if use_input_nodes:
                 req_node_list += [("Input node", node) for node in self.Par_.input_node_list]
-            req_node_list += [("Central manager", node) for node in self.Par_.central_manager_list]
-            req_node_list += [("Output node", node) for node in self.Par_.output_node_list]
+            if use_output_nodes:
+                req_node_list += [("Central manager", node) for node in self.Par_.central_manager_list]
+                req_node_list += [("Output node", node) for node in self.Par_.output_node_list]
         for node_type,node in req_node_list:
             if node not in node_list:
                 logger.critical(f"required {node_type}: {node} not allocated")
@@ -718,10 +730,13 @@ class params_checker:
             if self.Par_.use_flesnet:
                 excluded_node_list += [("Sender node", node) for node in self.Par_.exclude_sender_nodes]
         if self.Par_.ZIB_timesliceforwarding:
-            if self.Par_.use_flesnet:
+            use_input_nodes = not self.Par_.use_flesnet and (not self.Par_.use_flescluster or (self.Par_.use_flescluster and self.Par_.is_flescluster))
+            use_output_nodes = not self.Par_.use_flescluster or (self.Par_.use_flescluster and not self.Par_.is_flescluster)
+            if use_input_nodes:
                 excluded_node_list += [("Input node",node) for node in self.Par_.exclude_input_nodes]
-            excluded_node_list += [("Central Manager",node) for node in self.Par_.exclude_central_manager]
-            excluded_node_list += [("Output node",node) for node in self.Par_.exclude_output_nodes]
+            if use_output_nodes:
+                excluded_node_list += [("Central Manager",node) for node in self.Par_.exclude_central_manager]
+                excluded_node_list += [("Output node",node) for node in self.Par_.exclude_output_nodes]
         for node_type,node in excluded_node_list:
             if node in node_list:
                 logger.warning(f"Excluded {node_type}: {node} is allocated. It will not be used as an {node_type}")
@@ -730,6 +745,8 @@ class params_checker:
     def check_excluded_nodes_in_node_list(self):
         logger.debug('check if excluded nodes are wished')
         excluded_node_list = []
+        use_input_nodes = not self.Par_.use_flesnet and (not self.Par_.use_flescluster or (self.Par_.use_flescluster and self.Par_.is_flescluster))
+        use_output_nodes = not self.Par_.use_flescluster or (self.Par_.use_flescluster and not self.Par_.is_flescluster)
         if self.Par_.use_flesnet:
             excluded_node_list += [("Entry node",node) for node in self.Par_.exclude_entry_nodes]
             excluded_node_list += [("Build node",node) for node in self.Par_.exclude_build_nodes]
@@ -738,10 +755,12 @@ class params_checker:
             if self.Par_.use_flesnet:
                 excluded_node_list += [("Sender node", node) for node in self.Par_.exclude_sender_nodes]
         if self.Par_.ZIB_timesliceforwarding:
-            if self.Par_.use_flesnet:
+
+            if use_input_nodes:
                 excluded_node_list += [("Input node",node) for node in self.Par_.exclude_input_nodes]
-            excluded_node_list += [("Central Manager",node) for node in self.Par_.exclude_central_manager]
-            excluded_node_list += [("Output node",node) for node in self.Par_.exclude_output_nodes]
+            if use_output_nodes:
+                excluded_node_list += [("Central Manager",node) for node in self.Par_.exclude_central_manager]
+                excluded_node_list += [("Output node",node) for node in self.Par_.exclude_output_nodes]
         if os.getenv('SLURM_JOB_NUM_NODES') and self.Par_.set_node_list:
             req_node_list = []
             if self.Par_.use_flesnet:
@@ -750,9 +769,11 @@ class params_checker:
             if self.Par_.activate_timesliceforwarding:
                 req_node_list += self.Par_.process_nodes_list
             if self.Par_.ZIB_timesliceforwarding:
-                req_node_list += self.Par_.input_node_list
-                req_node_list += self.Par_.central_manager_list
-                req_node_list += self.Par_.output_node_list
+                if use_input_nodes:
+                    req_node_list += self.Par_.input_node_list
+                if use_output_nodes:
+                    req_node_list += self.Par_.central_manager_list
+                    req_node_list += self.Par_.output_node_list
             for node_type,node in excluded_node_list:
                 if node in req_node_list:
                     logger.critical(f"excluded {node_type}: {node} is both excluded and explicitly set to allocate. This will lead to a conflict when trying to alloacate the nodes")
@@ -770,19 +791,23 @@ class params_checker:
                     if excluded_process in self.Par_.process_nodes_list:
                         logger.warning(f'excluded process node: {excluded_process} is both excluded and wished. So it is not used as an process node.')
             if self.Par_.ZIB_timesliceforwarding:
-                for excluded_input in self.Par_.exclude_input_nodes:
-                    if excluded_input in self.Par_.input_node_list:
-                        logger.warning(f'excluded input node: {excluded_input} is both excluded and wished. So it is not used as an input node.')
-                for excluded_cm in self.Par_.exclude_central_manager:
-                    if excluded_cm in self.Par_.central_manager_list:
-                        logger.warning(f'excluded Central Manager: {excluded_cm} is both excluded and wished. So it is not used as a Central Manager.')
-                for excluded_output in self.Par_.exclude_output_nodes:
-                    if excluded_output in self.Par_.output_node_list:
-                        logger.warning(f'excluded output node: {excluded_output} is both excluded and wished. So it is not used as an output node.')
+                if use_input_nodes:
+                    for excluded_input in self.Par_.exclude_input_nodes:
+                        if excluded_input in self.Par_.input_node_list:
+                            logger.warning(f'excluded input node: {excluded_input} is both excluded and wished. So it is not used as an input node.')
+                if use_output_nodes:
+                    for excluded_cm in self.Par_.exclude_central_manager:
+                        if excluded_cm in self.Par_.central_manager_list:
+                            logger.warning(f'excluded Central Manager: {excluded_cm} is both excluded and wished. So it is not used as a Central Manager.')
+                    for excluded_output in self.Par_.exclude_output_nodes:
+                        if excluded_output in self.Par_.output_node_list:
+                            logger.warning(f'excluded output node: {excluded_output} is both excluded and wished. So it is not used as an output node.')
 
 
     def check_kill_par(self):
         logger.debug('check robustness test V2')
+        use_input_nodes = not self.Par_.use_flesnet and (not self.Par_.use_flescluster or (self.Par_.use_flescluster and self.Par_.is_flescluster))
+        use_output_nodes = not self.Par_.use_flescluster or (self.Par_.use_flescluster and not self.Par_.is_flescluster)
         if self.Par_.timer_for_kills == timedelta(seconds=0):
             logger.critical("Cannot kill programs immediatly")
             self.exit_program()
@@ -813,21 +838,23 @@ class params_checker:
                     logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_process_nodes_alive} outmatches the total number of receiver nodes: {self.Par_.num_receivers}')
                     self.exit_program()
         if self.Par_.ZIB_timesliceforwarding:
-            if self.Par_.use_flesnet:
-                if self.Par_.num_min_input_nodes_alive >= self.Par_.num_buildnodes:
-                    logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_input_nodes_alive} outmatches the total number of input nodes: {self.Par_.num_buildnodes}')
+            if use_input_nodes:
+                if self.Par_.use_flesnet:
+                    if self.Par_.num_min_input_nodes_alive >= self.Par_.num_buildnodes:
+                        logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_input_nodes_alive} outmatches the total number of input nodes: {self.Par_.num_buildnodes}')
+                        self.exit_program()
+                else:
+                    if self.Par_.num_min_input_nodes_alive > self.Par_.num_input_nodes:
+                        logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_input_nodes_alive} outmatches the total number of input nodes: {self.Par_.num_input_nodes}')
+                        self.exit_program()
+            if use_output_nodes:
+                if self.Par_.num_min_central_manager_alive > self.Par_.num_central_manager:
+                    logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_central_manager_alive} outmatches the total number of central manager nodes: {self.Par_.num_central_manager}')
                     self.exit_program()
-            else:
-                if self.Par_.num_min_input_nodes_alive > self.Par_.num_input_nodes:
-                    logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_input_nodes_alive} outmatches the total number of input nodes: {self.Par_.num_input_nodes}')
+                    
+                if self.Par_.num_min_output_nodes_alive > self.Par_.num_output_nodes:
+                    logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_output_nodes_alive} outmatches the total number of output nodes: {self.Par_.num_output_nodes}')
                     self.exit_program()
-            if self.Par_.num_min_central_manager_alive > self.Par_.num_central_manager:
-                logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_central_manager_alive} outmatches the total number of central manager nodes: {self.Par_.num_central_manager}')
-                self.exit_program()
-                
-            if self.Par_.num_min_output_nodes_alive > self.Par_.num_output_nodes:
-                logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_output_nodes_alive} outmatches the total number of output nodes: {self.Par_.num_output_nodes}')
-                self.exit_program()
                 
     def check_transport_method(self):
         logger.debug('check transport method')

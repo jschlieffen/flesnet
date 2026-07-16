@@ -14,6 +14,12 @@ function set_general_params(){
     INPUT_NODES_CNT=$(grep -E '^input_nodes=' setup/config.cfg | cut -d'=' -f2)
     OUTPUT_NODES_CNT=$(grep -E '^output_nodes=' setup/config.cfg | cut -d'=' -f2)
     USE_FLESNET=$(grep -E '^use_flesnet=' setup/config.cfg | cut -d'=' -f2)
+    USE_FLESCLUSTER=$(grep "^use_flescluster" setup/config.cfg | cut -d'=' -f2)
+    IS_FLESCLUSTER=$(grep "^is_flescluster" setup/config.cfg | cut -d'=' -f2)
+    USE_INPUT_NODES=$(( !USE_FLESNET && ( !USE_FLESCLUSTER || IS_FLESCLUSTER ) ))
+    USE_OUTPUT_NODES=$(( !USE_FLESCLUSTER || !IS_FLESCLUSTER ))
+    echo $USE_INPUT_NODES
+    echo $USE_OUTPUT_NODES
     NODES=0
     if [ "$USE_FLESNET" -eq 1 ]; then
 
@@ -27,9 +33,15 @@ function set_general_params(){
             ((NODES=2*RECEIVER_NODES_CNT))
         fi
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
-        if [ "$USE_FLESNET" -eq 1 ]; then
+        if (( !$USE_INPUT_NODES )); then
+            echo "test "
             INPUT_NODES_CNT=0
         fi 
+        if (( !$USE_OUTPUT_NODES )); then
+            echo "test123"
+            CENTRAL_MANAGER_CNT=0
+            OUTPUT_NODES_CNT=0
+        fi
         ((NODES=NODES+INPUT_NODES_CNT+OUTPUT_NODES_CNT+CENTRAL_MANAGER_CNT))
     fi
 }
@@ -50,6 +62,13 @@ function set_node_list() {
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         NODELIST="$NODELIST,$PROCESS_NODES_LIST"
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
+        if (( !$USE_INPUT_NODES )); then 
+            INPUT_NODE_LIST=""
+        fi
+        if (( !$USE_OUTPUT_NODES )); then 
+            CENTRAL_MANAGER_NODE_LIST=""
+            OUTPUT_NODE_LIST=""
+        fi
         NODELIST="$NODELIST,$INPUT_NODE_LIST,$CENTRAL_MANAGER_NODE_LIST,$OUTPUT_NODE_LIST"
     fi
     if [ "$SET_NODE_LIST" -eq 1 ]; then
@@ -73,6 +92,13 @@ set_exclude_node_list() {
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         EXCLUDE_NODE_LIST="$EXCLUDE_NODE_LIST,$EXCLUDE_PROCESS_NODES"
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
+        if (( !$USE_INPUT_NODES )); then
+            EXCLUDE_INPUT_NODES=""
+        fi
+        if (( !$USE_OUTPUT_NODES )); then 
+            EXCLUDE_CENTRAL_MANAGER=""
+            EXCLUDE_BUILD_NODES="" 
+        fi
         EXCLUDE_NODE_LIST="$EXCLUDE_NODE_LIST,$EXCLUDE_CENTRAL_MANAGER,$EXCLUDE_INPUT_NODES,$EXCLUDE_OUTPUT_NODES"
     fi
     if [ "$EXCLUDE_NODES" -eq 1 ]; then
@@ -84,15 +110,15 @@ set_cluster_commands() {
     USE_FLESCLUSTER=$(grep "^use_flescluster" setup/config.cfg | cut -d'=' -f2)
     IS_FLESCLUSTER=$(grep "^is_flescluster" setup/config.cfg | cut -d'=' -f2)
     CLUSTER_COMMAND=""
-    if [ "$USE_FLESCLUSTER" -eq 1 ]; then 
-        if [ "$IS_FLESCLUSTER" -eq 1 ]; then
-            CLUSTER_COMMAND=""
-        else
-            CLUSTER_COMMAND="--singularity-container=container_flesctrl.sif"
-        fi
-    else
+    # if [ "$USE_FLESCLUSTER" -eq 1 ]; then 
+    #     if [ "$IS_FLESCLUSTER" -eq 1 ]; then
+    #         CLUSTER_COMMAND=""
+    #     else
+    #         CLUSTER_COMMAND="--singularity-container=container_flesctrl.sif"
+    #     fi
+    #else
         CLUSTER_COMMAND="-p big --constraint=Infiniband"
-    fi
+    #fi
 }
 
 function allocate_nodes(){
