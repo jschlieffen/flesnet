@@ -82,7 +82,6 @@ def change_dir(flesctl_logfile):
     
     os.chdir(path)
     eval_number = 0
-    print(os.getcwd())
     eval_file = f"tmp/eval_num.txt"
     if not os.path.isfile(eval_file):
         os.mkdir("tmp")
@@ -395,7 +394,7 @@ class execution:
                     logger.error('serialization process not succeeded')
                     
                     print(diff)
-                #print(diff)
+                
             deserialzer_build_nodes = LH.deserialize_data("b", self.flesctl_logfile)
             if not self.zeromq_used:
                 deserialzer_build_nodes.deserialize_data_rates()
@@ -422,7 +421,6 @@ class execution:
                     else:
                         logger.error('serialization process not succeeded')
                         print(diff)
-                #print(diff)
         elif "ZIB_timeslice_forwarding" in self.mode_flesctrl:
             deserializer_input_nodes = LH.deserialize_data("i",self.flesctl_logfile)
             deserializer_input_nodes.deserialize_data_rates()
@@ -471,7 +469,6 @@ class execution:
             else:
                 logger.error('serialization process not succeeded')
                 print(diff)
-            #print(diff)
         if cpu_usage == self.cpu_usage_collectl:
             logger.success('serialization process collectl succeeded')
         else:
@@ -482,7 +479,7 @@ class execution:
             else:
                 logger.error('serialization process not succeeded')
                 print(diff)
-            #print(diff)
+
             
             
     def start_plots_entry_nodes(self,starttime,endtime):

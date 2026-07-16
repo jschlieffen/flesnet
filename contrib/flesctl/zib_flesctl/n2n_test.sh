@@ -4,10 +4,10 @@ CONFIG_FILE="setup/config.cfg"
 
 # Read command line argument
 num_nodes=$1
-
+time=$2
 # Check if argument exists
 if [ -z "$num_nodes" ]; then
-    echo "Usage: $0 <number_of_nodes>"
+    echo "Usage: $0 <number_of_nodes> <time_for_flesctrl_in_seconds>"
     exit 1
 fi
 
@@ -108,7 +108,7 @@ function start_flesctrl () {
 
     flesctrl_pid=$!
 
-    sleep 600
+    sleep $time
 
     #kill -INT -"$flesctrl_pid"
 

@@ -53,7 +53,7 @@ function set_node_list() {
     NODELIST=""
     NODELIST_COMMAND=""
     if [ "$USE_FLESNET" -eq 1 ]; then
-        NODELIST="$ENTRY_NODES_LIST,$OUTPUT_NODE_LIST"
+        NODELIST="$ENTRY_NODES_LIST,$BUILD_NODES_LIST"
     fi
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         NODELIST="$NODELIST,$PROCESS_NODES_LIST"

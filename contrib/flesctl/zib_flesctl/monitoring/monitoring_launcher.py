@@ -46,7 +46,6 @@ def get_params():
                 use_GSI_TS_forwarding = line.split(": ")[1] == '1'
             elif line.startswith("use_ZIB_TS_forwarding: "):
                 use_ZIB_TS_forwarding = line.split(": ")[1] == '1'
-                print(use_ZIB_TS_forwarding)
 
     return file_names, num_buildnodes, num_entrynodes, num_receivers, num_inputnodes, num_outputnodes, enable_graph, enable_progess_bar, use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding
 

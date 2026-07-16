@@ -159,7 +159,6 @@ class logfile_reader_ts_forwarding:
         
         
     def read_file(self, Logfile_name):
-        print(os.path.abspath(Logfile_name))
         with open(Logfile_name, "r") as file:
             return file.readlines()
         
@@ -193,30 +192,3 @@ class logfile_reader_ts_forwarding:
     
         return 0
         
-
-def main():
-    Logfile_reader_cls = Logfile_reader_entry_node("../logs/flesnet/entry_nodes/entry_node_htc-cmp108.log")
-    Logfile_reader_cls.extract_data_rates()
-    Logfile_reader_cls.extract_data_shms_entry_node()
-    
-    for key,val in Logfile_reader_cls.data_rate.items():
-        print(f'time_stamp: {key}, data rate: {val}')
-    
-    for key,val in Logfile_reader_cls.data_shms.items():
-        print(f"time_stamp: {key}, shm: used: {val['used']}, sending: {val['sending']}, freeing: {val['freeing']}, free: {val['free']}")
-        
-    Logfile_reader_cls_v2 = Logfile_reader_build_node("../logs/flesnet/build_nodes/build_node_htc-cmp509.log")
-    
-    Logfile_reader_cls_v2.extract_data_rates()
-    Logfile_reader_cls_v2.extract_data_shms_build_node()
-    
-    for key,val in Logfile_reader_cls_v2.data_rate.items():
-        print(f'time_stamp: {key}, data rate: {val}')
-    
-    for key1,val1 in Logfile_reader_cls_v2.data_shms.items():
-        print(f"shm for entry node: {key1}")
-        for key,val in val1.items():
-            print(f"time_stamp: {key}, used: {val['used']}, freeing: {val['freeing']}, free: {val['free']}")
-
-if __name__ == '__main__':
-    main()

@@ -222,7 +222,6 @@ class deserialize_data:
     
         with open(csv_file_name, "r", newline='') as csvfile:
             reader = csv.DictReader(csvfile)
-            print(self.node_type)
             for row in reader:
                 timestamp_str = row['timestamps']
                 try:

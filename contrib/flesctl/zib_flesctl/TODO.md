@@ -27,7 +27,7 @@
 | make monitoring also for timeslice-forwarding | $${\color{green} Done}$$|
 | make implementation for gsi cluster | $${\color{green} Done}$$ |
 | make sbatch implementation ready |$${\color{blue}Canceled}$$  |
-| check for blocking in monitoring | $${\color{yellow} In \space Progress} $$ |
-| make the implementation more robust. e.g. communication between nodes, iterating through pids for cancelation | $${\color{red}Open}$$ |
+| check for blocking in monitoring | $${\color{green} Done} $$ |
+| make the implementation more robust. e.g. communication between nodes, iterating through pids for cancelation | $${\color{yellow}In \space Progress}$$ |
 | make configs that are bools actual bools | $${\color{red}Open}$$|
 | write Documentation for full scale test and test |$${\color{red}Open}$$ |

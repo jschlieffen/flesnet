@@ -90,7 +90,6 @@ class collectl_reader:
 
     def get_alloc_cpus(self):
         filename = f"../../../tmp/{self.node_name}.txt"
-        #print(os.getcwd())
         with open(filename, "r") as f:
             cpus = [int(line.strip()) for line in f if line.strip().isdigit()]
         return cpus
@@ -116,43 +115,6 @@ class collectl_reader:
         
                 
                 
-def main():
-    
-    entry_node_reader = collectl_reader('../logs/collectl/entry_nodes/entry_node_htc-cmp507.csv', 
-                                        '../logs/collectl/entry_nodes/entry_node_htc-cmp507_cpu_usage.csv', 'entry_node')
-    build_node_reader = collectl_reader('../logs/collectl/build_nodes/build_node_htc-cmp520.csv',
-                                        '../logs/collectl/build_nodes/build_node_htc-cmp520_cpu_usage.csv', 'build_node')
-    tsclient_reader = collectl_reader('../logs/collectl/tsclient/receiving_node_htc-cmp523.csv', 
-                                      '../logs/collectl/tsclient/receiving_node_htc-cmp523_cpu_usage.csv', 'tsclient')
-    entry_node_reader.extract_infiniband_usage()
-    build_node_reader.extract_infiniband_usage()
-    tsclient_reader.extract_infiniband_usage()
-    for data in entry_node_reader.data_rates:
-        print(f"\033[32m{data}: \033[0m {entry_node_reader.data_rates[data]}")
-    print("\033[35mbuild_nodes\033[0m")
-    for data in build_node_reader.data_rates:
-        print(f"\033[32m{data}: \033[0m {build_node_reader.data_rates[data]}")
-    print("\033[35mtsclient\033[0m")
-    for data in tsclient_reader.data_rates:
-        print(f"\033[32m{data}: \033[0m {tsclient_reader.data_rates[data]}")
-        
-    entry_node_reader.extract_cpu_usage()
-    build_node_reader.extract_cpu_usage()
-    tsclient_reader.extract_cpu_usage()
-    
-    print("\033[35mentry_nodes\033[0m")
-    #print(entry_node_reader.data_rates)
-    for data in entry_node_reader.cpu_usage:
-        print(f"\033[32m{data}: \033[0m {entry_node_reader.cpu_usage[data]}")
-    print("\033[35mbuild_nodes\033[0m")
-    for data in build_node_reader.cpu_usage:
-        print(f"\033[32m{data}: \033[0m {build_node_reader.cpu_usage[data]}")
-    print("\033[35mtsclient\033[0m")
-    for data in tsclient_reader.cpu_usage:
-        print(f"\033[32m{data}: \033[0m {tsclient_reader.cpu_usage[data]}")
-
-if __name__ == '__main__':
-    main()
         
     
     

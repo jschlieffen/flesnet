@@ -39,7 +39,6 @@ def calc_str(input_file, port, use_flesnet, input_node_idx, input_node_ip):
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == 1:
         collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
-        #print(collectl_command)
     else:
         collectl_command = f"collectl --plot --sep , -i 1 -sn > {csvfile_name}"
     result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

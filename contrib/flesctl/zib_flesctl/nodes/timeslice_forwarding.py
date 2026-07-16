@@ -52,7 +52,6 @@ def calc_ip_str(ip,port,write_data_to_file,path,analyze_data,node_name,path_to_o
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == 1:
         collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
-        #print(collectl_command)
     else:
         collectl_command = f"collectl --plot --sep , -i 1 -sn > {csvfile_name}"
     result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -73,7 +72,6 @@ def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicate
     while True:
         msg = collectl_communicater.get()
         if msg == "exit":
-            #print('test collectl')
             result_collectl.terminate()
             result_collectl.wait()
             result_collectl_cpu.terminate()
@@ -144,22 +142,12 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
 
         except FileNotFoundError:
             msg = ""
-        #print(msg)
-        #print(node_name)
         if f"Receiver {node_name}" in msg:
-            #print('test')
-            #print(action)
             node, action = msg.split(": ")
-            #print(node)
-            #print('action ' + action)
             if action == prev_action: 
                 continue
             if action == "kill":
-                print('test kill')
-                #result_flesnet.terminate()
-                #result_flesnet.wait()
                 os.killpg(os.getpgid(result_tsclient.pid), signal.SIGKILL)
-                print('test kill 1')
                 write_response(node_name, "killing")
                 prev_action = action
             elif action == "revive":
@@ -167,13 +155,8 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
                 write_response(node_name, "reviving")
                 prev_action = action
             elif action == "stop":
-                print('test action')
                 break
     if use_collectl == 1:
-        #result_collectl.terminate()
-        #result_collectl.wait()
-        #result_collectl_cpu.terminate()
-        #result_collectl_cpu.wait()
         collectl_communicater.put("exit")
         thread_collectl.join()
     result_tsclient.terminate()
@@ -181,7 +164,6 @@ def main(ip,logfile,influx_node_ip, influx_token, use_grafana,path, port,write_d
     
 
 params = {}
-#print('test12')
 with open('tmp/receiving_nodes_params.txt', 'r') as f:
     print('test1')
     for line in f:
@@ -199,7 +181,6 @@ with open('tmp/receiving_nodes_params.txt', 'r') as f:
                     pass
             params[key] = value
 
-#print(params)
 for key, value in params.items():
     globals()[key] = value
     

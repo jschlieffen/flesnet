@@ -46,7 +46,6 @@ def calc_str(output_node_ip,port,cm_node_ip,output_node_idx, num_components, des
 def start_collectl(use_infiniband, csvfile_name):
     if use_infiniband == 1:
         collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
-        #print(collectl_command)
     else:
         collectl_command = f"collectl --plot --sep , -i 1 -sn > {csvfile_name}"
     result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
@@ -66,7 +65,6 @@ def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicate
     while True:
         msg = collectl_communicater.get()
         if msg == "exit":
-            #print('test collectl')
             result_collectl.terminate()
             result_collectl.wait()
             result_collectl_cpu.terminate()
@@ -118,7 +116,6 @@ def start_tsclient(path,shm_str,node_name,write_data_to_file,analyze_data, logfi
     while True:
         msg = tsclient_communicater.get()
         if msg == 'exit':
-            #print('test tsclient')
             result_tsclient.terminate()
             result_tsclient.wait()
             break
@@ -140,11 +137,7 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
 
     grafana_string = ''
     if use_grafana == 1:
-        #os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '-m influx2:%s:timeslice_forwarder_state:%s' % (influx_node_ip, influx_token) 
-
-        #tsclient_commands = '%s./tsclient -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
-        #result_tsclient = subprocess.Popen(tsclient_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     tsclient_communicater = queue.Queue()
     thread_tsclient = threading.Thread(target=start_tsclient, args=(path, shm_str, node_name, write_data_to_file, analyze_data, logfile_tsclient,
                                                                     path_to_output_file, influx_node_ip, influx_token, use_grafana, tsclient_communicater))
@@ -168,22 +161,12 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
 
         except FileNotFoundError:
             msg = ""
-        #print(msg)
-        #print(node_name)
         if f"TF Output {node_name}" in msg:
-            #print('test')
-            #print(action)
             node, action = msg.split(": ")
-            #print(node)
-            #print('action ' + action)
             if action == prev_action: 
                 continue
             if action == "kill":
-                print('test kill')
-                #result_flesnet.terminate()
-                #result_flesnet.wait()
                 os.killpg(os.getpgid(result_output_node.pid), signal.SIGKILL)
-                print('test kill 1')
                 write_response(node_name, "killing")
                 prev_action = action
             elif action == "revive":
@@ -191,20 +174,11 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
                 write_response(node_name, "reviving")
                 prev_action = action
             elif action == "stop":
-                print('test action')
                 break
     
-    #print(input_data)
-    #print(type(input_data))
     if use_collectl == 1:
-        #result_collectl.terminate()
-        #result_collectl.wait()
-        #result_collectl_cpu.terminate()
-        #result_collectl_cpu.wait()
         collectl_communicater.put("exit")
         thread_collectl.join()
-        #result_mstool.terminate()
-        #result_mstool.wait()
     tsclient_communicater.put("exit")
     thread_tsclient.join()
     result_output_node.terminate()
@@ -213,9 +187,8 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
     
 
 params = {}
-#print('test12')
+
 with open('tmp/tf_output_nodes_params.txt', 'r') as f:
-    print('test1')
     for line in f:
         if ':' in line:
             key, value = line.strip().split(':', 1)
@@ -232,7 +205,7 @@ with open('tmp/tf_output_nodes_params.txt', 'r') as f:
             params[key] = value
     f.close()
 
-print(params)
+
 for key, value in params.items():
     globals()[key] = value
 cm_node_ip = params.get('cm node ips')

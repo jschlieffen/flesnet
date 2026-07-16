@@ -634,10 +634,9 @@ def tail_file(file_path):
     finally:
         f.terminate()
         
-def tail_csv(file_path):
+def tail_csv_V2(file_path):
     with open(file_path, "r") as f:
         f.seek(0, 2)  # go to end of file
-
         while not terminate_program:
             line = f.readline()
             if not line:
@@ -650,6 +649,23 @@ def tail_csv(file_path):
                 continue
 
             yield line.split(",")
+            
+def tail_csv(file_path):
+    f = open(file_path, "r")
+    f.seek(0, 2)
+
+    def poll():
+        line = f.readline()
+        if not line:
+            return None
+
+        line = line.strip()
+        if not line or line.startswith("#"):
+            return None
+
+        return line.split(",")
+
+    return poll
 
 # =============================================================================
 # This function is the main funxtion in of this file. It adds 
@@ -758,16 +774,27 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes, num_receiver_nodes
             if time.time() - last_update > 1:
                 for key,val in data_dict.items():
                     try:
-                        parts = next(val['tail'])
+                        parts = val['tail']()
+                        if parts is None:
+                            if ('build_nodes' in key) and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
+                                data_rate_input = 0
+                                data_rate_output = 0
+                            else: 
+                                data_rate = 0
+                        else:
+                            
+                            if ('build_nodes' in key) and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
+                                data_rate_input = get_data_rate(parts, val['COL_INDEX'][0])
+                                data_rate_output = get_data_rate(parts, val['COL_INDEX'][1])
+                            else:
+                                data_rate = get_data_rate(parts, val['COL_INDEX'])
                         if ('build_nodes' in key) and (use_GSI_TS_forwarding or use_ZIB_TS_forwarding):
-                            data_rate_input = get_data_rate(parts, val['COL_INDEX'][0])
-                            data_rate_output = get_data_rate(parts, val['COL_INDEX'][1])
                             data_dict[key]['current_data_input'] += data_rate_input
                             data_dict[key]['current_data_output'] += data_rate_output
                             data_dict[key]['data_array_input'].append(data_rate_input)
                             data_dict[key]['data_array_output'].append(data_rate_output)
+                            
                         else:
-                            data_rate = get_data_rate(parts, val['COL_INDEX'])
                             data_dict[key]['current_data'] += data_rate
                             data_dict[key]['data_array'].append(data_rate)
                     except StopIteration:
@@ -836,12 +863,6 @@ def calc_output_msg(data_dict):
 def signal_handler_V2(signum, frame,stdscr):
     if signum == signal.SIGINT:
         cleanup(stdscr)
-       #logger.error(f'received signal {signum}. Handling termination')
-       #print(f'received signal {signum}. Handling termination')
-    #elif signum == signal.SIGTERM:
-        #logger.error(f'received signal {signum}. Handling termination')
-        #print(f'received signal {signum}. Handling termination')
-    #cleanup(stdscr)
 
 def signal_handler(signum, frame):
     global terminate_program

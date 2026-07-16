@@ -165,9 +165,7 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
         thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
         thread_collectl.start()
         time.sleep(1)
-    print(use_flesnet)
     if use_flesnet == 0:
-        print('test1234')
         tsclient_communicater = queue.Queue()
         thread_tsclient = threading.Thread(target=start_tsclient, args=(path,input_file, shm_str, logfile_tsclient, use_dtsa_files, num_components, desc_size, data_size,
                                                                         influx_node_ip, influx_token, use_grafana, malloc_size, tsclient_communicater))
@@ -181,7 +179,6 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
         '%s./timeslice_forwarder %s %s > %s 2>&1 &' 
         % (path,str_, grafana_string,logfile)
     )
-    print(input_node_commands)
     result_input_node = subprocess.Popen(input_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
     msg,action = "", ""
     prev_action = ""
@@ -220,7 +217,6 @@ def input_node(input_node_ip,port,cm_node_ip,input_node_idx,use_collectl,use_inf
 
 params = {}
 with open('tmp/tf_input_nodes_params.txt', 'r') as f:
-    print('test1')
     for line in f:
         if ':' in line:
             key, value = line.strip().split(':', 1)

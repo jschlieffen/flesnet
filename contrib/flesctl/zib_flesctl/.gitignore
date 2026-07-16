@@ -7,3 +7,6 @@ config.cfg
 __pycache__/
 .nfs*
 tmp
+monitoring/debug.log
+monitoring/monitoring.log 
+monitoring/mon_parameters.txt

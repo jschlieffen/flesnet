@@ -137,7 +137,6 @@ def start_timeslice_forwarded_input(logfile_tf,build_node_idx,use_infiniband):
     logfile_tsclient="sifew"
     node_ip = get_node_ip(use_infiniband)
     tf_input_command = "nodes/./tf_input_node.py %s %s %s %s %s %s" % (input_file,logfile_tf,build_node_idx,node_ip,logfile_collectl, logfile_tsclient)
-    print(os.getcwd())
     print(tf_input_command)
     result_tf_input = subprocess.Popen(tf_input_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
     return result_tf_input
@@ -176,7 +175,6 @@ def build_nodes(ip, build_nodes_ip,logfile, num_build_nodes, build_node_idx, inf
     result_flesnet = subprocess.Popen(flesnet_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
     msg,action = "", ""
     prev_action = ""
-    print(use_tf_zib)
     if use_tf_zib == 1:
         result_tf_input = start_timeslice_forwarded_input(logfile_tf, build_node_idx, use_infiniband)
     elif use_tf_GSI == 1:

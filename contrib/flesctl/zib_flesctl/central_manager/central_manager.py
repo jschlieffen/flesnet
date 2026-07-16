@@ -46,14 +46,12 @@ def ethernet_ip(node_id):
 def infiniband_ip(node_id):
     command = 'srun --nodelist=%s -N 1 --ntasks 1 ip a' % (node_id)
     
-    #print(node_id)
     try:
         result = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         stdout,stderr = result.communicate()
     except subprocess.CalledProcessError as e:
         logger.error(f'ERROR: {e} Error occurred at reading ips')
         sys.exit(1)
-    #print(stdout)
     match = re.search(r'ib0:(.*?)scope global ib0',stdout,re.DOTALL)
     content = match.group(1)
     match2 = re.search(r'inet (.*?)/',content,re.DOTALL)
@@ -974,7 +972,6 @@ class execution:
     # killed. So one can stay inside the session for future test runs.
     # =============================================================================
     def stop_monitoring(self):
-        print('test')
         try:
             logger.info(f"killing monitoring process")
             session_name = 'monitoring'
