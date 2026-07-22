@@ -10,17 +10,19 @@ import time
 import subprocess
 import os
 from logging_lib.log_msg import *
+import central_manager.Slurm_starter as ss
 
 # =============================================================================
 #      TODO:       Port is wrong, logfile names
 # =============================================================================
 class Timeslice_forwarding_ZIB:
     
-    def __init__(self,central_manager, central_manager_ips, central_manager_eth_ips, output_nodes,input_nodes, parameters,  Run_folder):
+    def __init__(self,central_manager, central_manager_ips, central_manager_eth_ips, output_nodes,input_nodes, parameters,  Run_folder, Slurm_starter):
         self.central_manager = central_manager
         self.central_manager_ips = central_manager_ips
         self.central_manager_eth_ips = central_manager_eth_ips
         self.output_nodes = output_nodes
+        self.Slurm_starter = Slurm_starter
         
         self.input_nodes = input_nodes
         self.pids_cm = {}
@@ -107,7 +109,8 @@ class Timeslice_forwarding_ZIB:
                 value = getattr(self.Par_, name, None)
                 Params_file.write(f"{name}: {value} \n")
         Params_file.close()
-        
+    
+    
     def start_cm(self):
         file = 'nodes/tf_central_manager.py'
         node_cnt = 0
@@ -116,21 +119,17 @@ class Timeslice_forwarding_ZIB:
             logger.info(f'start central manager for timeslice-forwarding: {node}')
             logfile = "%s/logs/timeslice_forwarding/central_manager/central_manager_%s.log" % (self.Run_folder,node)
             logfile_collectl = "%s/logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % (self.Run_folder,node)
-            command = (
-                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s'
-                % (node, self.apptainer_command, self.Par_.num_cpus ,file,logfile, logfile_collectl)
-            )
-            try:
-                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-            except subprocess.CalledProcessError as e:
-                logger.error(f'ERROR {e} occurried in central manager: {node}. Shutdown flesnet')
+            params = f"{logfile} {logfile_collectl}"
+            start_successfull = self.Slurm_starter.start_process("TF_Central_Manager", node, self.Par_.num_cpus, "16GB", file, params)
+            if not start_successfull:
+                logger.error(f'ERROR occurried in central manager: {node}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
-            self.pids_cm[node] = result
             logger.status('start successful')
             node_cnt += 1
         return None
      
+        
     def start_output_nodes(self):
         file = 'nodes/tf_output_node.py'
         nodes_cnt = 0
@@ -144,20 +143,16 @@ class Timeslice_forwarding_ZIB:
                 ip = self.output_nodes[node]['inf_ip']
             else:
                 ip = self.output_nodes[node]['eth_ip']
-            command = (
-                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s %s'
-                % (node, self.apptainer_command, self.Par_.num_cpus ,file,logfile, self.output_nodes[node]['output_node_idx'], ip, logfile_collectl, logfile_tsclient)
-            )
-            try:
-                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-            except subprocess.CalledProcessError as e:
-                logger.error(f'ERROR {e} occurried in tf output node: {node}. Shutdown flesnet')
+            params = f"{logfile} {self.output_nodes[node]['output_node_idx']} {ip} {logfile_collectl} {logfile_tsclient}"
+            start_successfull = self.Slurm_starter.start_process("TF_Output", node, self.Par_.num_cpus, "16GB", file, params)
+            if not start_successfull:
+                logger.error(f'ERROR occurried in tf output node: {node}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
-            self.pids_o[node] = result
+            logger.status('start successful')
             nodes_cnt += 1
         return None
-        
+    
     def start_input_nodes(self):
         file = 'nodes/tf_input_node.py'
         nodes_cnt = 0 
@@ -175,166 +170,79 @@ class Timeslice_forwarding_ZIB:
                 ip = self.input_nodes[node]['inf_ip']
             else:
                 ip = self.input_nodes[node]['eth_ip']
-            command = (
-                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s %s %s'
-                % (node, self.apptainer_command, self.Par_.num_cpus ,file,input_file ,logfile, self.input_nodes[node]['input_node_idx'], ip, logfile_collectl, logfile_tsclient)
-            )
-            try:
-                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-            except subprocess.CalledProcessError as e:
-                logger.error(f'ERROR {e} occurried in tf input node: {node}. Shutdown flesnet')
+            params = f"{input_file} {logfile} {self.input_nodes[node]['input_node_idx']} {ip} {logfile_collectl} {logfile_tsclient}"
+            start_successfull = self.Slurm_starter.start_process("TF_Input", node, self.Par_.num_cpus, "16GB", file, params)
+            if not start_successfull:
+                logger.error(f'ERROR occurried in tf input node: {node}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
-            self.pids_i[node] = result
             nodes_cnt += 1
         return None
-    
+
+        
     def kill_input_node(self, kill_node):
         logger.info(f"Killing Input node: {kill_node}")
-        with open("tmp/central_manager.txt","w") as f:
-            f.write(f"TF Input {kill_node}: kill")
-            f.flush()
-            os.fsync(f.fileno())
-            f.close()
-        msg = ""
-        while msg != f"TF Input {kill_node}: done killing":
-            try:
-                with open("tmp/nodes_response.txt","r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Input node {kill_node}: killed")
+        if self.Slurm_starter.kill_process("TF_Input", kill_node):
+            logger.status(f"Input node {kill_node}: killed")
                       
-                      
+        
     def revieve_input_node(self, revieve_node):
         logger.info(f"revieve Input node: {revieve_node}")
-        with open("tmp/central_manager.txt","w") as f:
-            f.write(f"TF Input {revieve_node}: revive")
-            f.flush()
-            os.fsync(f.fileno())
-            f.close()
-        msg = ""
-        while msg != f"TF Input {revieve_node}: done reviving":
-            try:
-                with open("tmp/nodes_response.txt","r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Input node: {revieve_node} revieve")
+        if self.Slurm_starter.revieve_process("TF_Input", revieve_node):
+            logger.status(f"Input node: {revieve_node} revieve")
+        
         
     def kill_central_manager(self, kill_node):
         logger.info(f"Killing Central Manager: {kill_node}")
-        with open("tmp/central_manager.txt","w") as f:
-            f.write(f"TF Central Manager {kill_node}: kill")
-            f.flush()
-            os.fsync(f.fileno())
-            f.close()
-        msg = ""
-        while msg != f"TF Central Manager {kill_node}: done killing":
-            try:
-                with open("tmp/nodes_response.txt","r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Central Manager: {kill_node} killed")
-                      
-                      
+        if self.Slurm_starter.kill_process("TF_Central_Manager", kill_node):
+            logger.status(f"Central Manager: {kill_node} killed")              
+        
+        
     def revieve_central_manager(self, revieve_node):
         logger.info(f"revieve Central Manager: {revieve_node}")
-        with open("tmp/central_manager.txt","w") as f:
-            f.write(f"TF Central Manager {revieve_node}: revive")
-            f.flush()
-            os.fsync(f.fileno())
-            f.close()
-        msg = ""
-        while msg != f"TF Central Manager {revieve_node}: done reviving":
-            try:
-                with open("tmp/nodes_response.txt","r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Central Manager: {revieve_node} revieve")
-        
-        
+        if self.Slurm_starter.revieve_process("TF_Central_Manager", revieve_node):
+            logger.status(f"Central Manager: {revieve_node} revieve")
+                      
     def kill_output_node(self, kill_node):
         logger.info(f"Killing Output node: {kill_node}")
-        with open("tmp/central_manager.txt","w") as f:
-            f.write(f"TF Output {kill_node}: kill")
-            f.flush()
-            os.fsync(f.fileno())
-            f.close()
-        msg = ""
-        while msg != f"TF Output {kill_node}: done killing":
-            try:
-                with open("tmp/nodes_response.txt","r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Output node: {kill_node} killed")
-                      
-                      
+        if self.Slurm_starter.kill_process("TF_Output", kill_node):
+            logger.status(f"Output node: {kill_node} killed")
+                                            
+        
     def revieve_output_node(self, revieve_node):
         logger.info(f"revieve Output node: {revieve_node}")
-        with open("tmp/central_manager.txt","w") as f:
-            f.write(f"TF Output {revieve_node}: revive")
-            f.flush()
-            os.fsync(f.fileno())
-            f.close()
-        msg = ""
-        while msg != f"TF Output {revieve_node}: done reviving":
-            try:
-                with open("tmp/nodes_response.txt","r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Output node: {revieve_node} revieve")
+        if self.Slurm_starter.revieve_process("TF_Output", revieve_node):
+            logger.status(f"Output node: {revieve_node} revieve")
         
+
+            
     def stop_central_manager(self):
         for node in self.central_manager.keys():
             logger.info(f"stopping central manager: {node}")
-            with open("tmp/central_manager.txt", "w") as f:
-                f.write(f"TF Central Manager {node}: stop")
-                f.flush()
-                os.fsync(f.fileno())
-            stdout, stderr = self.pids_cm[node].communicate()
-            logger.debug(f"Output from central manager: {node} \n {stdout}")
-            logger.debug(f"Error from central manager: {node} \n {stderr}")
+            stdout,stderr = self.Slurm_starter.stop_process("TF_Central_Manager", node, False)
+            if stdout != "":
+                logger.debug(f"Output from central manager: {node} \n {stdout}")
+                logger.debug(f"Error from central manager: {node} \n {stderr}")
             
+                
     def stop_input_nodes(self):
         for node in self.input_nodes.keys():
-            logger.info(f"stopping TF input node: {node}")
-            with open("tmp/central_manager.txt", "w") as f:
-                f.write(f"TF Input {node}: stop")
-                f.flush()
-                os.fsync(f.fileno())
+            logger.info(f"stopping TF Input node: {node}")
             if self.Par_.use_flesnet:
-                msg = ""
-                while msg != f"TF Input {node}: done terminating":
-                    try:
-                        with open("tmp/nodes_response.txt", "r") as f:
-                            msg = f.read().strip()
-                    except FileNotFoundError:
-                        msg = ""
-                    time.sleep(0.5)
-                logger.debug(f"TF input node: {node} stopped. See build nodes for output")
+                stdout,stderr = self.Slurm_starter.stop_process("TF_Input", node, True)
+                if stdout == "1":
+                    logger.debug(f"TF input node: {node} stopped. See build nodes for output")
             else:
-                stdout, stderr = self.pids_i[node].communicate()
-                logger.debug(f"Output from TF input node: {node} \n {stdout}")
-                logger.debug(f"Error from TF input node: {node} \n {stderr}")
+                stdout,stderr = self.Slurm_starter.stop_process("TF_Input", node, False)
+                if stdout != "":
+                    logger.debug(f"Output from TF input node: {node} \n {stdout}")
+                    logger.debug(f"Error from TF input node: {node} \n {stderr}")
+            
             
     def stop_output_nodes(self):
         for node in self.output_nodes.keys():
             logger.info(f"stopping TF output node: {node}")
-            with open("tmp/central_manager.txt", "w") as f:
-                f.write(f"TF Output {node}: stop")
-                f.flush()
-                os.fsync(f.fileno())
-            stdout, stderr = self.pids_o[node].communicate()
-            logger.debug(f"Output from TF output node: {node} \n {stdout}")
-            logger.debug(f"Error from TF output node: {node} \n {stderr}")
+            stdout,stderr = self.Slurm_starter.stop_process("TF_Output", node, False)
+            if stdout != "":
+                logger.debug(f"Output from TF output node: {node} \n {stdout}")
+                logger.debug(f"Error from TF output node: {node} \n {stderr}")

@@ -51,23 +51,6 @@ def get_data_rate(parts, col_index):
 def calculate_progress(current_data, total_data):
     return current_data / total_data
 
-# =============================================================================
-# Gives the prefix of the progress bars
-# =============================================================================
-def calc_outout_str_V2(input_string):
-    pattern = r"logs/collectl/(build|entry)_nodes/(build|entry)_node_(.+?)\.csv"
-    match = re.search(pattern, input_string)
-    if match:
-        node_type = match.group(1) 
-        node_id = match.group(3)
-        formatted_output = f"{node_type} node: {node_id}"
-        return formatted_output
-
-    # Log unmatched string
-    with open("debug.log", "a") as debug_log:
-        debug_log.write(f"calc_outout_str: input={input_string}, no match, returning input\n")
-    #return input_strin
-
 def calc_outout_str(input_string):
     patterns = [
         (
@@ -108,67 +91,6 @@ def calc_outout_str(input_string):
 # draws the progress bars of the entry and build nodes, by using the curses 
 # colours 
 # =============================================================================
-def draw_progress_bar_V2(stdscr, data_dict, num_entry_nodes, num_build_nodes):
-    #stdscr.clear()
-    bar_width = 50
-    stdscr.addstr(0, 0, "Number of: ")
-    stdscr.addstr("entry nodes: " + str(num_entry_nodes), curses.color_pair(4))
-    stdscr.addstr(1,0, "           build nodes: " + str(num_build_nodes), curses.color_pair(5))
-    i = 2
-    for key,val in data_dict.items():
-        progress = calculate_progress(val['current_data'], val['total_data'])
-        output_str = calc_outout_str(key)
-        green = u'\u2500' * int(progress * bar_width)
-        red = u'\u2500' * (bar_width - len(green))
-        if 'entry node' in output_str:
-            stdscr.addstr(i, 0, output_str + ': ', curses.color_pair(4))
-        elif 'build node' in output_str:
-            stdscr.addstr(i, 0, output_str + ': ', curses.color_pair(5))
-        else:
-            stdscr.addstr(i, 0, output_str + ': ')
-        stdscr.addstr(green, curses.color_pair(2))
-        stdscr.addstr(red, curses.color_pair(1))   
-        stdscr.addstr(f" {val['current_data']:12.2f} / {val['total_data']:.2f}", curses.color_pair(3))  
-        i += 1
-        
-# ==========================
-# Draw progress bar (top 1/3)
-# ==========================
-def draw_progress_bar_V3(stdscr, data_dict, num_entry_nodes, num_build_nodes,
-                      scroll_offset, height):
-    max_y, max_x = stdscr.getmaxyx()
-    all_lines = []
-
-    # Header lines
-    all_lines.append("Number of nodes:")
-    all_lines.append(f"  entry nodes: {num_entry_nodes}")
-    all_lines.append(f"  build nodes: {num_build_nodes}")
-
-    # Progress bars
-    bar_width = 50
-    for key, val in data_dict.items():
-        progress = val['current_data'] / max(1e-6, val['total_data'])
-        output_str = calc_outout_str(key)
-
-        green = u'\u2500' * int(progress * bar_width)
-        red = u'\u2500' * (bar_width - len(green))
-        line = f"{output_str}: {green}{red} {val['current_data']:.2f}/{val['total_data']:.2f}"
-        all_lines.append(line)
-
-    # Clamp scroll
-    content_height = len(all_lines)
-    scroll_offset = max(0, min(scroll_offset, max(0, content_height - height)))
-
-    # Draw visible lines
-    visible_lines = all_lines[scroll_offset:scroll_offset + height]
-    for i, line in enumerate(visible_lines):
-        try:
-            stdscr.addstr(i, 0, line[:max_x])
-        except curses.error:
-            pass
-
-    return content_height
-
 def draw_progress_bar(stdscr, data_dict, num_entry_nodes, num_build_nodes, num_receiver_nodes, num_input_nodes, num_output_nodes, 
                     use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding, scroll_offset, height):
     """
@@ -301,7 +223,7 @@ def strip_and_translate_ansi_escape_sequences(text):
 # =============================================================================
 # initialization of all ncurses colours. Maximum is 256
 # =============================================================================
-def init_color_pairs_v2():
+def init_color_pairs():
     curses.use_default_colors()
     for i in range(0, curses.COLORS):
         curses.init_pair(i, i, -1)
@@ -312,108 +234,6 @@ def init_color_pairs_v2():
 # of plotext is redirected into a buffer. The output is then
 # line by line translated and given to ncurses for the displaying
 # =============================================================================
-def draw_Graph_V2(stdscr, data_dict):
-    curses.start_color()
-
-    plt.clf()
-    for idx, (key,val) in enumerate(data_dict.items()):
-        data = val['data_array'][: ]
-        while True:
-            if len(data) > 20:
-                data.pop(0)
-            else:
-                break
-        lbl = calc_outout_str(key)
-        plt.plot(data, label=lbl)
-        
-    plt.theme("dark")
-    plt.title("data rate")
-    plt.plot_size(60,15)
-    buf = io.StringIO()
-    with redirect_stdout(buf):
-        plt.show()
-    plot_str = buf.getvalue()
-    max_y, max_x = stdscr.getmaxyx()  
-    lines = plot_str.splitlines()
-    for i, line in enumerate(lines):
-        if i < max_y - 1:  
-            result_arr = strip_and_translate_ansi_escape_sequences(line)         
-            color_pair = 0
-            char = ''
-            y, x = 0, 0
-            was_prev_color = False
-            count = 0
-            for j,tup in enumerate(result_arr):
-                if tup[0] == 'color':
-                    color_pair = tup[1]
-                    was_prev_color = True
-                elif tup[0] == 'text':
-                    char = tup[1]
-                    stdscr.addstr(i+15,x,char, curses.color_pair(int(color_pair)))
-                    was_prev_color = False
-                    count += 1
-                    
-                    x += len(char)
-            x = 0
-
-
-def draw_Graph_V3(stdscr, data_dict, scroll_offset):
-    curses.start_color()
-
-    stdscr.erase()
-    max_y, max_x = stdscr.getmaxyx()
-
-    all_lines = []
-
-    # 🔹 Build full "virtual screen"
-    for key, val in data_dict.items():
-        plt.clf()
-
-        data = val['data_array'][:]
-        while len(data) > 20:
-            data.pop(0)
-
-        lbl = calc_outout_str(key)
-        plt.plot(data, label=lbl)
-
-        plt.theme("dark")
-        plt.title(f"{lbl}")
-        plt.plot_size(60, 10)
-
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            plt.show()
-
-        lines = buf.getvalue().splitlines()
-        all_lines.extend(lines)
-        all_lines.append("")  # spacing between plots
-
-    # 🔹 Clamp scrolling
-    content_height = len(all_lines)
-    scroll_offset = max(0, min(scroll_offset, content_height - max_y))
-
-    # 🔹 Render visible window
-    visible_lines = all_lines[scroll_offset:scroll_offset + max_y]
-
-    for i, line in enumerate(visible_lines):
-        result_arr = strip_and_translate_ansi_escape_sequences(line)
-        x = 0
-        color_pair = 0
-
-        for tup in result_arr:
-            if tup[0] == 'color':
-                color_pair = tup[1]
-            elif tup[0] == 'text':
-                try:
-                    stdscr.addstr(i, x, tup[1],
-                                  curses.color_pair(int(color_pair)))
-                except curses.error:
-                    pass
-                x += len(tup[1])
-
-    return content_height
-
-
 def draw_Graph(stdscr, data_dict, use_flesnet,use_GSI_TS_forwarding, use_ZIB_TS_forwarding, scroll_offset, start_y, height):
     """
     Draws the graphs in two columns: entry nodes (left) and build nodes (right)
@@ -555,84 +375,6 @@ def draw_Graph(stdscr, data_dict, use_flesnet,use_GSI_TS_forwarding, use_ZIB_TS_
 
     return content_height
 
-# ==========================
-# Draw graphs (bottom 2/3)
-# ==========================
-def draw_Graph_V4(stdscr, data_dict, scroll_offset, start_y, height):
-    max_y, max_x = stdscr.getmaxyx()
-    all_lines = []
-
-    # Generate plots for each entry
-    for key, val in data_dict.items():
-        plt.clf()
-        data = val['data_array'][:]
-        if len(data) > 20:
-            data = data[-20:]
-        lbl = calc_outout_str(key)
-        plt.plot(data, label=lbl)
-        plt.theme("dark")
-        plt.title(lbl)
-        plt.plot_size(min(60, max_x), min(10, height))  # limit to region size
-
-        buf = io.StringIO()
-        with redirect_stdout(buf):
-            plt.show()
-        plot_str = buf.getvalue()
-        lines = plot_str.splitlines()
-        all_lines.extend(lines + [""])  # empty line between graphs
-
-    # Clamp scroll
-    content_height = len(all_lines)
-    scroll_offset = max(0, min(scroll_offset, max(0, content_height - height)))
-
-    # Draw visible portion in the bottom region
-    visible_lines = all_lines[scroll_offset:scroll_offset + height]
-    for i, line in enumerate(visible_lines):
-        result_arr = strip_and_translate_ansi_escape_sequences(line)
-        x = 0
-        color_pair = 0
-        for tup in result_arr:
-            if tup[0] == 'color':
-                color_pair = tup[1]
-            elif tup[0] == 'text':
-                try:
-                    stdscr.addstr(start_y + i, x, tup[1],
-                                  curses.color_pair(int(color_pair)))
-                except curses.error:
-                    pass
-                x += len(tup[1])
-
-    return content_height
-    
-# =============================================================================
-# Currently not used due to bad running time
-# =============================================================================
-def tail_file_v2(file_path):
-    f = subprocess.Popen(['tail','-F',file_path],\
-            stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-    p = select.poll()
-    p.register(f.stdout)
-    
-    while True:
-        if p.poll(1):
-            yield str(f.stdout.readline())
-        time.sleep(0.5)
-    
-# =============================================================================
-# mimics the tail function
-# =============================================================================
-def tail_file(file_path):
-    f = subprocess.Popen(['tail', '-F', file_path],
-                          stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    try:
-        while not terminate_program:
-            rlist, _, _ = select.select([f.stdout], [], [], 1) 
-            line = str(f.stdout.readline(), 'utf-8').strip()
-            if rlist:
-                if "STATUS:" in line or "INFO:" in line:
-                    yield line
-    finally:
-        f.terminate()
         
 def tail_csv_V2(file_path):
     with open(file_path, "r") as f:
@@ -684,7 +426,7 @@ def main(stdscr,file_names, num_entry_nodes, num_build_nodes, num_receiver_nodes
     stdscr.keypad(True)
     scroll_offset = 0
     data_dict = {}
-    init_color_pairs_v2()
+    init_color_pairs()
     COLUMN_MAP = {
         "[IB]InPkt": 2,
         "[IB]OutPkt": 3,
@@ -860,10 +602,6 @@ def calc_output_msg(data_dict):
 # implemented so it is recommended to only use it if the other two fails
 # May be changed in the furture
 # ============================================================================
-def signal_handler_V2(signum, frame,stdscr):
-    if signum == signal.SIGINT:
-        cleanup(stdscr)
-
 def signal_handler(signum, frame):
     global terminate_program
     terminate_program = True
@@ -882,8 +620,3 @@ def cleanup(stdscr):
         #finally:
         #    curses.endwin()
             
-def cleanup_V2(stdscr):
-    global terminate_program
-    if stdscr is not None:
-        curses.endwin()
-    terminate_program = True

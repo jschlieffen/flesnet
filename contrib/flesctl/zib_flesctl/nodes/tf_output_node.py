@@ -26,6 +26,9 @@ import os
 import threading
 import queue
 import signal
+import nodes_communicator as nc
+import thread_channel
+import nodes_help_functions as nh
 
 # =============================================================================
 # This file starts mstool and flesnet on an entry node. It is started with 
@@ -43,58 +46,7 @@ def calc_str(output_node_ip,port,cm_node_ip,output_node_idx, num_components, des
     str_ = f"-l 1 -A {output_node_ip}:{port} -c {cm_node_ip}:{port} -N {output_node_idx} -o {shm_str}?n={num_components}\\&descsize={desc_size}\\&datasize={data_size}"
     return str_,shm_str
 
-def start_collectl(use_infiniband, csvfile_name):
-    if use_infiniband == 1:
-        collectl_command = f"sudo collectl --plot --sep , -i 1 -sx > {csvfile_name}"
-    else:
-        collectl_command = f"collectl --plot --sep , -i 1 -sn > {csvfile_name}"
-    result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    time.sleep(1)
-    return result_collectl
 
-def start_collectl_cpu(csv_file_name):
-    cpu_csv_file_name = csv_file_name.replace(".csv", "_cpu_usage.csv")
-    collectl_command = f"collectl --plot --sep , -i 1 -sC > {cpu_csv_file_name}"
-    result_collectl = subprocess.Popen(collectl_command,shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    time.sleep(1)
-    return result_collectl
-
-def start_collectl_thread(use_infiniband, logfile_collectl, collectl_communicater):
-    result_collectl = start_collectl(use_infiniband, logfile_collectl)
-    result_collectl_cpu = start_collectl_cpu(logfile_collectl)
-    while True:
-        msg = collectl_communicater.get()
-        if msg == "exit":
-            result_collectl.terminate()
-            result_collectl.wait()
-            result_collectl_cpu.terminate()
-            result_collectl_cpu.wait()
-            break
-
-def get_alloc_cpus(filename):
-    taskset_command = "taskset -cp $$"
-    result_taskset = subprocess.Popen(taskset_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    stdout, stderr = result_taskset.communicate()
-    match = stdout.split(":")[-1].strip()
-    entries = match.split(",")
-    alloc_cpus = []
-    for entry in entries:
-        if "-" in entry:
-            start, end = map(int, entry.split("-"))
-            alloc_cpus.extend(range(start,end + 1))
-        else:
-            alloc_cpus.append(int(entry))
-    with open(filename, "w") as file:
-        for cpu in alloc_cpus:
-            file.write(f"{cpu}\n")
-
-
-def write_response(node_name, msg):
-    with open("tmp/nodes_response.txt", "w") as f:
-        f.write(f"TF Output {node_name}: done {msg}")
-        f.flush()
-        os.fsync(f.fileno())
-                
         
 def start_tsclient(path,shm_str,node_name,write_data_to_file,analyze_data, logfile_tsclient, 
                    path_to_output_file, influx_node_ip, influx_token, use_grafana, tsclient_communicater):
@@ -124,14 +76,17 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
                 logfile_tsclient,path_to_output_file, influx_node_ip, influx_token, use_grafana):
     str_,shm_str = calc_str(output_node_ip,port,cm_node_ip,output_node_idx, num_components, desc_size, data_size)
     node_name = subprocess.check_output(["hostname", "-s"]).decode().strip()
+    channel = thread_channel.Channel()
+    communicator = nc.communicator(channel, "TF_Output", node_name)
+    communicator.start()
     if use_collectl == 1:
         basename = os.path.splitext(os.path.basename(logfile))[0]
         filename_cpus = f"tmp/{basename}.txt"
-        get_alloc_cpus(filename_cpus)
+        nh.get_alloc_cpus(filename_cpus)
         #result_collectl = start_collectl(use_infiniband, logfile_collectl)
         #result_collectl_cpu = start_collectl_cpu(logfile_collectl)
         collectl_communicater = queue.Queue()
-        thread_collectl = threading.Thread(target=start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
+        thread_collectl = threading.Thread(target=nh.start_collectl_thread, args=(use_infiniband, logfile_collectl, collectl_communicater))
         thread_collectl.start()
         time.sleep(1)
 
@@ -148,34 +103,18 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
     )
     print(output_node_commands)
     result_output_node = subprocess.Popen(output_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, preexec_fn=os.setsid)
-    input_data = ''
-    msg,action = "", ""
-    prev_action = ""
+    msg = ""
     while True:
-        time.sleep(0.5)
-        try:
-            with open("tmp/central_manager.txt", "r") as f:
-                msg = f.read().strip()
-                #ode, action = line.split(": ")
-                f.close()
-
-        except FileNotFoundError:
-            msg = ""
-        if f"TF Output {node_name}" in msg:
-            node, action = msg.split(": ")
-            if action == prev_action: 
-                continue
-            if action == "kill":
+        msg = channel.recv_from_child()
+        match msg:
+            case "kill":
                 os.killpg(os.getpgid(result_output_node.pid), signal.SIGKILL)
-                write_response(node_name, "killing")
-                prev_action = action
-            elif action == "revive":
+                channel.send_to_child("succeed")
+            case "revieve":
                 result_output_node = subprocess.Popen(output_node_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,preexec_fn=os.setsid)
-                write_response(node_name, "reviving")
-                prev_action = action
-            elif action == "stop":
+                channel.send_to_child("succeed")
+            case "stop":
                 break
-    
     if use_collectl == 1:
         collectl_communicater.put("exit")
         thread_collectl.join()
@@ -183,7 +122,9 @@ def output_node(output_node_ip,port,cm_node_ip,output_node_idx,use_collectl,use_
     thread_tsclient.join()
     result_output_node.terminate()
     result_output_node.wait()
-    write_response(node_name, "terminating")
+    channel.send_to_child("succeed")
+    communicator.join()
+    
     
 
 params = {}

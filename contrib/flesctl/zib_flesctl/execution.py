@@ -15,6 +15,7 @@ import os
 os.environ['write_logfile'] = '1'
 from logging_lib.log_msg import *
 from logging_lib import logfile_gen as Logfile
+from pathlib import Path
 
 #TODO: make timeslice-forwarding cpu ids 
 # =============================================================================
@@ -90,6 +91,9 @@ class exec_:
         with open('tmp/Run_folder_name.txt', "w") as file:
             file.write(run_id)
             file.close()
+        with open('tmp/communication/central_manager.txt','w') as file:
+            file.write('test runtime improv')
+            file.close()
         if (self.Par_.activate_timesliceforwarding or self.Par_.ZIB_timesliceforwarding) and self.Par_.write_data_to_file:
             os.mkdir(f'{self.Par_.path_to_output_file}/{run_id}')
             os.mkdir(f'{self.Par_.path_to_output_file}/{run_id}/tsa_files')
@@ -152,12 +156,6 @@ class exec_:
         sys.exit(1)
         
     def clean_files(self):
-        with open("tmp/central_manager.txt", "w") as f:
-            f.truncate(0)
-            f.close()
-        with open("tmp/nodes_response.txt", "w") as f:
-            f.truncate(0)
-            f.close()
         with open("tmp/build_nodes_params.txt", "w") as f:
             f.truncate(0)
             f.close()
@@ -170,7 +168,10 @@ class exec_:
         with open("tmp/receiving_nodes_params.txt", "w") as f:
             f.truncate(0)
             f.close()
-    
+        for file in Path("tmp/communication").iterdir():
+            if file.is_file():
+                file.unlink()
+                
     def create_logfile(self):
         Logfile.logfile.write()
         for handler in logger.handlers[:]:

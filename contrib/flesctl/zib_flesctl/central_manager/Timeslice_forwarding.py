@@ -15,13 +15,14 @@ from logging_lib.log_msg import *
 #TODO: make port depended on node
 class Timeslice_forwarding:
     
-    def __init__(self, sender,receiver, parameters, Run_folder):    
+    def __init__(self, sender,receiver, parameters, Run_folder, Slurm_starter):    
         super().__init__()
         #self.rec2build = rec2build
         self.sender = sender
         self.receiver = receiver
         self.Par_ = parameters
         self.Run_folder = Run_folder
+        self.Slurm_starter = Slurm_starter
         self.pids = {}
         self.pids_sender = {}
         if self.Par_.use_apptainer:
@@ -95,14 +96,12 @@ class Timeslice_forwarding:
                 'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s'
                 % (node_id, self.apptainer_command, self.Par_.num_cpus ,file,logfile, sender_node_ip, logfile_collectl)
             )
-            try:
-                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-            except subprocess.CalledProcessError as e:
-                logger.error(f'ERROR {e} occurried in receiver node: {node_id}. Shutdown flesnet')
-                return 'shutdown'
+            params = f"{logfile} {sender_node_ip} {logfile_collectl}"
+            start_successfull = self.Slurm_starter.start_process("Receiver", node_id, self.Par_.num_cpus, "16GB", file, params)
             time.sleep(1)
-            self.pids[node_id] = result
-            logger.status('start successful')
+            if not start_successfull:
+                logger.error(f'ERROR occurried in Sender node: {node}. Shutdown flesnet')
+                return 'shutdown'
             node_cnt += 1
             
         logger.success('start of timeslice receivers successful')
@@ -128,116 +127,60 @@ class Timeslice_forwarding:
                 'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s %s %s' 
                 % (node_id, self.apptainer_command,self.Par_.num_cpus, file, input_file, logfile, node_cnt, logfile_collectl, node_ip, logfile_tsclient)
             )
-            try: 
-                result = subprocess.Popen(command,shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-            except subprocess.CalledProcessError as e:
-                logger.error(f'ERROR {e} occurried in GSI timesliceforwarding sender node: {node_id}. Shutdown flesnet')
-                return 'shutdown'
+            params = f"{input_file} {logfile} {node_cnt} {logfile_collectl} {node_ip} {logfile_tsclient}"
+            start_successfull = self.Slurm_starter.start_process("Sender",node_id,self.Par_.num_cpus,"16GB",file,params)
             time.sleep(1)
-            self.pids_sender[node_id] = result
-            logger.status('start successful')
+            if not start_successfull:
+                logger.error(f'ERROR occurried in Receiver node: {node}. Shutdown flesnet')
+                return 'shutdown'
             node_cnt += 1
         logger.success('start of timeslice sender successful')
         return None
     
     
-    
-    def kill_process(self, kill_node):
+    def kill_process(self,kill_node):
         logger.info(f"Killing Receiver node: {kill_node}")
-        with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"Receiver {kill_node}: kill")
-            f.flush()
-            os.fsync(f.fileno())
-        msg = ""
-        while msg != f"Receiver {kill_node}: done killing":
-            try:
-                with open("tmp/nodes_response.txt", "r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Receiver node: {kill_node} killed")
-    
+        if self.Slurm_starter.kill_process("Receiver", kill_node):
+            logger.status(f"Receiver node: {kill_node} killed")
+            
+        
     def kill_process_Sender(self, kill_node):
         logger.info(f"Killing Sender node: {kill_node}")
-        with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"Sender {kill_node}: kill")
-            f.flush()
-            os.fsync(f.fileno())
-        msg = ""
-        while msg != f"Sender {kill_node}: done killing":
-            try:
-                with open("tmp/nodes_response.txt", "r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Sender node: {kill_node} killed")
+        if self.Slurm_starter.kill_process("Sender", kill_node):
+            logger.status(f"Sender node: {kill_node} killed")
         
+    def revieve_process(self,revieve_node):
+        logger.info(f"revieve Receiver node: {revieve_node}")
+        if self.Slurm_starter.revieve_process("Receiver", revieve_node):
+            logger.status(f"Receiver node: {revieve_node} revieved")
     
-    def revieve_process(self, revive_node):
-        logger.info(f"revieve Receiver node: {revive_node}")
-        with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"Receiver {revive_node}: revive")
-            f.flush()
-            os.fsync(f.fileno())
-        msg = ""
-        while msg != f"Receiver {revive_node}: done reviving":
-            try:
-                with open("tmp/nodes_response.txt", "r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Receiver node: {revive_node} revieved")
         
-    def revieve_process_Sender(self,revive_node):
-        logger.info(f"revieve Sender node: {revive_node}")
-        with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"Sender {revive_node}: revive")
-            f.flush()
-            os.fsync(f.fileno())
-        msg = ""
-        while msg != f"Sender {revive_node}: done reviving":
-            try:
-                with open("tmp/nodes_response.txt", "r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Sender node: {revive_node} revieved")
-    
-    def stop_timeslice_forwarding(self):
-        for node, node_appendix in self.receiver.items():
-            logger.info(f"stopping Receiver node: {node}")
-            with open("tmp/central_manager.txt", "w") as f:
-                f.write(f"Receiver {node}: stop")
-                f.flush()
-                os.fsync(f.fileno())
-            stdout, stderr = self.pids[node].communicate()
-            logger.debug(f"Output from receiver node: {node} \n {stdout}")
-            logger.debug(f"Error from receiver node: {node} \n {stderr}")
+    def revieve_process_Sender(self,revieve_node):
+        logger.info(f"revieve Sender node: {revieve_node}")
+        if self.Slurm_starter.revieve_process("Sender", revieve_node):
+            logger.status(f"Sender node: {revieve_node} revieved")
             
+            
+    def stop_timeslice_forwarding(self):
+        for node in self.receiver.keys():
+            logger.info(f"stopping Receiver node: {node}")
+            stdout,stderr = self.Slurm_starter.stop_process("Receiver", node, False)
+            if stdout != "":
+                logger.debug(f"Output from Receiver node: {node} \n {stdout}")
+                logger.debug(f"Error from entry node: {node} \n {stderr}")
+                
+                
     def stop_timeslice_forwarding_sender(self):
-        for node_id, node in self.sender.items():
-            logger.info(f"stopping Sender node: {node_id}")
-            with open("tmp/central_manager.txt", "w") as f:
-                f.write(f"Sender {node_id}: stop")
-                f.flush()
-                os.fsync(f.fileno())
+        
+        for node in self.sender.keys():
+            logger.info(f"stopping Sender: {node}")
             if self.Par_.use_flesnet:
-                msg = ""
-                while msg != f"Sender {node_id}: done terminating":
-                    try:
-                        with open("tmp/nodes_response.txt", "r") as f:
-                            msg = f.read().strip()
-                    except FileNotFoundError:
-                        msg = ""
-                    time.sleep(0.5)
-                logger.debug(f"TF Sender node: {node_id} stopped. See build nodes for output")
-            #self.pids_sender[node_id].terminate()
+                stdout,stderr = self.Slurm_starter.stop_process("Sender", node, True)
+                if stdout == "1":
+                    logger.debug(f"Sender: {node} stopped. See build nodes for output")
             else:
-                stdout, stderr = self.pids_sender[node_id].communicate()
-                logger.debug(f"Output from sender node: {node_id} \n {stdout}")
-                logger.debug(f"Error from sender node: {node_id} \n {stderr}")
-    
+                stdout,stderr = self.Slurm_starter.stop_process("Sender", node, False)
+                if stdout != "":
+                    logger.debug(f"Output from Sender node: {node} \n {stdout}")
+                    logger.debug(f"Error from Sender node: {node} \n {stderr}")
+            

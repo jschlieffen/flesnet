@@ -17,7 +17,7 @@ from logging_lib.log_msg import *
 # attributes for the start of flesnet (e.g. rmda/zeromq)
 # =============================================================================
 class Entry_nodes:
-    def __init__(self, node_list,entry_nodes_ips, entry_nodes_eth_ips,build_nodes_ips,build_nodes_eth_ips,parameters, Run_folder):
+    def __init__(self, node_list,entry_nodes_ips, entry_nodes_eth_ips,build_nodes_ips,build_nodes_eth_ips,parameters, Run_folder, Slurm_starter):
         super().__init__()
         self.node_list = node_list
         self.entry_nodes_ips = entry_nodes_ips
@@ -26,6 +26,7 @@ class Entry_nodes:
         self.build_nodes_eth_ips = build_nodes_eth_ips
         self.Run_folder = Run_folder
         self.Par_ = parameters
+        self.Slurm_starter = Slurm_starter
         self.pids = {}
         if self.Par_.use_apptainer:
             self.apptainer_command = f"--export=https_proxy,http_proxy,SSL_CERT_FILE,CURL_CA_BUNDLE --singularity-container={self.Par_.apptainer_file}"
@@ -78,66 +79,34 @@ class Entry_nodes:
                 logger.info(f'start entry node: {node} with pattern generator')
             logfile = "%s/logs/flesnet/entry_nodes/entry_node_%s.log" % (self.Run_folder,node)
             logfile_collectl = "%s/logs/collectl/entry_nodes/entry_node_%s.csv" % (self.Run_folder,node)
-            command = (
-                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s'
-                % (node, self.apptainer_command, self.Par_.num_cpus ,file,input_file,logfile, self.node_list[node]['entry_node_idx'], logfile_collectl)
-            )
-            try:
-                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-            except subprocess.CalledProcessError as e:
-                logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
-                return 'shutdown'
+            params = f"{input_file} {logfile} {self.node_list[node]['entry_node_idx']} {logfile_collectl}"
+            start_successfull = self.Slurm_starter.start_process("Entry",node,self.Par_.num_cpus, "16GB",file,params)
             time.sleep(1)
-            self.pids[node] = result
-            logger.status('start successful')
+            if not start_successfull:
+                logger.error(f'ERROR occurried in entry node: {node}. Shutdown flesnet')
+                return 'shutdown'
             node_cnt += 1
         return None
     
-    def kill_process(self, kill_node):
-        logger.info(f"Killing entry node: {kill_node}")
-        with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"Entry {kill_node}: kill")
-            f.flush()
-            os.fsync(f.fileno())
-        msg = ""
-        while msg != f"Entry {kill_node}: done killing":
-            try:
-                with open("tmp/nodes_response.txt", "r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Entry node: {kill_node} killed")
-                
     
-    #TODO: Tippfehler, es heisst revive
-    def revieve_process(self, revive_node):
-        logger.info(f"revive entry node: {revive_node}")
-        with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"Entry {revive_node}: revive")
-            f.flush()
-            os.fsync(f.fileno())
-        msg = ""
-        while msg != f"Entry {revive_node}: done reviving":
-            try:
-                with open("tmp/nodes_response.txt", "r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Entry node: {revive_node} revive")
-        
+    
+
+    def kill_process(self,kill_node):
+        logger.info(f"Killing entry node: {kill_node}")
+        if self.Slurm_starter.kill_process("Entry", kill_node):
+            logger.status(f"Entry node: {kill_node} killed")
+           
  
+    def revieve_process(self,revieve_node):
+        logger.info(f"revieve entry node: {revieve_node}")
+        if self.Slurm_starter.revieve_process("Entry", revieve_node):
+            logger.status(f"Entry node: {revieve_node} revieved")
     
     def stop_flesnet(self):
         for node in self.node_list.keys():
             logger.info(f"stopping entry node: {node}")
-            with open("tmp/central_manager.txt", "w") as f:
-                f.write(f"Entry {node}: stop")
-                f.flush()
-                os.fsync(f.fileno())
-            stdout, stderr = self.pids[node].communicate()
-            logger.debug(f"Output from entry node: {node} \n {stdout}")
-            logger.debug(f"Error from entry node: {node} \n {stderr}")
-    
+            stdout,stderr = self.Slurm_starter.stop_process("Entry", node, False)
+            if stdout != "":
+                logger.debug(f"Output from entry node: {node} \n {stdout}")
+                logger.debug(f"Error from entry node: {node} \n {stderr}")
     

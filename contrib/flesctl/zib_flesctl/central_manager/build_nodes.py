@@ -18,7 +18,7 @@ from logging_lib.log_msg import *
 # =============================================================================
 class Build_nodes:
     
-    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, build_nodes_ips, build_nodes_eth_ips,parameters, Run_folder):
+    def __init__(self,node_list,entry_nodes_ips,entry_nodes_eth_ips, build_nodes_ips, build_nodes_eth_ips,parameters, Run_folder, Slurm_starter):
         super().__init__()
         self.node_list = node_list
         #self.num_build_nodes = num_build_nodes
@@ -30,6 +30,7 @@ class Build_nodes:
         #self.central_manager_eth_ips = central_ma´nager_eth_ips
         self.Par_ = parameters
         self.Run_folder = Run_folder 
+        self.Slurm_starter = Slurm_starter
         self.pids = {}
         if self.Par_.use_apptainer:
             self.apptainer_command = f"--export=https_proxy,http_proxy,SSL_CERT_FILE,CURL_CA_BUNDLE --singularity-container={self.Par_.apptainer_file}"
@@ -80,74 +81,30 @@ class Build_nodes:
             else:
                 logfile_tf = '%s/logs/flesnet/tsclient/sender_node_%s.log' % (self.Run_folder,node)
             logfile_collectl = '%s/logs/collectl/build_nodes/build_node_%s.csv' % (self.Run_folder,node)
-            command = (
-                'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s'
-                % (node, self.apptainer_command, self.Par_.num_cpus ,file,logfile, self.node_list[node]['build_node_idx'], logfile_collectl, logfile_tf)
-            )
-            try:
-                result = subprocess.Popen(command, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) 
-            except subprocess.CalledProcessError as e:
-                logger.error(f'ERROR {e} occurried in entry node: {node}. Shutdown flesnet')
+            params = f"{logfile} {self.node_list[node]['build_node_idx']} {logfile_collectl} {logfile_tf}"
+            start_successfull = self.Slurm_starter.start_process("Build",node,self.Par_.num_cpus,"16GB", file, params)
+            if not start_successfull:
+                logger.error(f'ERROR occurried in build node: {node}. Shutdown flesnet')
                 return 'shutdown'
             time.sleep(1)
-            self.pids[node] = result
-            logger.status('start successful')
             node_cnt += 1
         return None
 
-    def kill_process(self, kill_node):
+
+    def kill_process(self,kill_node):
         logger.info(f"Killing build node: {kill_node}")
-        with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"Build {kill_node}: kill")
-            f.flush()
-            os.fsync(f.fileno())
-        msg = ""
-        while msg != f"Build {kill_node}: done killing":
-            try:
-                with open("tmp/nodes_response.txt", "r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"Build node: {kill_node} killed")
-
+        if self.Slurm_starter.kill_process("Build",kill_node):
+            logger.status(f"Build node: {kill_node} killed")
         
-    #TODO: Tippfehler, es heisst revive
-    def revieve_process(self, revive_node):
-        logger.info(f"revive build node: {revive_node}")
-        with open("tmp/central_manager.txt", "w") as f:
-            f.write(f"Build {revive_node}: revive")
-            f.flush()
-            os.fsync(f.fileno())
-        msg = ""
-        while msg != f"Build {revive_node}: done reviving":
-            try:
-                with open("tmp/nodes_response.txt", "r") as f:
-                    msg = f.read().strip()
-            except FileNotFoundError:
-                msg = ""
-            time.sleep(0.5)
-        logger.status(f"build node: {revive_node} revive") 
-
-
-    def stop_flesnet(self):
-        for node in self.node_list.keys():
+    def revieve_process(self,revieve_node):
+        logger.info(f"revieve build node: {revieve_node}")
+        if self.Slurm_starter.revieve_process("Build", revieve_node):
+            logger.status(f"build node: {revieve_node} revieve") 
             
-            if self.Par_.ZIB_timesliceforwarding:
-                with open("tmp/central_manager.txt", "w") as f:
-                    f.write(f"TF Input {node}: stop")
-                    f.flush()
-                    os.fsync(f.fileno())
-                    f.close()
-            time.sleep(1)
+    def stop_flesnet(self):
+        for node in self.node_list:
             logger.info(f"stopping build node: {node}")
-            with open("tmp/central_manager.txt", "w") as f:
-                f.write(f"Build {node}: stop")
-                f.flush()
-                os.fsync(f.fileno())
-                f.close()
-
-            stdout, stderr = self.pids[node].communicate()
-            logger.debug(f"Output from build node: {node} \n {stdout}")
-            logger.debug(f"Error from build node: {node} \n {stderr}")
-    
+            stdout,stderr = self.Slurm_starter.stop_process("Build", node, False)
+            if stdout != "":
+                logger.debug(f"Output from build node: {node} \n {stdout}")
+                logger.debug(f"Error from build node: {node} \n {stderr}")

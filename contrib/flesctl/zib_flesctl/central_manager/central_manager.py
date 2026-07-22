@@ -19,9 +19,10 @@ from central_manager import entry_nodes as en
 from central_manager import build_nodes as b
 from central_manager import Timeslice_forwarding as T
 from central_manager import ZIB_Timeslice_forwarding as ZIB_T
+import central_manager.Slurm_starter as ss
 import random
 import numpy as np
-
+import traceback
 # =============================================================================
 # This file deals with scheduling the nodes and starting the import processes.
 # It deals with starting an experiment and clean up after the end of the experiment
@@ -89,18 +90,21 @@ class execution:
         self.build_nodes_eth_ips = ""
         self.central_manager_eth_ips = ""
         self.get_eth_ips()
+        self.Slurm_starter = ss.Slurm_starter(["Entry", "Build", "Sender", "Receiver", "TF_Input", "TF_Output", "TF_Central_Manager"]) 
         if self.Par_.activate_timesliceforwarding:
             self.rec2build = []
             #self.assemble_receiving_nodes2build_nodes()
             self.assemble_GSI_timeslice_forwarding_nodes()
         if self.Par_.use_flesnet:
-            self.entry_nodes_cls = en.Entry_nodes(self.entry_nodes, self.entry_nodes_ips, self.entry_nodes_eth_ips ,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_, self.Run_folder)
-            self.build_nodes_cls = b.Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,self.build_nodes_eth_ips, self.Par_, self.Run_folder)
+            self.entry_nodes_cls = en.Entry_nodes(self.entry_nodes, self.entry_nodes_ips, self.entry_nodes_eth_ips ,self.build_nodes_ips,
+                                                  self.build_nodes_eth_ips, self.Par_, self.Run_folder, self.Slurm_starter)
+            self.build_nodes_cls = b.Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,
+                                                 self.build_nodes_eth_ips, self.Par_, self.Run_folder, self.Slurm_starter)
         if self.Par_.ZIB_timesliceforwarding:
             self.ZIB_timeslice_forwarding_cls = ZIB_T.Timeslice_forwarding_ZIB(self.central_manager, self.central_manager_ips, self.central_manager_eth_ips, 
-                                                                        self.output_nodes, self.input_nodes, self.Par_, self.Run_folder)
+                                                                        self.output_nodes, self.input_nodes, self.Par_, self.Run_folder, self.Slurm_starter)
         if self.Par_.activate_timesliceforwarding:
-            self.timeslice_forwarding_cls = T.Timeslice_forwarding(self.sender_nodes, self.receiver_nodes, self.Par_, self.Run_folder)
+            self.timeslice_forwarding_cls = T.Timeslice_forwarding(self.sender_nodes, self.receiver_nodes, self.Par_, self.Run_folder, self.Slurm_starter)
             
             
     # =============================================================================
@@ -688,6 +692,7 @@ class execution:
                 self.robustness_test()
             except Exception as e:
                 logger.critical(f'Error {e} occured during robustness test V2. Terminating')
+                logger.debug(f'expanded debug message: {traceback.format_exc()}')
                 self.stop_program()
                 sys.exit(1)
         while True:
@@ -734,7 +739,7 @@ class execution:
         weights = [max(len(alive_dict[k]) - custom_adjustments.get(k, 0), 0) for k in alive_dict]
         keys = list(alive_dict.keys())
         if all(w == 0 for w in weights):
-            alive_dict, dead_dict = self.revieve_nodes_fct_V2(alive_dict, dead_dict)
+            alive_dict, dead_dict = self.revieve_nodes_fct(alive_dict, dead_dict)
             return alive_dict,dead_dict
         Node_type = random.choices(keys, weights=weights, k=1)[0]
         to_kill_node = random.choice(list(alive_dict[Node_type].keys()))
@@ -769,17 +774,22 @@ class execution:
         }
         weights = []
         keys = []
+        print('dead dict: ',dead_dict)
+        print('custom adjustments: ',custom_adjustments)
         for k, (min_needed, _) in custom_adjustments.items():
             subdict = alive_dict.get(k, {})
-            if not subdict:
-                continue  # skip empty subdicts, weight = 0
+
             
             current_alive = len(subdict)
-            if current_alive >= min_needed and dead_dict.get(k):
+            print('current_alive: ', current_alive)
+            if dead_dict.get(k):
+                print('test123')
                 # The closer to the minimum, the higher the weight
                 weight = 1 / (current_alive - min_needed + 1)
                 weights.append(weight)
                 keys.append(k)
+                print(k)
+        print(keys)
         if not keys:
             alive_dict,dead_dict = self.kill_nodes_fct(alive_dict, dead_dict)
             return alive_dict,dead_dict
