@@ -79,7 +79,7 @@ class Entry_nodes:
                 logger.info(f'start entry node: {node} with pattern generator')
             logfile = "%s/logs/flesnet/entry_nodes/entry_node_%s.log" % (self.Run_folder,node)
             logfile_collectl = "%s/logs/collectl/entry_nodes/entry_node_%s.csv" % (self.Run_folder,node)
-            params = f"{input_file} {logfile} {self.node_list[node]['entry_node_idx']} {logfile_collectl}"
+            params = f"\"{input_file}\" {logfile} {self.node_list[node]['entry_node_idx']} {logfile_collectl}"
             start_successfull = self.Slurm_starter.start_process("Entry",node,self.Par_.num_cpus, "16GB",file,params)
             time.sleep(1)
             if not start_successfull:

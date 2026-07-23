@@ -170,7 +170,7 @@ class Timeslice_forwarding_ZIB:
                 ip = self.input_nodes[node]['inf_ip']
             else:
                 ip = self.input_nodes[node]['eth_ip']
-            params = f"{input_file} {logfile} {self.input_nodes[node]['input_node_idx']} {ip} {logfile_collectl} {logfile_tsclient}"
+            params = f"\"{input_file}\" {logfile} {self.input_nodes[node]['input_node_idx']} {ip} {logfile_collectl} {logfile_tsclient}"
             start_successfull = self.Slurm_starter.start_process("TF_Input", node, self.Par_.num_cpus, "16GB", file, params)
             if not start_successfull:
                 logger.error(f'ERROR occurried in tf input node: {node}. Shutdown flesnet')
