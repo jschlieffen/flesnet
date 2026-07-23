@@ -530,20 +530,36 @@ class params_checker:
                 self.exit_program()
             else:
                 for elem in self.Par_.input_files:
-                    if not os.path.isfile(elem[1]):
-                        logger.critical(f'File {elem[1]} does not exist')
+                    pattern = elem[1]
+                    matches = glob.glob(pattern)
+                
+                    if not matches:
+                        logger.critical(f'No files match pattern: {pattern}')
                         self.exit_program()
+                
+                    # Optionally ensure all matches are files
+                    for match in matches:
+                        if not os.path.isfile(match):
+                            logger.critical(f'{match} is not a file')
+                            self.exit_program()
         if not self.Par_.use_flesnet:
             if not self.Par_.input_tsa_files:
                 logger.critical('no .tsa input file for the tsclient to read from')
                 self.exit_program()
             else:
                 for elem in self.Par_.input_tsa_files:
-                    matches = glob.glob(elem[1])
-            
+                    pattern = elem[1]
+                    matches = glob.glob(pattern)
+                
                     if not matches:
-                        logger.critical(f'No files found for {elem[1]}')
+                        logger.critical(f'No files match pattern: {pattern}')
                         self.exit_program()
+                
+                    # Optionally ensure all matches are files
+                    for match in matches:
+                        if not os.path.isfile(match):
+                            logger.critical(f'{match} is not a file')
+                            self.exit_program()
                         
                         
     def check_program_exists(self):
