@@ -10,6 +10,7 @@ import curses
 import curses.textpad
 
 import button as bu
+import nodes_info as ni
 
 def init_color_pairs():
     curses.use_default_colors()
@@ -42,84 +43,6 @@ def init_color_pairs():
         -1
     )
 
-
-def detail_window(stdscr, index):
-    switch_on = False
-
-    while True:
-        stdscr.clear()
-
-        h, w = stdscr.getmaxyx()
-
-        # Number display
-        text = f"Button {index}"
-
-        stdscr.addstr(
-            h // 2 - 3,
-            (w - len(text)) // 2,
-            text
-        )
-
-        # ON/OFF switch
-        sy = h // 2 - 1
-        sx = (w - 7) // 2
-
-        by, bx, bw = bu.button(
-            stdscr,
-            sy,
-            sx,
-            switch_on
-        )
-
-        # Return button
-        return_text = "[ Return ]"
-
-        ry = h // 2 + 3
-        rx = (w - len(return_text)) // 2
-
-        stdscr.attron(curses.color_pair(1))
-        stdscr.addstr(
-            ry,
-            rx,
-            return_text
-        )
-        stdscr.attroff(curses.color_pair(1))
-
-        # Frame
-        bu.draw_frame(
-            stdscr,
-            h // 2 - 5,
-            (w // 2) - 15,
-            h // 2 + 5,
-            (w // 2) + 15
-        )
-
-        stdscr.refresh()
-
-        key = stdscr.getch()
-
-        if key == curses.KEY_MOUSE:
-            try:
-                _, mx, my, _, state = curses.getmouse()
-
-                if state & curses.BUTTON1_CLICKED:
-
-                    # Toggle switch
-                    if (
-                        my == by
-                        and bx <= mx < bx + bw
-                    ):
-                        switch_on = not switch_on
-
-                    # Return
-                    elif (
-                        my == ry
-                        and rx <= mx < rx + len(return_text)
-                    ):
-                        return
-
-            except curses.error:
-                pass
 
 
 def main(stdscr):
@@ -225,8 +148,9 @@ def main(stdscr):
                         ):
                             button_states[index] = not button_states[index]
 
-                            detail_window(
+                            ni.nodes_info(
                                 stdscr,
+                                "Sender",
                                 index
                             )
 

@@ -54,7 +54,7 @@ def calc_str(ip, entry_nodes_ip ,num_entry_nodes, use_pattern_gen,mean,size_var,
     return ip_string, shm_string
 
 def start_mstool(path,dmsa_file, entry_node_idx, D_flag, mstool_communicater):
-    mstool_commands = '%s./mstool -i %s -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
+    mstool_commands = '%s./mstool -i \"%s\" -O fles_in_e%s %s > /dev/null 2>&1 &' % (path,dmsa_file, str(entry_node_idx), D_flag)
     result_mstool = subprocess.Popen(mstool_commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     while True:
         msg = mstool_communicater.get()

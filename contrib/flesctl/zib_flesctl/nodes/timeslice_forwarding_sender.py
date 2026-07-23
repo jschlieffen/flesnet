@@ -48,7 +48,7 @@ def start_tsclient(path,input_file,input_node_idx, logfile_tsclient, use_dtsa_fi
         os.environ['CBM_INFLUX_TOKEN'] = influx_token
         grafana_string = '--monitor influx2:%s:tsclient_status:' % (influx_node_ip)
     
-    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:{input_file} -o shm:fles_out_b{input_node_idx}?n={num_components}\\&descsize={desc_size}\\&datasize={data_size} {dtsa_command} {grafana_string}"
+    tsclient_command = f"{path}./tsclient -L {logfile_tsclient} -i file:\"{input_file}\" -o shm:fles_out_b{input_node_idx}?n={num_components}\\&descsize={desc_size}\\&datasize={data_size} {dtsa_command} {grafana_string}"
     print(tsclient_command)
     result_tsclient = subprocess.Popen(tsclient_command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     while True:
