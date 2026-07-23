@@ -21,15 +21,30 @@ IF (DATA_FORWARDER_INSTALL_PATH)
 ELSE ()
     message("Pulling data forwarder lib from git")
     set(DATA_FORWARDER_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/data_forwarder_lib_build/install_dir")
-    ExternalProject_Add(data_forwarder_lib
-        GIT_REPOSITORY https://git.zib.de/ngreve/data_forwarder.git
-        GIT_TAG dev
-        CMAKE_ARGS
-            -DLIBFABRIC_INSTALL_PATH=${LIBFABRIC_INSTALL_DIR}
-            -DCMAKE_INSTALL_PREFIX=${DATA_FORWARDER_INSTALL_DIR}
-        UPDATE_DISCONNECTED 1
-        BUILD_IN_SOURCE 1
-    )
+    IF (DEFINED ENV{SIMPATH})
+        ExternalProject_Add(data_forwarder_lib
+            GIT_REPOSITORY https://git.zib.de/ngreve/data_forwarder.git
+            GIT_TAG dev
+            CMAKE_ARGS
+                -DLIBFABRIC_INSTALL_PATH=${LIBFABRIC_INSTALL_DIR}
+                -DCMAKE_INSTALL_PREFIX=${DATA_FORWARDER_INSTALL_DIR}
+                -DBoost_NO_SYSTEM_PATHS=True
+                -DBoost_ROOT=$ENV{SIMPATH}
+                -DCMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}
+            UPDATE_DISCONNECTED 1
+            BUILD_IN_SOURCE 1
+        )
+    ELSE()
+        ExternalProject_Add(data_forwarder_lib
+            GIT_REPOSITORY https://git.zib.de/ngreve/data_forwarder.git
+            GIT_TAG dev
+            CMAKE_ARGS
+                -DLIBFABRIC_INSTALL_PATH=${LIBFABRIC_INSTALL_DIR}
+                -DCMAKE_INSTALL_PREFIX=${DATA_FORWARDER_INSTALL_DIR}
+            UPDATE_DISCONNECTED 1
+            BUILD_IN_SOURCE 1
+        )
+    ENDIF()
     add_dependencies(data_forwarder_lib libfabric)
     add_dependencies(timeslice_forwarder data_forwarder_lib)
 ENDIF()
@@ -38,12 +53,13 @@ set(DATA_FORWARDER_INCLUDE_DIR "${DATA_FORWARDER_INSTALL_DIR}/include")
 set(DATA_FORWARDER_LIB_DIR     "${DATA_FORWARDER_INSTALL_DIR}/lib")
 set(DATA_FORWARDER_LIBRARY "${DATA_FORWARDER_LIB_DIR}/libdata_forwarder.a")
 
-find_package(Boost 1.74.0 REQUIRED CONFIG COMPONENTS serialization program_options graph iostreams)
+target_compile_definitions(timeslice_forwarder PUBLIC BOOST_ALL_DYN_LINK)
 target_include_directories(timeslice_forwarder PRIVATE
     ./include
     ${LIBFABRIC_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/config
     ${DATA_FORWARDER_INCLUDE_DIR}
+    ${Boost_INCLUDE_DIRS}
 )
 
 target_link_libraries(timeslice_forwarder PRIVATE
