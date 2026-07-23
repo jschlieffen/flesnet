@@ -127,7 +127,7 @@ class Timeslice_forwarding:
                 'srun --nodelist=%s %s --exclusive -N 1 -c %s %s %s %s %s %s %s %s' 
                 % (node_id, self.apptainer_command,self.Par_.num_cpus, file, input_file, logfile, node_cnt, logfile_collectl, node_ip, logfile_tsclient)
             )
-            params = f"{input_file} {logfile} {node_cnt} {logfile_collectl} {node_ip} {logfile_tsclient}"
+            params = f"\"{input_file}\"{logfile} {node_cnt} {logfile_collectl} {node_ip} {logfile_tsclient}"
             start_successfull = self.Slurm_starter.start_process("Sender",node_id,self.Par_.num_cpus,"16GB",file,params)
             time.sleep(1)
             if not start_successfull:
