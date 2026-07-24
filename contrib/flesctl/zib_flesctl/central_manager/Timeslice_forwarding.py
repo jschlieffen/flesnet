@@ -97,7 +97,7 @@ class Timeslice_forwarding:
                 % (node_id, self.apptainer_command, self.Par_.num_cpus ,file,logfile, sender_node_ip, logfile_collectl)
             )
             params = f"{logfile} {sender_node_ip} {logfile_collectl}"
-            start_successfull = self.Slurm_starter.start_process("Receiver", node_id, self.Par_.num_cpus, "16GB", file, params)
+            start_successfull = self.Slurm_starter.start_process("Receiver", node_id, self.Par_.num_cpus, "64GB", file, params)
             time.sleep(1)
             if not start_successfull:
                 logger.error(f'ERROR occurried in Sender node: {node}. Shutdown flesnet')
@@ -128,7 +128,7 @@ class Timeslice_forwarding:
                 % (node_id, self.apptainer_command,self.Par_.num_cpus, file, input_file, logfile, node_cnt, logfile_collectl, node_ip, logfile_tsclient)
             )
             params = f"\"{input_file}\" {logfile} {node_cnt} {logfile_collectl} {node_ip} {logfile_tsclient}"
-            start_successfull = self.Slurm_starter.start_process("Sender",node_id,self.Par_.num_cpus,"16GB",file,params)
+            start_successfull = self.Slurm_starter.start_process("Sender",node_id,self.Par_.num_cpus,"64GB",file,params)
             time.sleep(1)
             if not start_successfull:
                 logger.error(f'ERROR occurried in Receiver node: {node}. Shutdown flesnet')

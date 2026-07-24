@@ -10,3 +10,5 @@ tmp
 monitoring/debug.log
 monitoring/monitoring.log 
 monitoring/mon_parameters.txt
+interface/
+start.py

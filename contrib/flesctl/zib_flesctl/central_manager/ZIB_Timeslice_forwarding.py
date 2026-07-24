@@ -120,7 +120,7 @@ class Timeslice_forwarding_ZIB:
             logfile = "%s/logs/timeslice_forwarding/central_manager/central_manager_%s.log" % (self.Run_folder,node)
             logfile_collectl = "%s/logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % (self.Run_folder,node)
             params = f"{logfile} {logfile_collectl}"
-            start_successfull = self.Slurm_starter.start_process("TF_Central_Manager", node, self.Par_.num_cpus, "16GB", file, params)
+            start_successfull = self.Slurm_starter.start_process("TF_Central_Manager", node, self.Par_.num_cpus, "64GB", file, params)
             if not start_successfull:
                 logger.error(f'ERROR occurried in central manager: {node}. Shutdown flesnet')
                 return 'shutdown'
@@ -144,7 +144,7 @@ class Timeslice_forwarding_ZIB:
             else:
                 ip = self.output_nodes[node]['eth_ip']
             params = f"{logfile} {self.output_nodes[node]['output_node_idx']} {ip} {logfile_collectl} {logfile_tsclient}"
-            start_successfull = self.Slurm_starter.start_process("TF_Output", node, self.Par_.num_cpus, "16GB", file, params)
+            start_successfull = self.Slurm_starter.start_process("TF_Output", node, self.Par_.num_cpus, "64GB", file, params)
             if not start_successfull:
                 logger.error(f'ERROR occurried in tf output node: {node}. Shutdown flesnet')
                 return 'shutdown'
@@ -171,7 +171,7 @@ class Timeslice_forwarding_ZIB:
             else:
                 ip = self.input_nodes[node]['eth_ip']
             params = f"\"{input_file}\" {logfile} {self.input_nodes[node]['input_node_idx']} {ip} {logfile_collectl} {logfile_tsclient}"
-            start_successfull = self.Slurm_starter.start_process("TF_Input", node, self.Par_.num_cpus, "16GB", file, params)
+            start_successfull = self.Slurm_starter.start_process("TF_Input", node, self.Par_.num_cpus, "64GB", file, params)
             if not start_successfull:
                 logger.error(f'ERROR occurried in tf input node: {node}. Shutdown flesnet')
                 return 'shutdown'

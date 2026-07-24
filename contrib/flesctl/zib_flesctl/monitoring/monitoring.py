@@ -223,6 +223,8 @@ def strip_and_translate_ansi_escape_sequences(text):
 # =============================================================================
 # initialization of all ncurses colours. Maximum is 256
 # =============================================================================
+
+
 def init_color_pairs():
     curses.use_default_colors()
     for i in range(0, curses.COLORS):
