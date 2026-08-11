@@ -72,16 +72,6 @@ class Logfile:
                     entry_node_idx = val['entry_node_idx']
                     build_node_idx = val['build_node_idx']
                     file.write(f'   {key} with entry node index {entry_node_idx} and build node index {build_node_idx} \n')
-            if self.entry_nodes_list:
-                file.write('Entry nodes: \n')
-                for key,val in self.entry_nodes_list.items():
-                    idx = val['entry_node_idx']
-                    file.write(f'    {key} as index {idx}\n')
-            if self.build_nodes_list:
-                file.write('Build nodes: \n')
-                for key,val in self.build_nodes_list.items():
-                    idx = val['build_node_idx']
-                    file.write(f'   {key} as index {idx} \n')
             if self.sender_node_list:
                 file.write('Sender nodes: \n')
                 for key,val in self.sender_node_list.items():

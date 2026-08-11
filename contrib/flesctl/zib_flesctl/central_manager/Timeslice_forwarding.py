@@ -155,13 +155,8 @@ class Timeslice_forwarding:
         
         for node in self.sender.keys():
             logger.info(f"stopping Sender: {node}")
-            if self.Par_.use_flesnet:
-                stdout,stderr = self.Slurm_starter.stop_process(node, True)
-                if stdout == "1":
-                    logger.debug(f"Sender: {node} stopped. See build nodes for output")
-            else:
-                stdout,stderr = self.Slurm_starter.stop_process(node, False)
-                if stdout != "":
-                    logger.debug(f"Output from Sender node: {node} \n {stdout}")
-                    logger.debug(f"Error from Sender node: {node} \n {stderr}")
-            
+            stdout,stderr = self.Slurm_starter.stop_process(node, False)
+            if stdout != "":
+                logger.debug(f"Output from Sender node: {node} \n {stdout}")
+                logger.debug(f"Error from Sender node: {node} \n {stderr}")
+        

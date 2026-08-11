@@ -1,8 +1,6 @@
 #!/bin/bash
 
 function set_general_params(){
-    ENTRY_NODES_CNT=$(grep -E '^entry_nodes=' setup/config.cfg | cut -d'=' -f2)
-    PROCESSING_NODES_CNT=$(grep -E '^build_nodes=' setup/config.cfg | cut -d'=' -f2)
     RECEIVER_NODES_CNT=$(grep -E '^receiver_nodes=' setup/config.cfg | cut -d'=' -f2)
     TIME=$(grep -E '^time=' setup/config.cfg | cut -d'=' -f2)
     SET_NODE_LIST=$(grep -E '^set_node_list=' setup/config.cfg | cut -d'=' -f2)
@@ -13,23 +11,13 @@ function set_general_params(){
     CENTRAL_MANAGER_CNT=$(grep -E '^central_manager=' setup/config.cfg | cut -d'=' -f2)
     INPUT_NODES_CNT=$(grep -E '^input_nodes=' setup/config.cfg | cut -d'=' -f2)
     OUTPUT_NODES_CNT=$(grep -E '^output_nodes=' setup/config.cfg | cut -d'=' -f2)
-    USE_FLESNET=$(grep -E '^use_flesnet=' setup/config.cfg | cut -d'=' -f2)
     USE_FLESCLUSTER=$(grep "^use_flescluster" setup/config.cfg | cut -d'=' -f2)
     IS_FLESCLUSTER=$(grep "^is_flescluster" setup/config.cfg | cut -d'=' -f2)
-    USE_INPUT_NODES=$(( !USE_FLESNET && ( !USE_FLESCLUSTER || IS_FLESCLUSTER ) ))
+    USE_INPUT_NODES=$(( ( !USE_FLESCLUSTER || IS_FLESCLUSTER ) ))
     USE_OUTPUT_NODES=$(( !USE_FLESCLUSTER || !IS_FLESCLUSTER ))
     NODES=0
-    if [ "$USE_FLESNET" -eq 1 ]; then
-
-        ((NODES=NODES+ENTRY_NODES_CNT+PROCESSING_NODES_CNT))
-
-    fi
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
-        if [ "$USE_FLESNET" -eq 1 ]; then
-            ((NODES=NODES+PROCESSING_NODES_CNT))
-        else
-            ((NODES=2*RECEIVER_NODES_CNT))
-        fi
+        ((NODES=2*RECEIVER_NODES_CNT))
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
         if (( !$USE_INPUT_NODES )); then
             INPUT_NODES_CNT=0
@@ -44,17 +32,12 @@ function set_general_params(){
 
 
 function set_node_list() {
-    ENTRY_NODES_LIST=$(grep "^entry_nodes_list" setup/config.cfg | cut -d'=' -f2)
-    BUILD_NODES_LIST=$(grep "^build_nodes_list" setup/config.cfg | cut -d'=' -f2)
     PROCESS_NODES_LIST=$(grep "^process_nodes_list" setup/config.cfg | cut -d'=' -f2)
     CENTRAL_MANAGER_NODE_LIST=$(grep '^central_manager_node_list=' setup/config.cfg | cut -d'=' -f2)
     INPUT_NODE_LIST=$(grep '^input_node_list=' setup/config.cfg | cut -d'=' -f2)
     OUTPUT_NODE_LIST=$(grep '^output_node_list=' setup/config.cfg | cut -d'=' -f2)
     NODELIST=""
     NODELIST_COMMAND=""
-    if [ "$USE_FLESNET" -eq 1 ]; then
-        NODELIST="$ENTRY_NODES_LIST,$BUILD_NODES_LIST"
-    fi
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         NODELIST="$NODELIST,$PROCESS_NODES_LIST"
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
@@ -74,17 +57,12 @@ function set_node_list() {
 }
 
 set_exclude_node_list() {
-    EXCLUDE_ENTRY_NODES=$(grep "^exclude_entry_nodes" setup/config.cfg | cut -d'=' -f2)
-    EXCLUDE_BUILD_NODES=$(grep "^exclude_build_nodes" setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_PROCESS_NODES=$(grep "^exclude_process_nodes" setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_CENTRAL_MANAGER=$(grep "^exclude_central_manager" setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_INPUT_NODES=$(grep "^exclude_input_nodes" setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_OUTPUT_NODES=$(grep "^exclude_output_nodes" setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_NODE_LIST=""
     EXCLUDE_COMMAND=""
-    if [ "$USE_FLESNET" -eq 1 ]; then
-        EXCLUDE_NODE_LIST="$EXCLUDE_NODE_LIST,$EXCLUDE_ENTRY_NODES,$EXCLUDE_BUILD_NODES"
-    fi
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         EXCLUDE_NODE_LIST="$EXCLUDE_NODE_LIST,$EXCLUDE_PROCESS_NODES"
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then

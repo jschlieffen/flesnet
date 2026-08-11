@@ -123,7 +123,7 @@ protected:
 
   friend class StorableTimeslice;
   friend class ::ManagedTimesliceBuffer;
-
+  friend class TimesliceBuilder;
   /// The timeslice descriptor.
   TimesliceDescriptor timeslice_descriptor_{};
 
@@ -136,12 +136,8 @@ protected:
   /// timeslice component.
   std::vector<TimesliceComponentDescriptor*> desc_ptr_;
 
-protected:
-  Timeslice() = default;
 
-  friend class StorableTimeslice;
-  friend class ::ManagedTimesliceBuffer;
-  friend class TimesliceBuilder;
+  
 };
 
 } // namespace fles

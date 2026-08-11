@@ -15,8 +15,6 @@ import curses
 import signal
 from logging_lib.log_msg import *
 from logging_lib import logfile_gen as Logfile
-from central_manager import entry_nodes as en
-from central_manager import build_nodes as b
 from central_manager import Timeslice_forwarding as T
 from central_manager import ZIB_Timeslice_forwarding as ZIB_T
 import central_manager.Slurm_starter as ss
@@ -71,23 +69,15 @@ class execution:
     def __init__(self, parameters, Run_folder):
         self.Par_ = parameters
         self.Run_folder = Run_folder
-        self.entry_nodes = {}
-        self.build_nodes = {} 
         self.sender_nodes = {}
         self.receiver_nodes = {}
         self.central_manager = {}
         self.input_nodes = {}
         self.output_nodes = {}
-        if self.Par_.use_flesnet:
-            self.schedule_nodes()
         if self.Par_.ZIB_timesliceforwarding:
             self.assemble_timeslice_forwarding_nodes()
-        self.entry_nodes_ips = ""
-        self.build_nodes_ips = ""
         self.central_manager_ips = ""
         self.get_ips()
-        self.entry_nodes_eth_ips = ""
-        self.build_nodes_eth_ips = ""
         self.central_manager_eth_ips = ""
         self.get_eth_ips()
         self.Slurm_starter = ss.Slurm_starter() 
@@ -95,11 +85,6 @@ class execution:
             self.rec2build = []
             #self.assemble_receiving_nodes2build_nodes()
             self.assemble_GSI_timeslice_forwarding_nodes()
-        if self.Par_.use_flesnet:
-            self.entry_nodes_cls = en.Entry_nodes(self.entry_nodes, self.entry_nodes_ips, self.entry_nodes_eth_ips ,self.build_nodes_ips,
-                                                  self.build_nodes_eth_ips, self.Par_, self.Run_folder, self.Slurm_starter)
-            self.build_nodes_cls = b.Build_nodes(self.build_nodes, self.entry_nodes_ips,self.entry_nodes_eth_ips,self.build_nodes_ips,
-                                                 self.build_nodes_eth_ips, self.Par_, self.Run_folder, self.Slurm_starter)
         if self.Par_.ZIB_timesliceforwarding:
             self.ZIB_timeslice_forwarding_cls = ZIB_T.Timeslice_forwarding_ZIB(self.central_manager, self.central_manager_ips, self.central_manager_eth_ips, 
                                                                         self.output_nodes, self.input_nodes, self.Par_, self.Run_folder, self.Slurm_starter)
@@ -231,150 +216,23 @@ class execution:
     # Note: They don't read it out the just forms the string
     # =============================================================================
     def get_eth_ips(self):
-        for key,val in self.entry_nodes.items():
-            self.entry_nodes_eth_ips += val['eth_ip'] + "sep"
-        for key,val in self.build_nodes.items():
-            self.build_nodes_eth_ips += val['eth_ip'] + "sep"
         for key, val in self.central_manager.items():
             self.central_manager_eth_ips += val['eth_ip']
         
     def get_ips(self):
-        for key,val in self.entry_nodes.items():
-            self.entry_nodes_ips += val['inf_ip'] + "sep"
-        for key,val in self.build_nodes.items():
-            self.build_nodes_ips += val['inf_ip'] + "sep"
         if self.Par_.use_flescluster and self.Par_.is_flescluster:
             self.central_manager_ips += self.Par_.cm_ip
         else:
             for key,val in self.central_manager.items():
                 self.central_manager_ips += val['inf_ip']
-            
-            
-    # =============================================================================
-    # This function divides the nodes into entry/build and if activated super nodes
-    # Furthermore the dict consisting the nodes also contains the index, of the nodes
-    # and their ips
-    # =============================================================================
-    def schedule_nodes(self):
-        node_list = self.get_node_list()
-        entry_nodes_cnt = 0
-        build_nodes_cnt = 0
-        if self.Par_.set_node_list == 1:
-            self.schedule_nodes_customized(node_list,entry_nodes_cnt, build_nodes_cnt)
-        else:
-            self.schedule_nodes_randomly(node_list,entry_nodes_cnt, build_nodes_cnt)
-        
-        Logfile.logfile.entry_nodes_list = self.entry_nodes
-        Logfile.logfile.build_nodes_list = self.build_nodes
-        #if self.activate_timesliceforwarding:
-            
-    
-        
-    # =============================================================================
-    # Help function for schedule nodes. Used if the user does not want to set the 
-    # entry and build nodes or the given entry and build nodes does not suffices
-    # to get the given number of entry and build nodes
-    # =============================================================================
-    def schedule_nodes_randomly(self,node_list,entry_nodes_cnt, build_nodes_cnt):
-        if self.Par_.set_node_list:
-            if self.Par_.activate_timesliceforwarding:
-                Timeslice_forwarding_nodes = self.Par_.process_nodes_list
-            elif self.Par_.ZIB_timesliceforwarding:
-                Timeslice_forwarding_nodes = self.Par_.input_node_list + self.Par_.central_manager_list + self.Par_.output_node_list
-            else:
-                Timeslice_forwarding_nodes = []
-        else:
-            Timeslice_forwarding_nodes = []
-        if len(node_list) < (self.Par_.num_entrynodes - entry_nodes_cnt) + (self.Par_.num_buildnodes - build_nodes_cnt):
-            logger.critical(f'Incorrect Number of nodes, expected: '
-                            f'{(self.Par_.num_entrynodes - entry_nodes_cnt) + (self.Par_.num_buildnodes - build_nodes_cnt)} '
-                            f', got: {len(node_list)} '
-                            )
-            sys.exit(1)
-        for node in node_list:
-            if node in Timeslice_forwarding_nodes:
-                continue
-            node_ip = infiniband_ip(node)
-            node_eth_ip = ethernet_ip(node)
-            #time.sleep(1)
-            if self.Par_.use_infiniband and node_ip is None:
-                logger.critical(f'node: {node} does not have infiniband')
-                sys.exit(1)
-            if entry_nodes_cnt < self.Par_.num_entrynodes and node not in self.Par_.exclude_entry_nodes:
-                self.entry_nodes[node] = {
-                    'node' : node,
-                    'entry_node_idx' : entry_nodes_cnt,
-                    'inf_ip' : node_ip,
-                    'eth_ip' : node_eth_ip}
-                entry_nodes_cnt += 1
-            elif build_nodes_cnt < self.Par_.num_buildnodes and node not in self.Par_.exclude_build_nodes:
-                self.build_nodes[node] = {
-                    'node' : node,
-                    'build_node_idx' : build_nodes_cnt,
-                    'inf_ip' : node_ip,
-                    'eth_ip' : node_eth_ip}
-                build_nodes_cnt += 1
-        if entry_nodes_cnt < self.Par_.num_entrynodes or build_nodes_cnt < self.Par_.num_buildnodes:
-            logger.critical(f'Could not assemble enough entry/build nodes: '
-                            f'Expected num. build nodes: {self.Par_.num_buildnodes} got: {build_nodes_cnt} '
-                            f'Expected num. entry nodes: {self.Par_.num_entrynodes} got : {entry_nodes_cnt} ' )
-            sys.exit(1)
-            
-            
-    # =============================================================================
-    # Help function for schedule nodes. Used if the user wants to set the
-    # entry nodes and build nodes manually
-    # =============================================================================
-    def schedule_nodes_customized(self,node_list,entry_nodes_cnt, build_nodes_cnt):
-        node_list_remaining = node_list[: ]
-
-        if len(node_list) < self.Par_.num_entrynodes + self.Par_.num_buildnodes:
-            logger.critical(f'Incorrect Number of nodes, expected: {self.Par_.num_entrynodes + self.Par_.num_buildnodes}, got: {len(node_list)} ')
-            sys.exit(1)
-        for node in node_list:
-            node_ip = infiniband_ip(node)
-            node_eth_ip = ethernet_ip(node)
-            #time.sleep(1)
-            if self.Par_.use_infiniband and node_ip is None:
-                logger.critical(f'node: {node} does not have infiniband')
-                sys.exit(1)
-            if node in self.Par_.entry_nodes_list and node not in self.Par_.exclude_entry_nodes:
-                self.entry_nodes[node] = {
-                    'node' : node,
-                    'entry_node_idx' : entry_nodes_cnt,
-                    'inf_ip' : node_ip,
-                    'eth_ip' : node_eth_ip}
-                entry_nodes_cnt += 1
-                node_list_remaining.remove(node)
-            elif node in self.Par_.build_nodes_list and node not in self.Par_.exclude_build_nodes:
-                self.build_nodes[node] = {
-                    'node' : node,
-                    'build_node_idx' : build_nodes_cnt,
-                    'inf_ip' : node_ip,
-                    'eth_ip' : node_eth_ip}
-                build_nodes_cnt += 1
-                node_list_remaining.remove(node)
-        if entry_nodes_cnt < self.Par_.num_entrynodes or build_nodes_cnt < self.Par_.num_buildnodes:
-            logger.warning(
-                f'The number of nodes assigned for the entry/build nodes does not match the number '
-                f'of entry/build nodes. Expected {self.Par_.num_entrynodes}, got {entry_nodes_cnt} for the ' 
-                f'entry nodes. Expected {self.Par_.num_buildnodes}, got {build_nodes_cnt} for the '
-                f'build nodes. Proceed by assembling the missing entry/build nodes randomly'
-            )
-            self.schedule_nodes_randomly(node_list_remaining, entry_nodes_cnt, build_nodes_cnt)
     
 
     def assemble_GSI_timeslice_forwarding_nodes(self):
         node_list = self.get_node_list()
-        unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes]
 
-        if self.Par_.use_flesnet:
-            self.sender_nodes = self.build_nodes 
-        else:
-             unused_nodes = self.assemble_GSI_timeslice_forwarding_sender_nodes(unused_nodes)   
+        unused_nodes = self.assemble_GSI_timeslice_forwarding_sender_nodes(node_list)   
         self.assemble_GSI_timeslice_forwarding_receiver_nodes(unused_nodes)
-        if not self.Par_.use_flesnet:
-            Logfile.logfile.sender_node_list = self.sender_nodes
+        Logfile.logfile.sender_node_list = self.sender_nodes
         Logfile.logfile.receiving_node_list = self.receiver_nodes
                     
     def assemble_GSI_timeslice_forwarding_sender_nodes(self,unused_nodes):
@@ -430,13 +288,8 @@ class execution:
                 if node not in self.Par_.process_nodes_list or node in self.Par_.exclude_process_nodes:
                     continue
                 idx = self.Par_.process_nodes_list.index(node)
-                if self.Par_.use_flesnet:    
-                    sender_node_id = self.Par_.build_nodes_list[idx]
-                    sender_node = self.sender_node_id[sender_node_id]
-                    used_build_nodes.append(node)
-                else:
-                    sender_node_id = self.sender_node_list[idx]
-                    sender_node = self.sender_node_id[sender_node_id]
+                sender_node_id = self.sender_node_list[idx]
+                sender_node = self.sender_node_id[sender_node_id]
                 self.receiver_nodes[node] = {
                         'node' : rec_node,
                         'sender_node' : node
@@ -536,7 +389,7 @@ class execution:
                     }
                 cm_nodes_cnt += 1
                 unused_nodes.remove(node)
-            elif input_nodes_cnt < self.Par_.num_input_nodes and not self.Par_.use_flesnet and node in self.Par_.input_node_list:
+            elif input_nodes_cnt < self.Par_.num_input_nodes and node in self.Par_.input_node_list:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)
                 #time.sleep(1)
@@ -579,9 +432,7 @@ class execution:
                 output_nodes_cnt = self.Par_.num_output_nodes
             else:
                 input_nodes_cnt = self.Par_.num_input_nodes
-        if self.Par_.use_flesnet:
-            self.input_nodes = self.build_nodes 
-        unused_nodes = [node for node in node_list if node not in self.entry_nodes and node not in self.build_nodes]
+        unused_nodes = [node for node in node_list]
         if self.Par_.set_node_list:
             unused_nodes,input_nodes_cnt,cm_nodes_cnt,output_nodes_cnt = self.assemble_timeslice_forwarding_nodes_customized(unused_nodes)
         for node in unused_nodes:
@@ -601,7 +452,7 @@ class execution:
                         'eth_ip' : node_eth_ip
                     }
                 cm_nodes_cnt += 1
-            elif input_nodes_cnt < self.Par_.num_input_nodes and not self.Par_.use_flesnet and node not in self.Par_.exclude_input_nodes: 
+            elif input_nodes_cnt < self.Par_.num_input_nodes and node not in self.Par_.exclude_input_nodes: 
                 self.input_nodes[node] = {
                         'node' : node,
                         'input_node_idx' : input_nodes_cnt,
@@ -629,45 +480,27 @@ class execution:
             res = self.timeslice_forwarding_cls.start_receivers()
             if res == 'shutdown':
                 self.shutdown()
-            if not self.Par_.use_flesnet:
-                res = self.timeslice_forwarding_cls.start_Senders()
-                if res == 'shutdown':
-                    self.shutdown()
-            else:
-                self.timeslice_forwarding_cls.write_Params_Sender()
+            res = self.timeslice_forwarding_cls.start_Senders()
+            if res == 'shutdown':
+                self.shutdown()
         elif self.Par_.ZIB_timesliceforwarding:
             res = self.ZIB_timeslice_forwarding_cls.start_cm()
 
             res = self.ZIB_timeslice_forwarding_cls.start_output_nodes()
-            if not self.Par_.use_flesnet:
-                res = self.ZIB_timeslice_forwarding_cls.start_input_nodes()
-            else:
-                self.ZIB_timeslice_forwarding_cls.write_params_input()
+            res = self.ZIB_timeslice_forwarding_cls.start_input_nodes()
             if res == 'shutdown':
                 self.shutdown()
-        if self.Par_.use_flesnet:
-            res = self.entry_nodes_cls.start_flesnet()
-            if res == 'shutdown':
-                self.shutdown()
-            else:    
-                res = self.build_nodes_cls.start_flesnet()
-                if res == 'shutdown':
-                    self.shutdown()
 
 
     def shutdown(self):
         if self.Par_.activate_timesliceforwarding:
             self.timeslice_forwarding_cls.stop_timeslice_forwarding()
-            if not self.Par_.use_flesnet:
-                self.timeslice_forwarding_cls.stop_timeslice_forwarding_sender()
+            self.timeslice_forwarding_cls.stop_timeslice_forwarding_sender()
         if self.Par_.ZIB_timesliceforawrding:
             self.ZIB_timeslice_forwarding_cls.start_cm()
             
             self.ZIB_timeslice_forwarding_cls.stop_output_nodes()
             self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
-        if self.Par_.use_flesnet:
-            self.entry_nodes_cls.stop_flesnet()
-            self.build_nodes_cls.stop_flesnet()
         sys.exit(1)
         
                 
@@ -702,9 +535,6 @@ class execution:
     def robustness_test(self):
         alive_dict = {}
         dead_dict = {}
-        if self.Par_.use_flesnet:
-            alive_dict['Entry nodes'] = (self.entry_nodes).copy()
-            alive_dict['Build nodes'] = (self.build_nodes).copy()
         
         if self.Par_.activate_timesliceforwarding:
             alive_dict['Sender nodes'] = self.sender_nodes.copy()
@@ -766,9 +596,9 @@ class execution:
         custom_adjustments = {
             'Entry nodes': (self.Par_.num_min_entry_nodes_alive,self.Par_.num_entrynodes),
             'Build nodes': (self.Par_.num_min_build_nodes_alive,self.Par_.num_buildnodes),
-            'Sender nodes': (self.Par_.num_min_sender_nodes_alive,self.Par_.num_receivers if not self.Par_.use_flesnet else self.Par_.num_buildnodes),
-            'Receiver nodes': (self.Par_.num_min_process_nodes_alive,self.Par_.num_receivers if not self.Par_.use_flesnet else self.Par_.num_buildnodes),
-            'Input nodes': (self.Par_.num_min_input_nodes_alive,self.Par_.num_input_nodes if not self.Par_.use_flesnet else self.Par_.num_buildnodes),
+            'Sender nodes': (self.Par_.num_min_sender_nodes_alive,self.Par_.num_receivers),
+            'Receiver nodes': (self.Par_.num_min_process_nodes_alive,self.Par_.num_receivers),
+            'Input nodes': (self.Par_.num_min_input_nodes_alive,self.Par_.num_input_nodes),
             'Central Manager': (self.Par_.num_min_central_manager_alive,self.Par_.num_central_manager),
             'Output nodes': (self.Par_.num_min_output_nodes_alive,self.Par_.num_output_nodes),
         }
@@ -815,24 +645,7 @@ class execution:
     
     # =============================================================================
     # Stops the experiment and kills every process connected    
-    # =============================================================================
-    def stop_program(self):
-        time.sleep(2)
-        logger.info('stopping flesnet')
-        total_data, avg_data_rate = 0,0
-        if self.Par_.use_flesnet:
-    
-            self.build_nodes_cls.stop_flesnet()
-            self.entry_nodes_cls.stop_flesnet()
-            if self.Par_.activate_timesliceforwarding:
-                self.timeslice_forwarding_cls.stop_timeslice_forwarding()
-            if self.Par_.show_total_data:
-                total_data, avg_data_rate = self.stop_monitoring()
-        else:
-            self.ZIB_timeslice_forwarding_cls.stop_central_manager()
-            self.ZIB_timeslice_forwarding_cls.stop_input_nodes()
-            self.ZIB_timeslice_forwarding_cls.stop_output_nodes()
-        return total_data, avg_data_rate
+    # ============================================================================
             
 
     def stop_program(self):
@@ -847,10 +660,6 @@ class execution:
         elif self.Par_.activate_timesliceforwarding:
             self.timeslice_forwarding_cls.stop_timeslice_forwarding()
             self.timeslice_forwarding_cls.stop_timeslice_forwarding_sender()
-        if self.Par_.use_flesnet:
-    
-            self.build_nodes_cls.stop_flesnet()
-            self.entry_nodes_cls.stop_flesnet()
         if self.Par_.show_total_data:
             total_data, avg_data_rate = self.stop_monitoring()
         return total_data, avg_data_rate
@@ -875,11 +684,10 @@ class execution:
         file_names = []
         nodes_cnt = {}
         with open('monitoring/mon_parameters.txt','w') as f:
-            f.write(f"use_flesnet: {self.Par_.use_flesnet}\n")
             f.write(f"use_GSI_TS_forwarding: {self.Par_.activate_timesliceforwarding}\n")
             f.write(f"use_ZIB_TS_forwarding: {self.Par_.ZIB_timesliceforwarding}\n")
-            f.write(f"num_entrynodes: {self.Par_.num_entrynodes}\n")
-            f.write(f"num_buildnodes: {self.Par_.num_buildnodes}\n")
+            f.write(f"num_entrynodes: 0\n")
+            f.write(f"num_buildnodes: 0\n")
             f.write(f"num_receivers: {self.Par_.num_receivers}\n")
             f.write(f"num_inputnodes: {self.Par_.num_input_nodes}\n")
             f.write(f"num_outputnodes: {self.Par_.num_output_nodes}\n")
@@ -888,8 +696,6 @@ class execution:
 
             
             f.close()
-        if self.Par_.use_flesnet:
-            self.get_monitoring_flesnet_parameters()
         if self.Par_.activate_timesliceforwarding:
             self.get_monitoring_GSI_TS_parameters()
         if self.Par_.ZIB_timesliceforwarding:
@@ -906,47 +712,22 @@ class execution:
         cmd = "monitoring/monitoring_launcher.sh"
         subprocess.run(['tmux', 'send-keys', '-t', session_name, cmd,'Enter'])   
             
-        
-    def get_monitoring_flesnet_parameters(self):
-        file_names = []
-        num_buildnodes = self.Par_.num_buildnodes
-        entry_nodes_cnt = 0
-        total_file_data = 0
-        for entry_node in self.entry_nodes.keys():
-            logfile = '../%s/logs/collectl/entry_nodes/entry_node_%s.csv' % (self.Run_folder,entry_node)
-            file_data = 0
-            file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == ('entry_node_' + str(entry_nodes_cnt))), None)
-            if file_data is None:
-                file_data = next((tup[2] for tup in self.Par_.input_files if tup[0] == 'e_default'), None)
-            
-            file_names.append((logfile,file_data))
-            entry_nodes_cnt += 1
-            total_file_data += file_data
-        if not self.Par_.show_only_entry_nodes:
-            for build_node in self.build_nodes.keys():
-                logfile = '../%s/logs/collectl/build_nodes/build_node_%s.csv' % (self.Run_folder, build_node)
-                file_data = total_file_data/num_buildnodes
-                file_names.append((logfile,file_data))
-        with open('monitoring/mon_parameters.txt', 'a') as f:
-            for logfile, file_data in file_names:
-                f.write(f"file_name: {logfile}, {file_data}\n")
                     
     def get_monitoring_GSI_TS_parameters(self):
         filenames = []
         sender_nodes_cnt = 0
         total_file_data = 0
         num_receivers_nodes = self.Par_.num_receivers
-        if not self.Par_.use_flesnet:
-            for sender_node in self.sender_nodes.keys():
-                logfile = '../%s/logs/collectl/tsclient/sender_node_%s.csv' % (self.Run_folder,sender_node)
-                file_data = 0
-                #file_data = next((tup))
-                file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(sender_nodes_cnt))), None)
-                if file_data is None:
-                    file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
-                filenames.append((logfile,file_data))
-                sender_nodes_cnt += 1
-                total_file_data += file_data
+        for sender_node in self.sender_nodes.keys():
+            logfile = '../%s/logs/collectl/tsclient/sender_node_%s.csv' % (self.Run_folder,sender_node)
+            file_data = 0
+            #file_data = next((tup))
+            file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(sender_nodes_cnt))), None)
+            if file_data is None:
+                file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
+            filenames.append((logfile,file_data))
+            sender_nodes_cnt += 1
+            total_file_data += file_data
         for receiver_node in self.receiver_nodes.keys():
             logfile = '../%s/logs/collectl/tsclient/receiving_node_%s.csv' % (self.Run_folder,receiver_node)
             filenames.append((logfile,total_file_data/num_receivers_nodes))
@@ -959,16 +740,15 @@ class execution:
         filenames = []
         input_nodes_cnt = 0
         total_file_data = 0
-        if not self.Par_.use_flesnet:
-            for input_node in self.input_nodes.keys():
-                logfile = "../%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,input_node)
-                file_data = 0
-                file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(input_nodes_cnt))), None)
-                if file_data is None:
-                    file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
-                filenames.append((logfile,file_data))
-                input_nodes_cnt += 1
-                total_file_data += file_data
+        for input_node in self.input_nodes.keys():
+            logfile = "../%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,input_node)
+            file_data = 0
+            file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(input_nodes_cnt))), None)
+            if file_data is None:
+                file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
+            filenames.append((logfile,file_data))
+            input_nodes_cnt += 1
+            total_file_data += file_data
         for output_node in self.output_nodes.keys():
             logfile = "../%s/logs/collectl/timeslice_forwarding/output_nodes/output_node_%s.csv" % (self.Run_folder,output_node)
             filenames.append((logfile,total_file_data/self.Par_.num_output_nodes))

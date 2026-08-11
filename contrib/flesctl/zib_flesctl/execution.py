@@ -61,9 +61,7 @@ class exec_:
         '''
         self.build_up_run_folders()
         self.execution_cls = cm.execution(self.Par_, self.Run_folder_name)
-        Logfile.logfile.transport_method = self.Par_.transport_method
         Logfile.logfile.infiniband_used = self.Par_.use_infiniband
-        Logfile.logfile.use_flesnet = self.Par_.use_flesnet
         Logfile.logfile.Par_ = self.Par_
         self.start_time = time.time()
         
@@ -102,14 +100,8 @@ class exec_:
         os.mkdir(f'Runs/{run_id}/logs/general')
         if self.Par_.use_collectl:
             os.mkdir(f'Runs/{run_id}/logs/collectl')
-        if self.Par_.use_flesnet or self.Par_.activate_timesliceforwarding:
+        if self.Par_.activate_timesliceforwarding:
             os.mkdir(f'Runs/{run_id}/logs/flesnet')
-            if self.Par_.use_flesnet:
-                os.mkdir(f'Runs/{run_id}/logs/flesnet/build_nodes')
-                os.mkdir(f'Runs/{run_id}/logs/flesnet/entry_nodes')
-                if self.Par_.use_collectl:
-                    os.mkdir(f'Runs/{run_id}/logs/collectl/build_nodes')
-                    os.mkdir(f'Runs/{run_id}/logs/collectl/entry_nodes')
             if self.Par_.activate_timesliceforwarding:
                 os.mkdir(f'Runs/{run_id}/logs/flesnet/tsclient')
                 if self.Par_.use_collectl:
@@ -156,18 +148,6 @@ class exec_:
         sys.exit(1)
         
     def clean_files(self):
-        with open("tmp/build_nodes_params.txt", "w") as f:
-            f.truncate(0)
-            f.close()
-        with open("tmp/entry_nodes_params.txt", "w") as f:
-            f.truncate(0)
-            f.close()
-        with open("tmp/super_nodes_params.txt", "w") as f:
-            f.truncate(0)
-            f.close()
-        with open("tmp/receiving_nodes_params.txt", "w") as f:
-            f.truncate(0)
-            f.close()
         for file in Path("tmp/communication").iterdir():
             if file.is_file():
                 file.unlink()

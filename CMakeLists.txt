@@ -303,15 +303,11 @@ if (BUILD_ARCHIVE_VALIDATOR)
 endif()
 
 add_subdirectory(app/tsclient)
-<<<<<<< HEAD
 add_subdirectory(app/dtsatool)
-add_subdirectory(app/flesnet)
-add_subdirectory(app/mstool_alloc)
-add_subdirectory(app/msa2dmsa)
+#add_subdirectory(app/mstool_alloc)
+#add_subdirectory(app/msa2dmsa)
 add_subdirectory(app/archive_validator)
 add_subdirectory(app/timeslice_forwarder)
-=======
->>>>>>> master
 if (USE_PDA AND PDA_FOUND)
   add_subdirectory(app/cri_tools)
   add_subdirectory(app/cri_cfg)

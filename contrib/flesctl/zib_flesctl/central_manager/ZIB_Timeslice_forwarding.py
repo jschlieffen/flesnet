@@ -192,15 +192,10 @@ class Timeslice_forwarding_ZIB:
     def stop_input_nodes(self):
         for node in self.input_nodes.keys():
             logger.info(f"stopping TF Input node: {node}")
-            if self.Par_.use_flesnet:
-                stdout,stderr = self.Slurm_starter.stop_process(node, True)
-                if stdout == "1":
-                    logger.debug(f"TF input node: {node} stopped. See build nodes for output")
-            else:
-                stdout,stderr = self.Slurm_starter.stop_process(node, False)
-                if stdout != "":
-                    logger.debug(f"Output from TF input node: {node} \n {stdout}")
-                    logger.debug(f"Error from TF input node: {node} \n {stderr}")
+            stdout,stderr = self.Slurm_starter.stop_process(node, False)
+            if stdout != "":
+                logger.debug(f"Output from TF input node: {node} \n {stdout}")
+                logger.debug(f"Error from TF input node: {node} \n {stderr}")
                     
     def stop_output_nodes(self):
         for node in self.output_nodes.keys():

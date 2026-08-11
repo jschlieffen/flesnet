@@ -31,8 +31,6 @@ class system_checker:
             ]
         self.required_files = [
                 '../central_manager/central_manager.py',
-                '../central_manager/entry_nodes.py',
-                '../central_manager/build_nodes.py',
                 '../central_manager/Timeslice_forwarding.py',
                 '../central_manager/ZIB_Timeslice_forwarding.py',
                 '../execution.py',
@@ -40,16 +38,9 @@ class system_checker:
                 '../logging_lib/logfile_gen.py',
                 '../logging_lib/log_msg.py',
                 '../monitoring/monitoring.py',
-                '../nodes/output.py',
                 'params.py',
-                '../nodes/super_nodes.py',
-                '../nodes/timeslice_forwarding.py'
             ]
         self.files_with_perm = [
-                ('../nodes/input.py',0o755),
-                ('../nodes/output.py',0o755),
-                ('../nodes/super_nodes.py', 0o755),
-                ('../nodes/timeslice_forwarding.py', 0o755)
             ]
         self.setup_ready = True
     

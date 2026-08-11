@@ -1,75 +1,16 @@
 #pragma once
 
-<<<<<<< HEAD
-=======
 #include "FragmentedTimesliceBuffer.hpp"
->>>>>>> 6e03f3e111f4fea1db2df2fdf4522c8023680292
 #include "ItemDistributor.hpp"
 #include "ManagedTimesliceBuffer.hpp"
 #include "Timeslice.hpp"
 #include "TimesliceReceiver.hpp"
-<<<<<<< HEAD
-#include "Tssink.hpp"
-#include "MyTimeslice.hpp"
-#include "FragmentedTimesliceBuffer.hpp"
-=======
 #include "TsfTimeslice.hpp"
->>>>>>> 6e03f3e111f4fea1db2df2fdf4522c8023680292
 
 #include <atomic>
 #include <cstdint>
 #include <memory>
 
-<<<<<<< HEAD
-#include <df/Utils/CallbackContainer.hpp>
-#include <df/BufferMap/BufferMap.hpp>
-#include <df/WorkerThread.hpp>
-#include <df/Connectors/ConnectorInterface.hpp>
-
-class TsclientWriter : public TsSink {
-private:
-    std::shared_ptr<BufferMap> buffer_map_ = nullptr;
-    std::unique_ptr<fles::Receiver<fles::Timeslice,fles::TimesliceView>> source_ = nullptr;
-    uint64_t buffer_size_ = 0;
-    std::shared_ptr<char> buffer_ = nullptr;
-    std::shared_ptr<ConnectorInterface> node_connector_ = nullptr;
-
-    // std::string shm_address_ = "";
-    std::unique_ptr<fles::Timeslice> last_timeslice_ = nullptr;
-    std::atomic_bool stop_ = false;
-    std::unique_ptr<MyTimesliceArchive> ts_sink_ = nullptr;
-    zmq::context_t zmq_context_{1};
-    std::shared_ptr<ManagedTimesliceBuffer> managed_timeslice_buffer = nullptr;
-    std::shared_ptr<FragmentedTimesliceBuffer> ts_buffer_ = nullptr;
-    std::unique_ptr<ItemDistributor> item_distributor_ = nullptr;
-    std::thread distributor_thread_;
-    std::string producer_address_;
-    std::string worker_address_;
-    uint64_t ts_cnt_ = 0;
-    uint32_t timeslice_size_ = 100;
-    uint64_t handle_timeslice_completions();
-    CallbackContainer<void(uint64_t ts_finished_cnt)> handled_timeslice_callbacks_;
-    std::future<void> ts_completions_thread_;
-    uint64_t ts_pos_ = 0; // will simply increase with every written timeslice
-    std::unordered_map<uint64_t, uint64_t> tspos_componentid_map_;
-
-    std::mutex mtx_;
-    std::queue<uint64_t> component_ids_done_;
-
-    std::atomic_uint64_t ts_input_output_cnt_diff_;
-public:
-    TsclientWriter(std::string output_uri, uint32_t timeslice_size);
-    virtual ~TsclientWriter() override;
-    bool on_timeslices_handled(std::function<void(uint64_t)> cb);
-    std::shared_ptr<char> get_buffer() override;
-    uint64_t get_buffer_size() override;
-    void set_buffer_map(std::shared_ptr<BufferMap> buffer_map);
-    void write_timeslice(std::vector<BufferMap::ListElement*>& elements) override;
-    bool pop_finished_component_id(uint64_t& component_id);
-    uint64_t get_finished_component_id_cnt();
-
-};
-=======
 #include <df/BufferMap/BufferMap.hpp>
 #include <df/Connectors/ConnectorInterface.hpp>
 #include <df/Utils/CallbackContainer.hpp>
@@ -120,4 +61,3 @@ public:
   bool pop_finished_component_id(uint64_t& component_id);
   uint64_t get_finished_component_id_cnt();
 };
->>>>>>> 6e03f3e111f4fea1db2df2fdf4522c8023680292
