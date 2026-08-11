@@ -5,6 +5,7 @@
 
 #include "MicrosliceDescriptor.hpp"
 #include <boost/serialization/access.hpp>
+#include <cstdint>
 
 namespace fles {
 
