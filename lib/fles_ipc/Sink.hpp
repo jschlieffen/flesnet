@@ -20,7 +20,7 @@ public:
   
   virtual void put(std::shared_ptr<const T> item) = 0;
 
-  virtual void end_stream(){};
+  virtual void end_stream() {};
 
   virtual ~Sink() = default;
 };

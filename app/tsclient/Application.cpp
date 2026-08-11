@@ -7,7 +7,7 @@
 #include "ManagedTDescriptorBuffer.hpp"
 #include "Monitor.hpp"
 #include "Parameters.hpp"
-#include "Sink.hpp"                     // TimesliceSink
+#include "Sink.hpp" // TimesliceSink
 #include "StorableTimeslice.hpp"
 #include "StorableTimesliceDescriptor.hpp"
 #include "TimesliceBuilder.hpp"

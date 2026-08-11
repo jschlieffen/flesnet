@@ -5,6 +5,7 @@
 project.xcworkspace/
 xcuserdata/
 .vscode/
+.claude/
 /.cproject
 /.project
 /.cache
@@ -19,3 +20,5 @@ contrib/flesctl/zib_flesctl/n_to_n_test/
 contrib/flesctl/zib_flesctl/interface/
 contrib/flesctl/zib_flesctl/start.py
 
+__pycache__/
+*.pyc

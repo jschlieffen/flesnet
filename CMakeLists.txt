@@ -8,6 +8,10 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
+# Remove NDEBUG from RelWithDebInfo and Release builds to keep assertions enabled for now
+string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+
 # emit 'compile_commands.json' used by some IDEs
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -166,11 +170,34 @@ endif()
 find_package(Boost 1.74.0 REQUIRED CONFIG COMPONENTS filesystem log program_options serialization thread unit_test_framework iostreams)
 find_package(Threads REQUIRED)
 
-find_package(LIBFABRIC)
-find_package(RDMA)
+find_package(UCX CONFIG 1.16.0)
+if (UCX_FOUND)
+  message(STATUS "UCX found: ${UCX_VERSION}")
+endif()
 find_package(PDA)
 find_package(NUMA)
 find_package(Doxygen)
+
+# Workaround for https://bugs.launchpad.net/ubuntu/+source/ucx/+bug/2076529
+# If UCX is found and the prefix variable is equal to "/usr/lib", change
+# the IMPORTED_LOCATION and INTERFACE_INCLUDE_DIRECTORIES properties
+# of the imported libraries ucx::ucp, ucx::uct, and ucx::ucs by replacing
+# the "/usr/lib" prefix with "/usr".
+# This is necessary because the UCX package on Ubuntu 22.04 is broken.
+if (UCX_FOUND AND prefix STREQUAL "/usr/lib")
+  message(STATUS "UCX found, but prefix is /usr/lib. Fixing imported libraries.")
+  foreach(component IN ITEMS ucp uct ucs)
+    get_target_property(${component}_location ucx::${component} IMPORTED_LOCATION)
+    get_target_property(${component}_include_dirs ucx::${component} INTERFACE_INCLUDE_DIRECTORIES)
+    string(REPLACE "/usr/lib" "/usr" ${component}_location ${${component}_location})
+    string(REPLACE "/usr/lib" "/usr" ${component}_include_dirs ${${component}_include_dirs})
+    set_target_properties(ucx::${component} PROPERTIES
+      IMPORTED_LOCATION ${${component}_location}
+      INTERFACE_INCLUDE_DIRECTORIES ${${component}_include_dirs}
+    )
+  endforeach()
+endif()
+# End of workaround. Delete this block when the UCX package is fixed.
 
 find_package(OpenSSL REQUIRED)
 if(APPLE)
@@ -178,14 +205,9 @@ if(APPLE)
   get_filename_component(ZSTD_LIB_DIR ${ZSTD_LIBRARY} DIRECTORY)
 endif()
 
-set(USE_RDMA TRUE CACHE BOOL "Use RDMA libraries and build RDMA transport.")
-if(USE_RDMA AND NOT RDMA_FOUND)
-  message(STATUS "Libraries not found: rdma. Building without RDMA transport.")
-endif()
-
-set(USE_LIBFABRIC TRUE CACHE BOOL "Use LIBFABRIC libraries and build LIBFABRIC transport.")
-if(USE_LIBFABRIC AND NOT LIBFABRIC_FOUND)
-	message(STATUS "Library not found: libfabric. Building without.")
+set(USE_UCX TRUE CACHE BOOL "Use UCX libraries and build UCX transport.")
+if(USE_UCX AND NOT UCX_FOUND)
+  message(STATUS "Libraries not found: ucx. Building without UCX transport.")
 endif()
 
 set(USE_PDA TRUE CACHE BOOL "Use libpda and build CRI interface.")
@@ -216,7 +238,15 @@ if(USE_CLANG_TIDY)
   endif()
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+# C++23 unless a consumer explicitly requests otherwise. Projects embedding the
+# externally consumed libraries (logging, monitoring, fles_ipc, shm_ipc,
+# tsclient) may still be on an older toolchain and can pass
+# -DCMAKE_CXX_STANDARD=17. Targets that genuinely need C++23 declare it via
+# target_compile_features().
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 23)
+endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if( NOT "arm64" STREQUAL ${CMAKE_SYSTEM_PROCESSOR} )
     add_compile_options(-msse4.2)
@@ -232,25 +262,20 @@ endif()
 add_subdirectory(lib/logging)
 add_subdirectory(lib/monitoring)
 add_subdirectory(lib/crcutil)
-add_subdirectory(lib/flib_ipc)
 if(CLANG_TIDY)
   set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY})
 endif()
 add_subdirectory(lib/fles_ipc)
 add_subdirectory(lib/fles_core)
-add_subdirectory(lib/fles_zeromq)
 add_subdirectory(lib/shm_ipc)
-if (USE_RDMA AND RDMA_FOUND)
-  add_subdirectory(lib/fles_rdma)
+if (USE_UCX AND UCX_FOUND)
+  add_subdirectory(lib/tsb)
 endif()
 if (USE_PDA AND PDA_FOUND)
   add_subdirectory(lib/cri)
   add_subdirectory(lib/pda)
 endif()
 unset(CMAKE_CXX_CLANG_TIDY)
-if (USE_LIBFABRIC AND LIBFABRIC_FOUND)
-  add_subdirectory(lib/fles_libfabric)
-endif()
 
 set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
      OWNER_READ OWNER_WRITE OWNER_EXECUTE
@@ -263,24 +288,31 @@ if(CLANG_TIDY)
 endif()
 
 add_subdirectory(app/mstool)
-add_subdirectory(app/msconsumer)
 add_subdirectory(app/tsclient)
+<<<<<<< HEAD
 add_subdirectory(app/dtsatool)
 add_subdirectory(app/flesnet)
 add_subdirectory(app/mstool_alloc)
 add_subdirectory(app/msa2dmsa)
 add_subdirectory(app/archive_validator)
 add_subdirectory(app/timeslice_forwarder)
+=======
+>>>>>>> master
 if (USE_PDA AND PDA_FOUND)
   add_subdirectory(app/cri_tools)
   add_subdirectory(app/cri_cfg)
-  add_subdirectory(app/cri_server)
+  if (USE_UCX AND UCX_FOUND)
+    add_subdirectory(app/stserver)
+    add_subdirectory(app/tsmanager)
+    add_subdirectory(app/tsbuilder)
+  endif()
 endif()
 unset(CMAKE_CXX_CLANG_TIDY)
 unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 
 add_subdirectory(contrib)
 add_subdirectory(contrib/flesctl)
+add_subdirectory(flesctl)
 if (USE_DOXYGEN AND DOXYGEN_FOUND)
   add_subdirectory(doc)
 endif()

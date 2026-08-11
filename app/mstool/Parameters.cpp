@@ -3,13 +3,13 @@
 #include "Parameters.hpp"
 #include "GitRevision.hpp"
 #include "log.hpp"
-//#include <boost/program_options.hpp>
+// #include <boost/program_options.hpp>
 #include <boost/log/sinks/syslog_constants.hpp>
-//#include <boost/program_options.hpp>
+// #include <boost/program_options.hpp>
 #include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
 #include <boost/program_options/value_semantic.hpp>
 #include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/parsers.hpp>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -41,8 +41,6 @@ void Parameters::parse_options(int argc, char* argv[]) {
   general_add("maximum-number,n", po::value<uint64_t>(&maximum_number),
               "set the maximum number of microslices to process (default: "
               "unlimited)");
-  general_add("exec,e", po::value<std::string>(&exec)->value_name("<string>"),
-              "name of an executable to run after startup");
 
   po::options_description source("Source options");
   auto source_add = source.add_options();
@@ -53,8 +51,6 @@ void Parameters::parse_options(int argc, char* argv[]) {
             "Usage only if you want to create a ms-Archive.");
   source_add("channel,c", po::value<size_t>(&channel_idx),
              "use given channel/component index for source/sink");
-  source_add("input-shm,I", po::value<std::string>(&input_shm),
-             "name of a shared memory to use as data source");
   source_add("input-archive,i", po::value<std::string>(&input_archive),
              "name of an input file archive to read");
   source_add("descriptor_source,D",po::value<bool>(&descriptor_source),
@@ -66,8 +62,6 @@ void Parameters::parse_options(int argc, char* argv[]) {
            "enable/disable pattern check");
   sink_add("dump_verbosity,v", po::value<size_t>(&dump_verbosity),
            "set output debug dump verbosity");
-  sink_add("output-shm,O", po::value<std::string>(&output_shm),
-           "name of a shared memory to write to");
   sink_add("output-archive,o", po::value<std::string>(&output_archive),
            "name of an output file archive to write");
   sink_add("malloc_size,m" , 
@@ -113,8 +107,8 @@ void Parameters::parse_options(int argc, char* argv[]) {
 
   use_pattern_generator = vm.count("pattern-generator") != 0;
 
-  size_t input_sources = vm.count("pattern-generator") +
-                         vm.count("input-archive") + vm.count("input-shm");
+  size_t input_sources =
+      vm.count("pattern-generator") + vm.count("input-archive");
   if (input_sources == 0) {
     throw ParametersException("no input source specified");
   }

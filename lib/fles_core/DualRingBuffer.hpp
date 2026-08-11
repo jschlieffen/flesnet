@@ -63,7 +63,8 @@ inline bool operator==(const DualIndex& lhs, const DualIndex& rhs) {
 }
 
 /// Abstract FLES data source class.
-template <typename T_DESC, typename T_DATA> class DualRingBufferReadInterface {
+template <typename T_DESC, typename T_DATA, bool POWER_OF_TWO = true>
+class DualRingBufferReadInterface {
 public:
   virtual ~DualRingBufferReadInterface() = default;
 
@@ -76,26 +77,9 @@ public:
   virtual void set_read_index(DualIndex new_read_index) = 0;
   virtual DualIndex get_read_index() = 0;
 
-  virtual RingBufferView<T_DATA>& data_buffer() = 0;
-  virtual RingBufferView<T_DESC>& desc_buffer() = 0;
-};
-
-template <typename T_DESC, typename T_DATA> class DualRingBufferWriteInterface {
-public:
-  virtual ~DualRingBufferWriteInterface() = default;
-
-  virtual DualIndex get_read_index() = 0;
-
-  virtual void set_write_index(DualIndex new_write_index) = 0;
-
-  virtual void set_eof(bool eof) = 0;
-
-  virtual RingBufferView<T_DATA>& data_buffer() = 0;
-  virtual RingBufferView<T_DESC>& desc_buffer() = 0;
+  virtual RingBufferView<T_DATA, POWER_OF_TWO>& data_buffer() = 0;
+  virtual RingBufferView<T_DESC, POWER_OF_TWO>& desc_buffer() = 0;
 };
 
 using InputBufferReadInterface =
     DualRingBufferReadInterface<fles::MicrosliceDescriptor, uint8_t>;
-
-using InputBufferWriteInterface =
-    DualRingBufferWriteInterface<fles::MicrosliceDescriptor, uint8_t>;

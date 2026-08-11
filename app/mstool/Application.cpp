@@ -2,29 +2,20 @@
 
 #include "Application.hpp"
 #include "FlesnetPatternGenerator.hpp"
-#include "DualRingBuffer.hpp"          // InputBufferWriteInterface
-#include "Parameters.hpp"
 #include "MicrosliceAnalyzer.hpp"
 #include "MicrosliceInputArchive.hpp"
 #include "MicrosliceOutputArchive.hpp"
 #include "MicrosliceDescriptorInputArchive.hpp"
 #include "MicrosliceDescribtorOutputArchive.hpp"
 #include "MicrosliceReceiver.hpp"
-#include "Sink.hpp"                    // MicrosliceSink
-#include "MicrosliceTransmitter.hpp"
+#include "Parameters.hpp"
+#include "Sink.hpp" // MicrosliceSink
 #include "TimesliceDebugger.hpp"
-#include "shm_device_client.hpp"
-#include "shm_device_provider.hpp"
 #include "log.hpp"
-#include "shm_channel_client.hpp"
-#include "Utility.hpp"
-#include <chrono>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
-#include <stdexcept>
-#include <thread>
 #include <utility>
 #include <stdint.h>
 
@@ -33,19 +24,7 @@
 Application::Application(Parameters const& par) : par_(par) {
 
   // Source setup
-  if (!par_.input_shm.empty()) {
-    L_(info) << "using shared memory as data source: " << par_.input_shm;
-
-    shm_device_ = std::make_shared<flib_shm_device_client>(par_.input_shm);
-
-    if (par_.channel_idx < shm_device_->num_channels()) {
-      data_source_ = std::make_unique<flib_shm_channel_client>(
-          shm_device_, par_.channel_idx);
-
-    } else {
-      throw std::runtime_error("shared memory channel not available");
-    }
-  } else if (par_.use_pattern_generator) {
+  if (par_.use_pattern_generator) {
     L_(info) << "using pattern generator as data source";
 
     uint32_t typical_content_size = par_.content_size;
@@ -72,7 +51,7 @@ Application::Application(Parameters const& par) : par_(par) {
   // Sink setup
   if (par_.analyze) {
     sinks_.push_back(std::unique_ptr<fles::MicrosliceSink>(
-        new MicrosliceAnalyzer(100000, 3, std::cout, "", par_.channel_idx)));
+        new MicrosliceAnalyzer(100000, 3, std::cout, "")));
   }
 
   if (par_.dump_verbosity > 0) {
@@ -83,30 +62,6 @@ Application::Application(Parameters const& par) : par_(par) {
   if (!par_.output_archive.empty()) {
     sinks_.push_back(std::unique_ptr<fles::MicrosliceSink>(
         new fles::MicrosliceOutputArchive(par_.output_archive)));
-  }
-
-  if (!par_.output_shm.empty()) {
-    L_(info) << "providing output in shared memory: " << par_.output_shm;
-    UriComponents uri{par_.output_shm};
-    uint32_t desc_buffer_size_exp = 19; // 512 ki entries
-    uint32_t data_buffer_size_exp = 27; // 128 MiB
-      for (auto& [key, value] : uri.query_components) {
-        if (key == "datasize") {
-          data_buffer_size_exp = std::stoul(value);
-        } else if (key == "descsize") {
-          desc_buffer_size_exp = std::stoul(value);
-        } else {
-          throw std::runtime_error(
-              "query parameter not implemented for scheme " + uri.scheme +
-              ": " + key);
-        }
-      }
-            const auto shm_identifier = split(uri.path, "/").at(0);
-    output_shm_device_ = std::make_unique<flib_shm_device_provider>(
-        shm_identifier, 1, data_buffer_size_exp, desc_buffer_size_exp);
-    InputBufferWriteInterface* data_sink = output_shm_device_->channels().at(0);
-    sinks_.push_back(std::unique_ptr<fles::MicrosliceSink>(
-        new fles::MicrosliceTransmitter(*data_sink)));
   }
 }
 
@@ -228,11 +183,4 @@ void Application::run() {
       sink->end_stream();
     }
   }
-  if (output_shm_device_) {
-    L_(info) << "waiting until output shared memory is empty";
-    while (!output_shm_device_->channels().at(0)->empty()) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-  }
-
 }
