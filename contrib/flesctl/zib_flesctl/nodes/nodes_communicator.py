@@ -14,15 +14,14 @@ import os
 import traceback
 
 class communicator(Thread):
-    def __init__(self,channel,node_type,node):
+    def __init__(self,channel,node):
         super().__init__(daemon=True)
         self.channel = channel
-        self.node_type = node_type
         self.node = node
         
     def write_response(self, msg):
-        with open(f"tmp/communication/{self.node_type}_{self.node}.txt", "w") as f:
-            f.write(f"{self.node_type} {self.node}: {msg}")
+        with open(f"tmp/communication/{self.node}.txt", "w") as f:
+            f.write(f"{self.node}: {msg}")
             f.flush()
             os.fsync(f.fileno())
     
@@ -39,27 +38,27 @@ class communicator(Thread):
                 msg = ""
             prev_action = ""
             
-            if f"{self.node_type} {self.node}" in msg:
+            if f"{self.node}" in msg:
                 
-                node, action = msg.split(": ")
+                node,process, action = msg.split(": ")
                 if action == prev_action: 
                     continue
                 if action == "kill":
-                    if not self.give_command('kill'):
+                    if not self.give_command('kill',process):
                         break
                     prev_action = action
                 elif action == "revieve":
-                    if not self.give_command('revieve'):
+                    if not self.give_command('revieve',process):
                         break
                     prev_action = action
                 elif action == "stop":
                     self.write_response('done stop')
-                    self.give_command('stop')
+                    self.give_command('stop',process)
                     prev_action = action
                     break
                     
-    def give_command(self,action):
-        self.channel.send_to_parent(action)
+    def give_command(self,action,process):
+        self.channel.send_to_parent(f"{process}: {action}")
         msg = self.channel.recv_from_parent()
         match msg:
                 case "succeed":

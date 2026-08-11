@@ -90,7 +90,7 @@ class execution:
         self.build_nodes_eth_ips = ""
         self.central_manager_eth_ips = ""
         self.get_eth_ips()
-        self.Slurm_starter = ss.Slurm_starter(["Entry", "Build", "Sender", "Receiver", "TF_Input", "TF_Output", "TF_Central_Manager"]) 
+        self.Slurm_starter = ss.Slurm_starter() 
         if self.Par_.activate_timesliceforwarding:
             self.rec2build = []
             #self.assemble_receiving_nodes2build_nodes()
