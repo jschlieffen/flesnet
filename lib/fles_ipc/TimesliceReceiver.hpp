@@ -121,7 +121,6 @@ private:
     eos_ = true;
     return nullptr;
   }
-
 };
 
 } // namespace fles

@@ -1,20 +1,20 @@
 #pragma once
 #include "Timeslice.hpp"
 #include <TimesliceReceiver.hpp>
-#include <TsfTimesliceView.hpp>
 #include <TimesliceView.hpp>
+#include <TsfTimesliceView.hpp>
 
 namespace tsforwarder {
 
 class Receiver : public fles::Receiver<fles::Timeslice, fles::TimesliceView> {
-    public:
-        Receiver(const std::string& ipc_identifier, WorkerParameters parameters)
-      : fles::Receiver<fles::Timeslice, fles::TimesliceView>(ipc_identifier, parameters)
-        {};
-        /// Delete copy constructor (non-copyable).
-        Receiver(const Receiver&) = delete;
-        /// Delete assignment operator (non-copyable).
-        void operator=(const Receiver&) = delete;
+public:
+  Receiver(const std::string& ipc_identifier, WorkerParameters parameters)
+      : fles::Receiver<fles::Timeslice, fles::TimesliceView>(ipc_identifier,
+                                                             parameters) {};
+  /// Delete copy constructor (non-copyable).
+  Receiver(const Receiver&) = delete;
+  /// Delete assignment operator (non-copyable).
+  void operator=(const Receiver&) = delete;
 
   tsforwarder::TimesliceView* do_get() override {
     if (eos_) {
@@ -49,15 +49,17 @@ class Receiver : public fles::Receiver<fles::Timeslice, fles::TimesliceView> {
         }
       }
 
-      return new tsforwarder::TimesliceView(managed_shm_, item, timeslice_item); // NOLINT
+      return new tsforwarder::TimesliceView(managed_shm_, item,
+                                            timeslice_item); // NOLINT
     }
 
     eos_ = true;
     return nullptr;
   }
 
-  std::shared_ptr<boost::interprocess::managed_shared_memory> get_managed_shm() {
-      return fles::Receiver<fles::Timeslice, fles::TimesliceView>::managed_shm_;
+  std::shared_ptr<boost::interprocess::managed_shared_memory>
+  get_managed_shm() {
+    return fles::Receiver<fles::Timeslice, fles::TimesliceView>::managed_shm_;
   }
 };
-}
+} // namespace tsforwarder
