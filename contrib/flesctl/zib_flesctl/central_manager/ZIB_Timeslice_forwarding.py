@@ -46,7 +46,7 @@ class Timeslice_forwarding_ZIB:
         commands = {}
         if self.Par_.use_collectl:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
-        cm_command = f"{self.Par_.path}./timeslice_forwarder -l 1 -c {self.central_manager_ips}:{self.Par_.port}"
+        cm_command = f"{self.Par_.path}./timeslice_forwarder -l 1 -L {logfile} -c {self.central_manager_ips}:{self.Par_.port}"
         if self.Par_.use_grafana:
             cm_command += f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
         commands['3'] = cm_command
@@ -70,6 +70,7 @@ class Timeslice_forwarding_ZIB:
         input_command = (
             f"{self.Par_.path}./timeslice_forwarder "
             f"-l 1 "
+            f"-L {logfile} "
             f"-c {self.central_manager_ips}:{self.Par_.port} "
             f"-A {node_ip}:{self.Par_.port} "
             f"-N {idx} "
@@ -103,6 +104,7 @@ class Timeslice_forwarding_ZIB:
         output_command = (
             f"{self.Par_.path}./timeslice_forwarder "
             f"-l 1 "
+            f"-L {logfile} "
             f"-c {self.central_manager_ips}:{self.Par_.port} "
             f"-A {node_ip}:{self.Par_.port} "
             f"-N {idx} "
