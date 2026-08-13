@@ -24,7 +24,7 @@ import nodes_help_functions as nh
 
 def threads_starter(command, communicator):
     print(command)
-    result = subprocess.Popen(command, shell=True, text=True, preexec_fn=os.setsid)
+    result = subprocess.Popen(command,  stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True, preexec_fn=os.setsid)
     while True:
         msg = communicator.get()
         if msg == 'exit':
