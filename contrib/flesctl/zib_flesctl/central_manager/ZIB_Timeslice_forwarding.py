@@ -46,7 +46,7 @@ class Timeslice_forwarding_ZIB:
         commands = {}
         if self.Par_.use_collectl:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
-        cm_command = f"{self.Par_.path}./timeslice_forwarder -l 1 -L {logfile} -c {self.central_manager_ips}:{self.Par_.port}"
+        cm_command = f"{self.Par_.path}./timeslice_forwarder -l 1  -c {self.central_manager_ips}:{self.Par_.port} > -L {logfile}"
         if self.Par_.use_grafana:
             cm_command += f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
         commands['3'] = cm_command
@@ -70,7 +70,7 @@ class Timeslice_forwarding_ZIB:
         input_command = (
             f"{self.Par_.path}./timeslice_forwarder "
             f"-l 1 "
-            f"-L {logfile} "
+            f"-L {logfile}  > -L {logfile} "
             f"-c {self.central_manager_ips}:{self.Par_.port} "
             f"-A {node_ip}:{self.Par_.port} "
             f"-N {idx} "
@@ -105,7 +105,7 @@ class Timeslice_forwarding_ZIB:
             f"{self.Par_.path}./timeslice_forwarder "
             f"-l 1 "
             f"-L {logfile} "
-            f"-c {self.central_manager_ips}:{self.Par_.port} "
+            f"-c {self.central_manager_ips}:{self.Par_.port}  > -L {logfile}"
             f"-A {node_ip}:{self.Par_.port} "
             f"-N {idx} "
             f"-o {shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
@@ -126,7 +126,7 @@ class Timeslice_forwarding_ZIB:
             logfile_collectl = "%s/logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % (self.Run_folder,node)
             self.commands_cm[node] = self.define_commands_cm(node, logfile_collectl, logfile)
             self.write_commands(node,self.commands_cm[node])
-            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,"16GB")
+            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,"64GB")
             if not start_successfull:
                 logger.error(f'ERROR occurried in central manager: {node}. Shutdown flesnet')
                 return 'shutdown'
@@ -152,7 +152,7 @@ class Timeslice_forwarding_ZIB:
                 ip = self.input_nodes[node]['eth_ip']
             self.commands_i[node] = self.define_commands_input(node, logfile_collectl, logfile, logfile_tsclient, input_file, node_cnt, ip)
             self.write_commands(node, self.commands_i[node])
-            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,"16GB")
+            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,"64GB")
             if not start_successfull:
                 logger.error(f'ERROR occurried in central manager: {node}. Shutdown flesnet')
                 return 'shutdown'
@@ -174,7 +174,7 @@ class Timeslice_forwarding_ZIB:
                 ip = self.output_nodes[node]['eth_ip']
             self.commands_o[node] = self.define_commands_output(node, logfile_collectl, logfile, logfile_tsclient, node_cnt, ip)
             self.write_commands(node, self.commands_o[node])
-            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,"16GB")
+            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,"64GB")
             if not start_successfull:
                 logger.error(f'ERROR occurried in central manager: {node}. Shutdown flesnet')
                 return 'shutdown'
