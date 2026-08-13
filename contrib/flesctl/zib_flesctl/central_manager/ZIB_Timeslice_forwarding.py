@@ -46,7 +46,7 @@ class Timeslice_forwarding_ZIB:
         commands = {}
         if self.Par_.use_collectl:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
-        cm_command = f"{self.Par_.path}./timeslice_forwarder -l 1  -c {self.central_manager_ips}:{self.Par_.port} > -L {logfile}"
+        cm_command = f"{self.Par_.path}./timeslice_forwarder -l 1  -c {self.central_manager_ips}:{self.Par_.port} > {logfile}"
         if self.Par_.use_grafana:
             cm_command += f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
         commands['3'] = cm_command
@@ -70,11 +70,11 @@ class Timeslice_forwarding_ZIB:
         input_command = (
             f"{self.Par_.path}./timeslice_forwarder "
             f"-l 1 "
-            f"-L {logfile}  > -L {logfile} "
             f"-c {self.central_manager_ips}:{self.Par_.port} "
             f"-A {node_ip}:{self.Par_.port} "
             f"-N {idx} "
-            f"-i {shm_str}"
+            f"-i {shm_str} "
+            f"> {logfile}"
         )
         if self.Par_.use_grafana:
             tsclient_command +=  f" -m influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
@@ -104,11 +104,11 @@ class Timeslice_forwarding_ZIB:
         output_command = (
             f"{self.Par_.path}./timeslice_forwarder "
             f"-l 1 "
-            f"-L {logfile} "
-            f"-c {self.central_manager_ips}:{self.Par_.port}  > -L {logfile}"
+            f"-c {self.central_manager_ips}:{self.Par_.port}  "
             f"-A {node_ip}:{self.Par_.port} "
             f"-N {idx} "
-            f"-o {shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
+            f"-o {shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size} "
+            f"> {logfile}"
         )
         if self.Par_.use_grafana:
             tsclient_command +=  f" -m influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
