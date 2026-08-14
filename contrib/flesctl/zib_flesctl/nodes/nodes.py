@@ -28,7 +28,8 @@ def threads_starter(command, communicator):
     while True:
         msg = communicator.get()
         if msg == 'exit':
-            result.terminate()
+            #result.terminate()
+            os.killpg(os.getpgid(result.pid),signal.SIGKILL)
             result.wait()
             break
         elif msg == 'kill':

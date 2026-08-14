@@ -54,7 +54,7 @@ class Timeslice_forwarding_ZIB:
         
     def define_commands_input(self,node_name,collectl_logfile,logfile,logfile_tsclient,input_file,idx,node_ip):
         commands = {}
-        shm_str = "fles_out_b{idx}"
+        shm_str = f"fles_out_b{idx}"
         if self.Par_.use_collectl:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
         #tsclient_command = f"{self.Par_.path}./timeslice_forwarder -l 1 -i file:\"{input_file}\" -o {shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
@@ -85,7 +85,7 @@ class Timeslice_forwarding_ZIB:
     
     def define_commands_output(self,node_name,collectl_logfile,logfile, logfile_tsclient,idx,node_ip):
         commands = {}
-        shm_str = "fles_out_b{idx}"
+        shm_str = f"fles_out_b{idx}"
         if self.Par_.use_collectl:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
         tsclient_command = (
