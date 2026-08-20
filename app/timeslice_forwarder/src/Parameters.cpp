@@ -161,8 +161,8 @@ void Parameters::parse_options(int argc, char** argv) {
   po::options_description desc(desc_sstr.str());
   desc.add(general).add(advanced);
 
-  po::store(po::parse_command_line(argc, argv, general), vm);
-  po::notify(vm);
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
 
   if (vm.count("help") != 0) {
     cout << desc << endl;

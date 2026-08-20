@@ -7,12 +7,11 @@ enum WiType : uint64_t { WI_TYPES, wi_work_done, wi_buffer_full_report };
 
 class WiBufferFullReport : public WorkItem {
 public:
-  uint64_t node_id = 0;  //!> node_id of which the buffer is full
-  uint64_t group_id = 0; //!> group_id of which the buffer is full
-
-  WiBufferFullReport() {
-    type = static_cast<WorkItem::Type>(wi_buffer_full_report);
-  }
+    uint64_t node_id = 0; //!> node_id of which the buffer is full
+    uint64_t group_id = 0; //!> group_id of which the buffer is full
+    WiBufferFullReport() {
+        type = static_cast<WorkItem::Type>(wi_buffer_full_report);
+    }
 
   // Boost
   template <typename Archive>
@@ -45,6 +44,7 @@ public:
 };
 
 class WiWorkDone : public WorkItem {
+<<<<<<< HEAD
 public:
   WiWorkDone() { type = static_cast<WorkItem::Type>(wi_work_done); }
 
@@ -53,6 +53,20 @@ public:
   void serialize(Archive& ar, const unsigned /*version*/) {
     WI_SERIALIZE(ar);
   }
+=======
+    public:
+        uint64_t cnt = 0;
+    WiWorkDone() {
+        type = static_cast<WorkItem::Type>(wi_work_done);
+    }
+
+    // Boost
+    template<typename Archive>
+    void serialize(Archive& ar, const unsigned /*version*/) {
+        WI_SERIALIZE(ar);
+        ar & cnt;
+    }
+>>>>>>> 5764767bdc99164b1892c899741fef556e7d5de2
 
   std::shared_ptr<char> serialize(uint64_t* size) override {
     std::ostringstream sstream;
@@ -68,6 +82,7 @@ public:
     return shared_ptr;
   }
 
+<<<<<<< HEAD
   bool deserialize(std::shared_ptr<char> serialized) override {
     std::string s(serialized.get());
     std::istringstream sstream(s);
@@ -76,3 +91,13 @@ public:
     return true;
   }
 };
+=======
+    bool deserialize(std::shared_ptr<char> serialized) override {
+        std::string s(serialized.get());
+        std::istringstream sstream(s);
+        boost::archive::text_iarchive archive(sstream);
+        archive & *this;
+        return true;
+    }
+};
+>>>>>>> 5764767bdc99164b1892c899741fef556e7d5de2

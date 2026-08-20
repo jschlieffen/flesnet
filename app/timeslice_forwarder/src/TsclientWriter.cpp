@@ -44,39 +44,37 @@ TsclientWriter::TsclientWriter(std::string output_uri, uint32_t timeslice_size)
   buffer_size_ = ts_buffer_->get_shm_size();
   handled_timeslice_callbacks_.set_worker(make_shared<WorkerThread>());
 
-  ts_completions_thread_ = std::async([this]() {
-    while (true) {
-      fles::TimesliceCompletion c{};
-      uint64_t found_completions = 0;
-      {
-        L_(trace) << "ts_completions_thread_ - before mtx";
-        unique_lock<mutex> l(mtx_);
-        L_(trace) << "ts_completions_thread_ - try_receive_completion ...";
-        while (ts_buffer_->try_receive_completion(c)) {
-          L_(debug) << "c.ts_pos: " << c.ts_pos
-                    << " - tspos_componentid_map_[c.ts_pos]: "
-                    << tspos_componentid_map_[c.ts_pos];
-          component_ids_done_.push(tspos_componentid_map_[c.ts_pos]);
-          tspos_componentid_map_.erase(c.ts_pos);
-          found_completions++;
-        }
-      }
+    ts_completions_thread_ = std::async([this] () {
+        while (true) {
+            fles::TimesliceCompletion c{};
+            uint64_t found_completions = 0;
+            {
+                //L_(trace) << "ts_completions_thread_ - before mtx";
+                unique_lock<mutex> l(mtx_);
+                //L_(trace) << "ts_completions_thread_ - try_receive_completion ...";
+                while (ts_buffer_->try_receive_completion(c)) {
+                    //L_(debug) << "c.ts_pos: " << c.ts_pos << " - tspos_componentid_map_[c.ts_pos]: " << tspos_componentid_map_[c.ts_pos];
+                    component_ids_done_.push(tspos_componentid_map_[c.ts_pos]);
+                    if (tspos_componentid_map_.erase(c.ts_pos) != 1) {
+                        L_(fatal) << "tspos_componentid_map_.erase failed";
+                        exit(-1);
+                    }
+                    found_completions++;
+                }
+            }
 
-      if (found_completions != 0) {
-        ts_input_output_cnt_diff_ -= found_completions;
-        L_(debug) << "ts_completions_thread_ - open completions: "
-                  << ts_input_output_cnt_diff_;
-        L_(trace) << "ts_completions_thread_ - completions: "
-                  << found_completions;
-        handled_timeslice_callbacks_.call_async(found_completions);
-        L_(trace) << "ts_completions_thread_ - call_async called"
-                  << found_completions;
-      } else {
-        L_(trace) << "no completions found ...";
-        this_thread::sleep_for(chrono::milliseconds(500));
-      }
-    }
-  });
+            if (found_completions != 0) {
+                ts_input_output_cnt_diff_ -= found_completions;
+                L_(debug) << "ts_completions_thread_ - open completions: " << ts_input_output_cnt_diff_;
+                //L_(trace) << "ts_completions_thread_ - completions: " << found_completions;
+                handled_timeslice_callbacks_.call_async(found_completions);
+                //L_(trace) << "ts_completions_thread_ - call_async called" << found_completions;
+            } else {
+                L_(trace) << "no completions found ...";
+                this_thread::sleep_for(chrono::milliseconds(500));
+            }
+        }
+    });
 }
 
 uint64_t TsclientWriter::handle_timeslice_completions() {
@@ -136,42 +134,38 @@ void TsclientWriter::write_timeslice(
   auto ts = make_shared<tsforwarder::Timeslice>();
   ts_pos_++;
 
-  fles::TimesliceDescriptor ts_desc;
-  ts_desc.index = desc_ptr[0]->ts_num;
-  ts_desc.ts_pos = ts_pos_;
-  ts_desc.num_core_microslices = timeslice_size_;
-  ts_desc.num_components = static_cast<uint32_t>(desc_ptr.size());
-  ts->set_timeslice_descriptor(ts_desc);
-  L_(debug) << "elements[0]->compontent_id: " << elements[0]->compontent_id
-            << endl;
+    fles::TimesliceDescriptor ts_desc;
+    ts_desc.index = desc_ptr[0]->ts_num;
+    ts_desc.ts_pos = ts_pos_;
+    ts_desc.num_core_microslices = timeslice_size_;
+    ts_desc.num_components = static_cast<uint32_t>(desc_ptr.size());
+    ts->set_timeslice_descriptor(ts_desc);
+    //L_(debug) << "elements[0]->compontent_id: " << elements[0]->compontent_id << endl;
 
-  ts->set_desc(std::move(desc_ptr));
-  ts->set_data(std::move(data_ptr));
-  {
-    unique_lock<mutex> l(mtx_);
-    tspos_componentid_map_[ts_pos_] = elements[0]->compontent_id;
-    L_(debug) << "send_work_item - open completions: "
-              << ts_input_output_cnt_diff_;
-    ts_input_output_cnt_diff_++;
-    ts_buffer_->send_work_item(ts);
-  }
-  L_(trace) << "Sending work item ... size: " << combined_size;
-  stop = high_resolution_clock::now();
+    ts->set_desc(std::move(desc_ptr));
+    ts->set_data(std::move(data_ptr));
+    {
+        unique_lock<mutex> l(mtx_);
+        tspos_componentid_map_[ts_pos_] = elements[0]->compontent_id;
+        L_(debug) << "send_work_item - open completions: " << ts_input_output_cnt_diff_;
+        ts_input_output_cnt_diff_++;
+        ts_buffer_->send_work_item(ts);
+    }
+    //L_(trace) << "Sending work item ... size: " << combined_size;
+    stop = high_resolution_clock::now();
 
-  L_(debug) << "TS writer - ts written after: "
-            << duration_cast<milliseconds>(stop - start).count();
+    //L_(debug) << "TS writer - ts written after: " <<  duration_cast<milliseconds>(stop-start).count();
 }
 
 bool TsclientWriter::pop_finished_component_id(uint64_t& component_id) {
   unique_lock<mutex> l(mtx_);
 
-  if (!component_ids_done_.empty()) {
-    component_id = component_ids_done_.front();
-    L_(debug) << "TsclientWriter::pop_finished_component_id - component_id: "
-              << component_id;
-    component_ids_done_.pop();
-    return true;
-  }
+    if (!component_ids_done_.empty()) {
+        component_id = component_ids_done_.front();
+        //L_(debug) << "TsclientWriter::pop_finished_component_id - component_id: " << component_id;
+        component_ids_done_.pop();
+        return true;
+    }
 
   return false;
 }

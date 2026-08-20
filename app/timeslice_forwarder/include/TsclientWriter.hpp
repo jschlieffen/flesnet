@@ -51,6 +51,7 @@ private:
   std::atomic_uint64_t ts_input_output_cnt_diff_;
 
 public:
+<<<<<<< HEAD
   TsclientWriter(std::string output_uri, uint32_t timeslice_size);
   virtual ~TsclientWriter();
   bool on_timeslices_handled(std::function<void(uint64_t)> cb);
@@ -60,4 +61,18 @@ public:
   void write_timeslice(std::vector<BufferMap::ListElement*>& elements);
   bool pop_finished_component_id(uint64_t& component_id);
   uint64_t get_finished_component_id_cnt();
+=======
+    TsclientWriter(std::string output_uri, uint32_t timeslice_size);
+    virtual ~TsclientWriter();
+    bool on_timeslices_handled(std::function<void(uint64_t)> cb);
+    std::shared_ptr<char> get_buffer();
+    uint64_t get_buffer_size();
+    void set_buffer_map(std::shared_ptr<BufferMap> buffer_map);
+    void write_timeslice(std::vector<BufferMap::ListElement*>& elements);
+    bool pop_finished_component_id(uint64_t& component_id);
+    uint64_t get_finished_component_id_cnt();
+    uint64_t get_boost_shm_offset() {
+        return ts_buffer_->get_boost_shm_offset();
+    }
+>>>>>>> 5764767bdc99164b1892c899741fef556e7d5de2
 };

@@ -13,13 +13,19 @@ using namespace std;
 using namespace std::chrono;
 
 TsclientReader::TsclientReader(std::string shm_uri) {
-  WorkerParameters param{1, 0, WorkerQueuePolicy::QueueAll, 0,
-                         "AutoSource at PID " +
-                             to_string(fles::system::current_pid())};
-  UriComponents uri{shm_uri};
-  const auto shm_identifier = uri.path;
-  source_ = make_unique<tsforwarder::Receiver>(shm_identifier, param);
-  new_timeslice_callbacks_.set_worker(make_shared<WorkerThread>());
+    WorkerParameters param{
+        1,
+        0,
+        WorkerQueuePolicy::QueueAll,
+        0,
+        "AutoSource at PID " +
+        to_string(fles::system::current_pid())
+    };
+    UriComponents uri{shm_uri};
+    const auto shm_identifier = uri.path;
+    source_ = make_unique<tsforwarder::Receiver>(shm_identifier, param);
+    //source_orig_ = make_unique<fles::Receiver<fles::Timeslice, fles::TimesliceView>>(shm_identifier, param);
+    new_timeslice_callbacks_.set_worker(make_shared<WorkerThread>());
 
   // We have to read out one timeslice so the fles::Receiver class initializes
   // the SHM and we can get the necessary SHM pointer to register it for RDMA
@@ -36,12 +42,15 @@ uint64_t TsclientReader::get_buffer_size() const { return buffer_size_; }
 char* TsclientReader::get_buffer() { return buffer_; }
 
 void TsclientReader::clear_last_timeslice() {
-  last_timeslice_ = nullptr;
-  timeslice_available = false;
-  cv.notify_all();
-  stop_clock_ = high_resolution_clock::now();
-  L_(debug) << "TS reader - last_timeslice_ resetted after: "
-            << duration_cast<milliseconds>(stop_clock_ - start_clock_).count();
+    {
+        std::unique_lock lk(m);
+        //last_timeslice_.reset();
+        last_timeslice_ = nullptr;
+        timeslice_available = false;
+    }
+    cv.notify_all();
+    stop_clock_ = high_resolution_clock::now();
+    L_(trace) << "TS reader - last_timeslice_ resetted after: " <<  duration_cast<milliseconds>(stop_clock_-start_clock_).count();
 }
 
 void TsclientReader::on_new_timeslice(std::function<void()> cb) {
@@ -80,23 +89,30 @@ void TsclientReader::start_timeslice_reading() {
       cv.wait(lk, [this] { return !timeslice_available; });
       ts = source_->get();
 
-      stop = high_resolution_clock::now();
-      L_(debug) << "TS reader - got ts after: "
-                << duration_cast<milliseconds>(stop - start).count();
-      if (!ts) {
-        break;
-      }
-      // TODO: This does not make an sense
-      auto* tsf_timeslice = dynamic_cast<tsforwarder::TimesliceView*>(ts.get());
+        unique_ptr<fles::TimesliceView> ts = nullptr;
+        auto addresses = shared_ptr<uint64_t>(new uint64_t[num_components_ * 2], default_delete<uint64_t[]>());
+        auto sizes = shared_ptr<uint64_t>(new uint64_t[num_components_ * 2], default_delete<uint64_t[]>());
+        auto tags = shared_ptr<uint32_t>(new uint32_t[num_components_ * 2], default_delete<uint32_t[]>());
+        time_point<high_resolution_clock> start;
+        time_point<high_resolution_clock> stop;
+        while (!stop_)  {
+            start = high_resolution_clock::now();
+            std::unique_lock lk(m);
+            L_(trace) << "waiting for consumption";
+            cv.wait(lk, [this]{ return !timeslice_available; });
+            //sleep(6);
+            L_(trace) << "Getting new";
 
-      L_(debug) << "TS index: " << tsf_timeslice->index();
-      if (buffer_ !=
-          reinterpret_cast<char*>(source_->get_managed_shm()->get_address())) {
-        buffer_ =
-            reinterpret_cast<char*>(source_->get_managed_shm()->get_address());
-        L_(fatal) << "(TimesliceReader) SHM base memory address changed";
-        exit(-EXIT_FAILURE);
-      }
+            ts = source_->get();
+
+            stop = high_resolution_clock::now();
+            L_(trace) << "TS reader - got ts after: " <<  duration_cast<milliseconds>(stop-start).count();
+            if (!ts) {
+                L_(debug) << "ts is null";
+                break;
+            }
+            // TODO: This does not make an sense
+            auto *tsf_timeslice = dynamic_cast<tsforwarder::TimesliceView*>(ts.get());
 
       // Proactively request lock and start preparing data in the meantime
       atomic_bool is_locked = false;
@@ -138,10 +154,11 @@ void TsclientReader::start_timeslice_reading() {
       L_(debug) << "TS reader - got buffer map after: "
                 << duration_cast<milliseconds>(stop - start).count();
 
-      // reperesent new data in the buffer map
-      const auto* const buffer_map_ret =
-          buffer_map_->insert(num_components * 2, sizes.get(), addresses.get(),
-                              0, 0, tags.get(), BufferMap::ListElement::IO::RX);
+            // waiting to get the lock
+            start = high_resolution_clock::now();
+            while (!is_locked) {};
+            stop = high_resolution_clock::now();
+            L_(trace) << "TS reader - got buffer map after: " <<  duration_cast<milliseconds>(stop-start).count();
 
       if (buffer_map_ret == nullptr) {
         L_(fatal)

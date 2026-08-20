@@ -17,24 +17,20 @@ using namespace std;
 using namespace std::chrono;
 
 void TsSender::send_latest_data(uint64_t group_id, uint64_t node_id) {
-  string rem_address;
-  auto node_uid = MAKE_UID(group_id, node_id);
-  {
-    shared_lock<shared_mutex> l(mtx_);
-    rem_address = uid_address_map_[node_uid];
-  }
+    string rem_address;
+    auto node_uid = MAKE_UID(group_id, node_id);
+    {
+        shared_lock<shared_mutex> l(mtx_);
+        rem_address = uid_address_map_[node_uid];
+    }
+    //tsleep(6);
 
   L_(debug) << "Commanded to send data to Node ID: " << node_id
             << " - Group ID: " << group_id << " - address: " << rem_address;
   time_point<high_resolution_clock> start = high_resolution_clock::now();
 
-  node_connector_->lock_buffer_map(
-      data_buffer_map_,
-      [this, rem_address, node_id, group_id, start]() {
-        L_(debug) << "send_latest_data - got own buffer map after: "
-                  << duration_cast<milliseconds>(high_resolution_clock::now() -
-                                                 start)
-                         .count();
+    node_connector_->lock_buffer_map(data_buffer_map_, [this, rem_address, node_id, group_id, start] () {
+        L_(trace) << "send_latest_data - got own buffer map after: " <<  duration_cast<milliseconds>(high_resolution_clock::now()-start).count();
 
         auto* el = data_buffer_map_->get_oldest_linked_list_element(
             nullptr, BufferMap::ListElement::IO::RX);
@@ -64,53 +60,128 @@ void TsSender::send_latest_data(uint64_t group_id, uint64_t node_id) {
           return;
         }
         uint64_t combined_size = 0;
-        L_(debug) << "get_elements of component...";
-        auto component_elements = data_buffer_map_->get_elements_of_component(
-            el->compontent_id, combined_size);
-        L_(debug) << "got elements";
-        auto* data_write_chain = new std::function<void()>;
-        (*data_write_chain) = [this, data_write_chain, rem_address,
-                               component_elements, combined_size, node_id,
-                               group_id]() {
-          atomic_uint64_t fail_cnt = 0;
-          time_point<high_resolution_clock> start =
-              high_resolution_clock::now();
-          node_connector_->lock_and_get_buffer_map(
-              rem_address, Node::DATA_BUFFER_IDX,
-              [this, data_write_chain, start, component_elements, rem_address,
-               combined_size, node_id, group_id,
-               &fail_cnt](shared_ptr<BufferMap> rem_buffer_map_copy) {
-                L_(debug) << "send_latest_data - Got remote buffer map after "
-                          << fail_cnt << " tries";
-                L_(debug) << "send_latest_data - got own buffer map after: "
-                          << duration_cast<milliseconds>(
-                                 high_resolution_clock::now() - start)
-                                 .count();
+        L_(trace) << "get_elements of component...";
+        auto component_elements = data_buffer_map_->get_elements_of_component(el->compontent_id, combined_size);
+        L_(trace) << "got elements";
+        auto *data_write_chain = new std::function<void()>;
+        (*data_write_chain) = [this, data_write_chain, rem_address, component_elements, combined_size, node_id, group_id] () {
+            atomic_uint64_t fail_cnt = 0;
+            time_point<high_resolution_clock> start = high_resolution_clock::now();
+            node_connector_->lock_and_get_buffer_map(
+                rem_address,
+                Node::DATA_BUFFER_IDX,
+                [this, data_write_chain, start, component_elements, rem_address, combined_size, node_id, group_id, &fail_cnt] (shared_ptr<BufferMap> rem_buffer_map_copy) {
+                    L_(trace) << "send_latest_data - Got remote buffer map after " << fail_cnt << " tries";
+                    L_(trace) << "send_latest_data - got own buffer map after: " <<  duration_cast<milliseconds>(high_resolution_clock::now()-start).count();
 
-                auto rem_offsets_and_spaces =
-                    rem_buffer_map_copy->get_offsets_and_spaces();
-                L_(debug)
-                    << "send_latest_data - start calculating addresses...";
-                auto dest_addresses = eval_logic_.evaluate(
-                    component_elements, rem_offsets_and_spaces);
-                L_(debug) << "send_latest_data - done calculating";
-                if (dest_addresses.empty()) {
-                  L_(warning) << "Remote buffer full - Node ID: " << node_id
-                              << " - Group ID: " << group_id;
-                  auto wi_buffer_full_report =
-                      make_shared<WiBufferFullReport>();
-                  wi_buffer_full_report->node_id = node_id;
-                  wi_buffer_full_report->group_id = group_id;
-                  send_work_item(cm_address_, wi_buffer_full_report);
-                  node_connector_->unlock_remote_buffer_map(
-                      rem_address, rem_buffer_map_copy, Node::DATA_BUFFER_IDX);
-                  node_connector_->unlock_buffer_map(data_buffer_map_);
-                  monitor_->QueueMetric(
-                      "timeslice_forwarder_state",
-                      {{"host", hostname_}, {"sender", to_string(node_id_)}},
-                      {{"rem_buffer_full", ++rem_buffer_full_cnt_}});
-                  delete data_write_chain;
-                  return;
+                    auto rem_offsets_and_spaces = rem_buffer_map_copy->get_offsets_and_spaces();
+                    L_(trace) << "send_latest_data - start calculating addresses...";
+                    auto dest_addresses = eval_logic_.evaluate(component_elements, rem_offsets_and_spaces);
+                    L_(trace) << "send_latest_data - done calculating";
+                    if (dest_addresses.empty()) {
+                        L_(debug) << "Remote buffer full - Node ID: " << node_id << " - Group ID: " << group_id;
+                        auto wi_buffer_full_report = make_shared<WiBufferFullReport>();
+                        wi_buffer_full_report->node_id = node_id;
+                        wi_buffer_full_report->group_id = group_id;
+                        send_work_item(cm_address_, wi_buffer_full_report);
+                        node_connector_->unlock_remote_buffer_map(
+                            rem_address,
+                            rem_buffer_map_copy,
+                            Node::DATA_BUFFER_IDX
+                        );
+                        node_connector_->unlock_buffer_map(data_buffer_map_);
+                        monitor_->QueueMetric("timeslice_forwarder_state",
+                                    {{"host", hostname_},
+                                        {"sender", to_string(node_id_)}},
+                                    {{"rem_buffer_full", ++rem_buffer_full_cnt_}});
+                        delete data_write_chain;
+                        return;
+                    }
+
+                    vector<uint64_t> src_mem_addresses;
+                    vector<uint64_t> sizes;
+                    src_mem_addresses.resize(component_elements.size());
+                    sizes.resize(component_elements.size());
+                    for (uint64_t i = 0; i < component_elements.size(); i++) {
+                        src_mem_addresses[i] = component_elements[i]->address;
+                        sizes[i] = component_elements[i]->len;
+                    }
+                    L_(trace) << "send_latest_data - start inserting in remote buffer map...";
+                    bool insert_successfull = rem_buffer_map_copy->insert(component_elements, dest_addresses, node_id_, group_id_, BufferMap::ListElement::RX);
+                    L_(trace) << "send_latest_data - inserting done";
+                    if (!insert_successfull) {
+                        L_(warning) << "Remote buffer map has no elements available - Node ID: " << node_id << " - Group ID: " << group_id;
+                        auto wi_buffer_full_report = make_shared<WiBufferFullReport>();
+                        wi_buffer_full_report->node_id = node_id;
+                        wi_buffer_full_report->group_id = group_id;
+                        send_work_item(cm_address_, wi_buffer_full_report);
+                        node_connector_->unlock_remote_buffer_map(
+                            rem_address,
+                            rem_buffer_map_copy,
+                            Node::DATA_BUFFER_IDX
+                        );
+                        node_connector_->unlock_buffer_map(data_buffer_map_);
+                        monitor_->QueueMetric("timeslice_forwarder_state",
+                                    {{"host", hostname_},
+                                        {"sender", to_string(node_id_)}},
+                                    {{"rem_buffer_map_full", ++rem_buffer_map_full_cnt_}});
+
+                        delete data_write_chain;
+                        return;
+                    }
+                    delete data_write_chain;
+                    L_(trace) << "send_latest_data - calling sendv...";
+                    int ret = node_connector_->sendv(
+                        rem_address,
+                        data_buffer_,
+                        Node::DATA_BUFFER_IDX,
+                        src_mem_addresses,
+                        dest_addresses,
+                        sizes,
+                        [this, rem_address, rem_buffer_map_copy, component_elements, combined_size] () {
+                            L_(trace) << "sendv - in callback";
+                            // send the new buffer map to remote node and unlock
+                            ts_reader->clear_last_timeslice();
+
+                            L_(trace) << "sendv - cleared last timeslice";
+                            node_connector_->write_remote_buffer_map_and_unlock(rem_address, rem_buffer_map_copy,
+                                Node::DATA_BUFFER_IDX,
+                                [this, component_elements, combined_size, rem_address] () {
+
+                                    *(bytes_sent_.value) = *(bytes_sent_.value) + combined_size;
+                                    monitor_->QueueMetric("timeslice_forwarder_state",
+                                        {{"host", hostname_},
+                                            {"sender", to_string(node_id_)}},
+                                        {{"send_cnt", ++send_cnt_}});
+                                    monitor_->QueueMetric("timeslice_forwarder_state",
+                                        {{"host", hostname_},
+                                            {"sender", to_string(node_id_)}},
+                                        {{"bytes_sent", combined_size}});
+
+                                    // remove the sent TS from own buffermap
+                                    data_buffer_map_->remove_elements(component_elements);
+                                    node_connector_->unlock_buffer_map(data_buffer_map_);
+                                    stop_ = high_resolution_clock::now();
+                                    L_(trace) << "TS transmitted in: " << duration_cast<milliseconds>(stop_-start_).count();
+                                }
+                            );
+                        }
+                    );
+                    if (ret) {
+                        L_(warning) << "sendv returned error: " << ret;
+                    } else {
+                        L_(trace) << "send_latest_data - sendv returned";
+                    }
+                },
+                [this, &fail_cnt] () {
+                    if ((++fail_cnt % 200) == 0) {
+                        L_(trace) << "failed to get remote lock";
+                    };
+                    monitor_->QueueMetric("timeslice_forwarder_state",
+                            {{"host", hostname_},
+                                {"sender", to_string(node_id_)}},
+                        {{"failed_remote_lock", ++failed_remote_lock_cnt_}});
+                    return true;
                 }
 
                 vector<uint64_t> src_mem_addresses;
@@ -304,11 +375,12 @@ TsSender::TsSender(uint64_t node_id,
     }
   });
 
-  data_buffer_size_ = ts_reader->get_buffer_size();
-  data_buffer_ = shared_ptr<char>(ts_reader->get_buffer());
-  data_buffer_map_ =
-      make_shared<BufferMap>(data_buffer_map_size, data_buffer_size_);
-  ts_reader->set_buffer_map(data_buffer_map_);
+    log_thread_ = std::async([this] {
+        while (true) {
+            this_thread::sleep_for(chrono::seconds(5));
+            L_(info) << "Output MB/s: " << (*bytes_sent_.per_seconds() / 1000000.0);
+        }
+    });
 
   wi_buffer_map_ = make_shared<BufferMap>(wi_buffer_map_size, wi_buffer_size);
   wi_buffer_ = std::shared_ptr<char>(new char[wi_buffer_size],
