@@ -223,8 +223,11 @@ class execution:
         if self.Par_.use_flescluster:
             if self.Par_.is_flescluster and not self.Par_.central_manager_on_flescluster:
                 self.central_manager_ips += self.Par_.cm_ip
-            if not self.Par_.is_flescluster and self.Par_.central_manager_on_flescluster:
+            elif not self.Par_.is_flescluster and self.Par_.central_manager_on_flescluster:
                 self.central_manager_ips += self.Par_.cm_ip
+            else:
+                for key,val in self.central_manager.items():
+                    self.central_manager_ips += val['inf_ip']
         else:
             for key,val in self.central_manager.items():
                 self.central_manager_ips += val['inf_ip']
