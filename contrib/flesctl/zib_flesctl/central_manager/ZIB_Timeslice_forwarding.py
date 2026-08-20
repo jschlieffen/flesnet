@@ -130,7 +130,7 @@ class Timeslice_forwarding_ZIB:
             logfile_collectl = "%s/logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % (self.Run_folder,node)
             self.commands_cm[node] = self.define_commands_cm(node, logfile_collectl, logfile)
             self.write_commands(node,self.commands_cm[node])
-            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,"64GB")
+            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,self.Par_.mem)
             if not start_successfull:
                 logger.error(f'ERROR occurried in central manager: {node}. Shutdown flesnet')
                 return 'shutdown'
@@ -179,7 +179,7 @@ class Timeslice_forwarding_ZIB:
                 ip = self.input_nodes[node]['eth_ip']
             self.commands_i[node] = self.define_commands_input(node, logfile_collectl, logfile, logfile_tsclient, input_file, node_cnt, ip)
             self.write_commands(node, self.commands_i[node])
-            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,"64GB")
+            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,self.Par_.mem)
             if not start_successfull:
                 logger.error(f'ERROR occurried in central manager: {node}. Shutdown flesnet')
                 return 'shutdown'
@@ -201,7 +201,7 @@ class Timeslice_forwarding_ZIB:
                 ip = self.output_nodes[node]['eth_ip']
             self.commands_o[node] = self.define_commands_output(node, logfile_collectl, logfile, logfile_tsclient, node_cnt, ip)
             self.write_commands(node, self.commands_o[node])
-            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,"64GB")
+            start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,self.Par_.mem)
             if not start_successfull:
                 logger.error(f'ERROR occurried in central manager: {node}. Shutdown flesnet')
                 return 'shutdown'

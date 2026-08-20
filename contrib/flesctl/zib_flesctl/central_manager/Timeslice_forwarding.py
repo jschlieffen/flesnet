@@ -109,7 +109,7 @@ class Timeslice_forwarding:
                 node_ip = node['eth_ip']
             self.commands_s[node_id] = self.define_sender_commands(node_id, logfile_collectl, logfile, logfile_tsclient, input_file, node_cnt)
             self.write_commands(node_id,self.commands_s[node_id])
-            start_successfull = self.Slurm_starter.start_process(node_id,self.Par_.num_cpus,"16GB")
+            start_successfull = self.Slurm_starter.start_process(node_id,self.Par_.num_cpus,self.Par_.mem)
             if not start_successfull:
                 logger.error(f'ERROR occurried in sender node: {node}. Shutdown flesnet')
                 return 'shutdown'
@@ -133,7 +133,7 @@ class Timeslice_forwarding:
                 sender_node_ip = sender_node['eth_ip']
             self.commands_r[node_id] = self.define_receiver_commands(node_id, logfile_collectl, logfile, logfile_tsclient, node_cnt, sender_node_ip)
             self.write_commands(node_id,self.commands_r[node_id])
-            start_successfull = self.Slurm_starter.start_process(node_id,self.Par_.num_cpus,"16GB")
+            start_successfull = self.Slurm_starter.start_process(node_id,self.Par_.num_cpus,self.Par_.mem)
             if not start_successfull:
                 logger.error(f'ERROR occurried in sender node: {node}. Shutdown flesnet')
                 return 'shutdown'

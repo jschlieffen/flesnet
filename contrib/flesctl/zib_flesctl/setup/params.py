@@ -30,6 +30,7 @@ class Params:
         self.num_receivers = 0
         self.use_collectl = 0
         self.num_cpus = 2
+        self.mem="64GB"
         self.loglevel="DEBUG"
         self.activate_robustness_test = 1
         self.timer_for_kills= timedelta(minutes=1)
@@ -120,6 +121,7 @@ class Params:
     def get_general_par(self):
         self.use_collectl = self.get_value('general', 'use_collectl','int',required=True)
         self.num_cpus = self.get_value('general', 'num_cpus', 'int', required=False)
+        self.mem = self.get_value('general', 'mem', 'str', required=False)
         self.loglevel = self.get_value('general','loglevel','str',required=True)
         self.check_log_lvl()
         

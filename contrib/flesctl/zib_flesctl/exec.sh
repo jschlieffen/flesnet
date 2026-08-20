@@ -6,6 +6,7 @@ function set_general_params(){
     SET_NODE_LIST=$(grep -E '^set_node_list=' setup/config.cfg | cut -d'=' -f2)
     EXCLUDE_NODES=$(grep -E '^exclude_nodes=' setup/config.cfg | cut -d'=' -f2)
     NUM_CPUS=$(grep -E '^num_cpus=' setup/config.cfg | cut -d'=' -f2)
+    MEM=$(grep -E '^mem=' setup/config.cfg | cut -d'=' -f2)
     ACTIVATE_TIMESLICEFORWARDING=$(grep "^GSI_Timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
     ZIB_TIMESLICEFORWARDING=$(grep "^ZIB_Timesliceforwarding" setup/config.cfg | cut -d'=' -f2)
     CENTRAL_MANAGER_CNT=$(grep -E '^central_manager=' setup/config.cfg | cut -d'=' -f2)
@@ -98,7 +99,7 @@ set_cluster_commands() {
 function allocate_nodes(){
     set_general_params
     NTASKS=4
-    MEM=64GB
+
     p="big"
     set_node_list
     set_exclude_node_list
