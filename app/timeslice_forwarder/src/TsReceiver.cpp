@@ -244,12 +244,7 @@ void TsReceiver::on_new_data(const std::string& /*address*/,
         time_point<high_resolution_clock> start;
         time_point<high_resolution_clock> stop;
         start = high_resolution_clock::now();
-<<<<<<< HEAD
-        L_(debug) << "TS writer - ts written after: "
-                  << duration_cast<milliseconds>(stop - start).count();
-=======
         //L_(debug) << "TS writer - ts written after: " <<  duration_cast<milliseconds>(stop-start).count();
->>>>>>> 5764767bdc99164b1892c899741fef556e7d5de2
 
         auto* el = data_buffer_map_->get_oldest_linked_list_element(
             nullptr, BufferMap::ListElement::IO::RX);
@@ -259,59 +254,16 @@ void TsReceiver::on_new_data(const std::string& /*address*/,
           return;
         }
         uint64_t component_size = 0;
-<<<<<<< HEAD
-        auto component = data_buffer_map_->get_elements_of_component(
-            el->compontent_id, component_size);
-        for (auto& component : component) {
-          component->rx_tx = BufferMap::ListElement::IO::
-              UNSPEC; // asynchronousity makes it possible to read it twice,
-                      // therefore we remove the RX mark to prevent this from
-                      // happening
-=======
         
         auto component = data_buffer_map_->get_elements_of_component(el->compontent_id, component_size);
         for (auto &c : component) {
             c->rx_tx = BufferMap::ListElement::IO::UNSPEC; // asynchronousity makes it possible to read it twice, therefore we remove the RX mark to prevent this from happening
->>>>>>> 5764767bdc99164b1892c899741fef556e7d5de2
         }
 
         *(bytes_received_.value) = *(bytes_received_.value) + component_size;
         L_(debug) << "New data from Node ID: " << component[0]->node_id
                   << " - Group ID: " << component[0]->group_id;
         ts_sink_->write_timeslice(component);
-<<<<<<< HEAD
-        auto buffer_fill_state =
-            (static_cast<double>(
-                 data_buffer_map_->get_list_metadata()->used_mem) /
-             static_cast<double>(
-                 data_buffer_map_->get_list_metadata()->buffer_size)) *
-            100.0;
-        auto buffer_map_fill_state =
-            (static_cast<double>(
-                 data_buffer_map_->get_list_metadata()->element_cnt -
-                 data_buffer_map_->get_list_metadata()->available_element_cnt) /
-             static_cast<double>(
-                 data_buffer_map_->get_list_metadata()->element_cnt)) *
-            100.0;
-        node_connector_->unlock_buffer_map(data_buffer_map_);
-        stop = high_resolution_clock::now();
-        L_(debug) << "TS on_new_data - done after: "
-                  << duration_cast<milliseconds>(stop - start).count();
-
-        monitor_->QueueMetric(
-            "timeslice_forwarder_state",
-            {{"host", hostname_}, {"receiver", to_string(node_id_)}},
-            {{"bytes_received", component_size},
-             {"buffer_fill", buffer_fill_state},
-             {"buffer_map_fill", buffer_map_fill_state},
-             {"recv_cnt", ++recv_cnt_}});
-      },
-      [this]() {
-        monitor_->QueueMetric(
-            "timeslice_forwarder_state",
-            {{"host", hostname_}, {"receiver", to_string(node_id_)}},
-            {{"failed_self_locks", ++failed_self_locks_}});
-=======
         auto buffer_fill_state =(static_cast<double>(data_buffer_map_->get_list_metadata()->used_mem) / static_cast<double>(data_buffer_map_->get_list_metadata()->buffer_size)) * 100.0;
         auto buffer_map_fill_state = (static_cast<double>(data_buffer_map_->get_list_metadata()->element_cnt - data_buffer_map_->get_list_metadata()->available_element_cnt) / static_cast<double>(data_buffer_map_->get_list_metadata()->element_cnt)) * 100.0;
         //sleep(6);
@@ -337,7 +289,6 @@ void TsReceiver::on_new_data(const std::string& /*address*/,
             {{"host", hostname_},
             {"receiver", to_string(node_id_)}},
                     {{"failed_self_locks", ++failed_self_locks_}});
->>>>>>> 5764767bdc99164b1892c899741fef556e7d5de2
         return true;
       });
 }
