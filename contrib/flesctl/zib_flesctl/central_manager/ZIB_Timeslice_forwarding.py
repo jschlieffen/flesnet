@@ -54,33 +54,37 @@ class Timeslice_forwarding_ZIB:
         
     def define_commands_input(self,node_name,collectl_logfile,logfile,logfile_tsclient,input_file,idx,node_ip):
         commands = {}
-        shm_str = f"fles_out_b{idx}"
+        
         if self.Par_.use_collectl:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
         #tsclient_command = f"{self.Par_.path}./timeslice_forwarder -l 1 -i file:\"{input_file}\" -o {shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
-        tsclient_command = (
-            f"{self.Par_.path}./tsclient "
-            f"-L {logfile_tsclient} "
-            f"-l 1 "
-            f"-i file:\"{input_file}\" "
-            f"-o shm:{shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
-        )
-        if self.Par_.use_dtsa_files:
-            tsclient_command += " -D 1"
-        input_command = (
-            f"{self.Par_.path}./timeslice_forwarder "
-            f"-l 1 "
-            f"-c {self.central_manager_ips}:{self.Par_.port} "
-            f"-A {node_ip}:{self.Par_.port} "
-            f"-N {idx} "
-            f"-i {shm_str} "
-            f"> {logfile} 2>&1 &"
-        )
-        if self.Par_.use_grafana:
-            tsclient_command +=  f" -m influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
-            input_command +=  f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
-        commands['3'] = tsclient_command
-        commands['4'] = input_command
+        print(self.Par_.num_sender_per_node)
+        for i in range(1,self.Par_.num_sender_per_node+1):
+            print(i)
+            shm_str = f"fles_out_b{idx}_{i}"
+            tsclient_command = (
+                f"{self.Par_.path}./tsclient "
+                f"-L {logfile_tsclient}_{i}.log "
+                f"-l 1 "
+                f"-i file:\"{input_file[i-1][1]}\" "
+                f"-o shm:{shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
+            )
+            if self.Par_.use_dtsa_files:
+                tsclient_command += " -D 1"
+            input_command = (
+                f"{self.Par_.path}./timeslice_forwarder "
+                f"-l 1 "
+                f"-c {self.central_manager_ips}:{self.Par_.port} "
+                f"-A {node_ip}:{int(self.Par_.port)+i} "
+                f"-N {idx + i-1} "
+                f"-i {shm_str} "
+                f"> {logfile}_{i}.log 2>&1 &"
+            )
+            if self.Par_.use_grafana:
+                tsclient_command +=  f" -m influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
+                input_command +=  f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
+            commands[f'{2*i + 1}'] = tsclient_command
+            commands[f'{2*i + 2}'] = input_command
         return commands
     
     def define_commands_output(self,node_name,collectl_logfile,logfile, logfile_tsclient,idx,node_ip):
@@ -138,14 +142,37 @@ class Timeslice_forwarding_ZIB:
     def start_input_nodes(self):
         node_cnt = 0
         for node in self.input_nodes.keys():
-            input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(node_cnt))), None)
-            if input_file is None:
-                input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
+            input_file = next(
+                (tup[1] for tup in self.Par_.input_tsa_files
+                 if tup[0] == 'input_node_' + str(node_cnt)),
+                []
+            )
+        
+            input_by_index = {item[0]: item for item in input_file}
+        
+            # Fill missing sender indices with the default
+            input_file = [
+                input_by_index.get(
+                    index,
+                    (index, self.Par_.default_path, self.Par_.default_data_size)
+                )
+                for index in range(1, self.Par_.num_sender_per_node + 1)
+            ]
+        
+            for file_info in input_file:
+                logger.info(
+                    f'start input node for timeslice-forwarding: '
+                    f'{node} with input file: {file_info}'
+                )
+                    
+            #input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(node_cnt))), None)
+            #if input_file is None:
+            #    input_file = next((tup[1] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
             
-            logger.info(f'start input node for timeslice-forwarding: {node} with input file: {input_file}')
-            logfile = "%s/logs/timeslice_forwarding/input_nodes/input_node_%s.log" % (self.Run_folder,node)
+            #logger.info(f'start input node for timeslice-forwarding: {node} with input files: {input_file}')
+            logfile = "%s/logs/timeslice_forwarding/input_nodes/input_node_%s" % (self.Run_folder,node)
             logfile_collectl = "%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,node)
-            logfile_tsclient = "%s/logs/timeslice_forwarding/tsclient/input_nodes/input_node_%s.log" % (self.Run_folder,node)
+            logfile_tsclient = "%s/logs/timeslice_forwarding/tsclient/input_nodes/input_node_%s" % (self.Run_folder,node)
             if self.Par_.use_infiniband:
                 ip = self.input_nodes[node]['inf_ip']
             else:
@@ -158,7 +185,7 @@ class Timeslice_forwarding_ZIB:
                 return 'shutdown'
             time.sleep(1)
             logger.status('start successful')
-            node_cnt += 1
+            node_cnt += 1*self.Par_.num_sender_per_node
         return None
             
     def start_output_nodes(self):

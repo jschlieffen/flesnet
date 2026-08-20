@@ -12,10 +12,11 @@ import time
 
 import signal
 import os
-os.environ['write_logfile'] = '1'
+#os.environ['write_logfile'] = '1'
 from logging_lib.log_msg import *
 from logging_lib import logfile_gen as Logfile
 from pathlib import Path
+import argparse
 
 #TODO: make timeslice-forwarding cpu ids 
 # =============================================================================
@@ -31,9 +32,13 @@ from pathlib import Path
 
 class exec_:
     
-    def __init__(self):
+    def __init__(self,interactive):
         self.clean_files()
-        self.Par_ = par.Params('setup/config.cfg')
+        self.interactive = interactive
+        if self.interactive:
+            self.Par_ = par.Params('setup/config_interactive.cfg')
+        else: 
+            self.Par_ = par.Params('setup/config.cfg')
         set_loglvl(self.Par_.loglevel, logger)
         foobar = self.Par_.validation_params(False)
         logger.success('Params valid and successfully set')
@@ -66,8 +71,10 @@ class exec_:
         self.start_time = time.time()
         
         self.execution_cls.start_Flesnet()
-
-        self.execution_cls.stop_via_ctrl_c()
+        if self.interactive:
+            self.execution_cls.wait_for_commands()
+        else:
+            self.execution_cls.stop_via_ctrl_c()
         if self.Par_.show_total_data:
             total_data, avg_data_rate = self.execution_cls.stop_monitoring()
         else:
@@ -168,7 +175,18 @@ class exec_:
         logger.info(data_rate_str)
         
 def main():
-    exe = exec_()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--interactive",
+        action="store_true",
+        help="Run in interactive mode"
+    )
+    
+    args = parser.parse_args()
+    
+    interactive = args.interactive
+
+    exe = exec_(interactive)
     exe.start_sim()
 
 if __name__ == '__main__':

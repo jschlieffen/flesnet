@@ -31,7 +31,7 @@ class Slurm_starter:
             }
         return True
     
-    def kill_process(self, node):
+    def kill_process(self, node,process):
         with open('tmp/communication/central_manager.txt', 'w') as f:
             f.write(f"{node}: {process}: kill")
             f.flush()
@@ -66,14 +66,14 @@ class Slurm_starter:
         
     def revieve_process(self, node, process):
         with open('tmp/communication/central_manager.txt', 'w') as f:
-            f.write(f"{node}: {process}: revieve")
+            f.write(f"{node}: {process}: revive")
             f.flush()
             os.fsync(f.fileno())
             f.close()
         msg = ""
         cnt = 0
         retries = 0
-        while msg != f"{node}: done revieve":
+        while msg != f"{node}: done revive":
             if retries < 3:
                 try:
                     with open(f"tmp/communication/{node}.txt","r") as f:

@@ -9,7 +9,7 @@ function execute_iteration() {
     Logfile="../${Logfile}"
     move_config $Logfile
     cd "benchmark_eval"
-    python3 $benchmark_eval $Logfile --collectl_used --mode='all'
+    python3 $benchmark_eval $Logfile --mode='all'
     cd ..
     #create_output_folder $Logfile 1
 }

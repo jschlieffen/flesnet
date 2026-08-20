@@ -65,8 +65,11 @@ class Params:
         self.num_components = 1
         self.num_central_manager = 1
         self.num_input_nodes = 1
+        self.num_sender_per_node = 1
         self.num_output_nodes = 1
         self.input_tsa_files = []
+        self.default_path = ""
+        self.default_data_size = 0
         self.show_total_data = 0
         self.enable_graph = 0
         self.enable_progress_bar = 0
@@ -77,6 +80,7 @@ class Params:
         self.use_flescluster = 0
         self.is_flescluster = 0
         self.cm_ip = ""
+        self.central_manager_on_flescluster = 0
         self.config = cfg.ConfigParser(interpolation=None)
         self.config.read(config_file)
         self.get_params(config_file)
@@ -110,6 +114,7 @@ class Params:
         self.num_receivers = self.get_value('Number_of_Nodes', 'receiver_nodes','int',required=True)
         self.num_central_manager = self.get_value('Number_of_Nodes', 'central_manager', 'int', True)
         self.num_input_nodes = self.get_value('Number_of_Nodes', 'input_nodes', 'int', True)
+        self.num_sender_per_node = self.get_value('Number_of_Nodes', 'num_sender_per_node','int',False)
         self.num_output_nodes = self.get_value('Number_of_Nodes', 'output_nodes','int',True)
         
     def get_general_par(self):
@@ -124,6 +129,7 @@ class Params:
         self.use_flescluster = self.get_value('mode', 'use_flescluster','int',required=True)
         self.is_flescluster = self.get_value('mode','is_flescluster','int',required=True)
         self.cm_ip = self.get_value('mode', 'cm_ip', 'str',required=False)
+        self.central_manager_on_flescluster = self.get_value('mode','central_manager_on_flescluster','int',required=True)
 
     def get_kill_par(self):
         self.activate_robustness_test = self.get_value('robustness_test','activate_robustness_test','int', self.activate_robustness_test, required=True)
@@ -169,6 +175,9 @@ class Params:
         
     def get_ts_forwarding_par(self):
         self.input_tsa_files = self.get_input_file_list('ts_input_files')
+        self.default_path = self.get_value('ts_input_files','i_default','str',required=True)
+        self.default_data_size = self.get_value('ts_input_files','i_default_data',0,False)
+        
         
     def get_mon_par(self):
         self.show_total_data = self.get_value('Monotoring', 'show_total_data', 'int', True)
@@ -210,7 +219,32 @@ class Params:
             logger.warning(f'not required Param not set: {param}')
             return var
         
-    def get_input_file_list(self,section):
+
+    def get_input_file_list(self, section):
+        file_groups = {}
+    
+        for entry in self.config[section]:
+            # Match entries like input_node_0_1
+            match = re.match(r'^(.*)_(\d+)$', entry)
+    
+            if match:
+                base_name = match.group(1)
+                index = int(match.group(2))
+    
+                path = self.config[section][entry]
+                data_size_name = entry + '_data'
+    
+                if self.config.has_option(section, data_size_name):
+                    data_size = self.config.getint(section, data_size_name)
+                    value = (index, path, data_size)
+                else:
+                    value = (index, path)
+    
+                file_groups.setdefault(base_name, []).append(value)
+    
+        return list(file_groups.items())        
+
+    def get_input_file_list_v2(self,section):
         file_list = []
         
         for entry in self.config[section]:
@@ -341,7 +375,7 @@ class Params:
 
     def validation_params(self, system_check):
         Params_check = params_checker(self, system_check)
-        Params_check.check_validity_of_files()
+        #Params_check.check_validity_of_files()
         Params_check.check_program_exists()
         Params_check.check_mode()
         if self.set_node_list:

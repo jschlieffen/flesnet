@@ -22,6 +22,7 @@ def get_params():
     with open('mon_parameters.txt', 'r') as f:
         for line in f:
             line = line.strip()
+            use_flesnet = 0
             if line.startswith("file_name:"):
                 _, data = line.split("file_name: ")
                 logfile, file_data = data.split(", ")
@@ -40,8 +41,8 @@ def get_params():
                 enable_graph = line.split(": ")[1] == '1'
             elif line.startswith("enable_progess_bar:"):
                 enable_progess_bar = line.split(": ")[1] == '1'
-            elif line.startswith("use_flesnet:"):
-                use_flesnet = line.split(": ")[1] == '1'
+            #elif line.startswith("use_flesnet:"):
+            #    use_flesnet = line.split(": ")[1] == '1'
             elif line.startswith("use_GSI_TS_forwarding: "):
                 use_GSI_TS_forwarding = line.split(": ")[1] == '1'
             elif line.startswith("use_ZIB_TS_forwarding: "):

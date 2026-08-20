@@ -368,10 +368,13 @@ class execution:
         cm_nodes_cnt = 0
         if self.Par_.use_flescluster:
             if self.Par_.is_flescluster:
-                cm_nodes_cnt = self.Par_.num_central_manager
                 output_nodes_cnt = self.Par_.num_output_nodes
+                if not self.Par_.central_manager_on_flescluster:
+                    cm_nodes_cnt = self.Par_.num_central_manager
             else:
                 input_nodes_cnt = self.Par_.num_input_nodes
+                if self.Par_.central_manager_on_flescluster:
+                    cm_nodes_cnt = self.Par_.num_central_manager
         for node in unused_nodes_iter:
 
             if cm_nodes_cnt < self.Par_.num_central_manager and node in self.Par_.central_manager_list:            
@@ -428,10 +431,13 @@ class execution:
         cm_nodes_cnt = 0
         if self.Par_.use_flescluster:
             if self.Par_.is_flescluster:
-                cm_nodes_cnt = self.Par_.num_central_manager
                 output_nodes_cnt = self.Par_.num_output_nodes
+                if not self.Par_.central_manager_on_flescluster:
+                    cm_nodes_cnt = self.Par_.num_central_manager
             else:
                 input_nodes_cnt = self.Par_.num_input_nodes
+                if self.Par_.central_manager_on_flescluster:
+                    cm_nodes_cnt = self.Par_.num_central_manager
         unused_nodes = [node for node in node_list]
         if self.Par_.set_node_list:
             unused_nodes,input_nodes_cnt,cm_nodes_cnt,output_nodes_cnt = self.assemble_timeslice_forwarding_nodes_customized(unused_nodes)
@@ -530,8 +536,126 @@ class execution:
                 sys.exit(1)
         while True:
             time.sleep(1)
-    
-    
+            
+    def write_interface_params(self):
+        with open('tmp/interface/interface_params.txt','w') as f:
+            f.write(f"use_GSI_TS_forwarding: {self.Par_.activate_timesliceforwarding}\n")
+            f.write(f"use_ZIB_TS_forwarding: {self.Par_.ZIB_timesliceforwarding}\n")
+            f.write(f"num_receivers: {self.Par_.num_receivers}\n")
+            f.write(f"num_inputnodes: {self.Par_.num_input_nodes}\n")
+            f.write(f"num_outputnodes: {self.Par_.num_output_nodes}\n")
+            f.write(f"num_cm: {self.Par_.num_central_manager}\n")
+            f.close()
+        if self.Par_.activate_timesliceforwarding:
+            self.get_interface_GSI_TS_parameters()
+        if self.Par_.ZIB_timesliceforwarding:
+            self.get_interface_ZIB_TS_parameters()
+            
+            
+    def get_interface_GSI_TS_parameters(self):
+        filenames = []
+        sender_nodes_cnt = 0
+        total_file_data = 0
+        num_receivers_nodes = self.Par_.num_receivers
+        for sender_node in self.sender_nodes.keys():
+            logfile = '../%s/logs/collectl/tsclient/sender_node_%s.csv' % (self.Run_folder,sender_node)
+            file_data = 0
+            #file_data = next((tup))
+            file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(sender_nodes_cnt))), None)
+            if file_data is None:
+                file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
+            filenames.append((logfile,file_data))
+            sender_nodes_cnt += 1
+            total_file_data += file_data
+        for receiver_node in self.receiver_nodes.keys():
+            logfile = '../%s/logs/collectl/tsclient/receiving_node_%s.csv' % (self.Run_folder,receiver_node)
+            filenames.append((logfile,total_file_data/num_receivers_nodes))
+        with open('tmp/interface/interface_params.txt','a') as f:
+            for logfile, file_data in filenames:
+                f.write(f"file_name: {logfile}, {file_data}\n")
+                
+    def get_interface_ZIB_TS_parameters(self):
+        filenames = []
+        input_nodes_cnt = 0
+        total_file_data = 0
+        for input_node in self.input_nodes.keys():
+            logfile = "../%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,input_node)
+            file_data = 0
+            file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(input_nodes_cnt))), None)
+            if file_data is None:
+                file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
+            filenames.append((logfile,file_data))
+            input_nodes_cnt += 1
+            total_file_data += file_data
+        for output_node in self.output_nodes.keys():
+            logfile = "../%s/logs/collectl/timeslice_forwarding/output_nodes/output_node_%s.csv" % (self.Run_folder,output_node)
+            filenames.append((logfile,total_file_data/self.Par_.num_output_nodes))
+        for cm in self.central_manager.keys():
+            logfile = "../%s//logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % (self.Run_folder,cm)
+            filenames.append((logfile,total_file_data/self.Par_.num_central_manager))
+        with open('tmp/interface/interface_params.txt','a') as f:
+            for logfile,file_data in filenames:
+                f.write(f'file_name: {logfile}, {file_data}\n')
+            
+    def wait_for_commands(self):
+        try:
+            self.write_interface_params()
+            self.write_response('0', 'starting')
+            msg = ''
+            prev_msg = ''
+            while True:
+                time.sleep(0.1)
+                
+                try:
+                    with open('tmp/interface/interface_commands.txt','r') as f:
+                        msg = f.read().strip()
+                        #ode, action = line.split(": ")
+                        f.close()
+                except FileNotFoundError:
+                    msg = ""
+                if not ':' in msg:
+                    continue
+                node_type, node,process,action = msg.split(': ')
+                if msg == prev_msg:
+                    continue
+                if action == 'kill':
+                    logger.info(f'killing node: {node_type} {node}')
+                    self.kill_node(node_type, node)
+                    self.write_response(node, action)
+                    prev_msg = msg
+                    logger.info('done kill')
+                elif action == 'revive':
+                    logger.info(f'revive node: {node_type} {node}')
+                    self.revive_node(node_type,node)
+                    self.write_response(node,action)
+                    prev_msg = msg
+                    logger.info('done revive')
+        except Exception as e:
+            logger.critical(f'Error {e} occured during interface comm. Terminating')
+            logger.debug(f'expanded debug message: {traceback.format_exc()}')
+            self.stop_program()
+            sys.exit(1)
+
+    def write_response(self,node,action):
+        with open('tmp/interface/interface_response.txt','w') as f:
+            f.write(f'{node}: done {action}')
+            f.close()    
+            
+            
+    def kill_node(self,Node_type,to_kill_node):
+        if Node_type == 'Central manager':
+            self.Slurm_starter.kill_process(to_kill_node,'3')
+        else:
+            self.Slurm_starter.kill_process(to_kill_node,'4')
+
+    def revive_node(self,Node_type,to_revive_node):
+        if Node_type == 'Central manager':
+            self.Slurm_starter.revieve_process(to_revive_node,'3')
+        else:
+            self.Slurm_starter.revieve_process(to_revive_node,'4')
+                        
+            
+            
     def robustness_test(self):
         alive_dict = {}
         dead_dict = {}
@@ -573,6 +697,7 @@ class execution:
             return alive_dict,dead_dict
         Node_type = random.choices(keys, weights=weights, k=1)[0]
         to_kill_node = random.choice(list(alive_dict[Node_type].keys()))
+        self.kill_node(Node_type,to_kill_node)
         if Node_type == 'Entry nodes':
             self.entry_nodes_cls.kill_process(to_kill_node)
         elif Node_type == 'Build nodes':
@@ -591,7 +716,8 @@ class execution:
         alive_dict[Node_type].pop(to_kill_node)
         return alive_dict,dead_dict
 
-    
+ 
+        
     def revieve_nodes_fct(self,alive_dict,dead_dict):
         custom_adjustments = {
             'Entry nodes': (self.Par_.num_min_entry_nodes_alive,self.Par_.num_entrynodes),
@@ -643,6 +769,9 @@ class execution:
         dead_dict[Node_type].pop(to_revive_node)
         return alive_dict,dead_dict
     
+    
+
+            
     # =============================================================================
     # Stops the experiment and kills every process connected    
     # ============================================================================

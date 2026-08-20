@@ -77,6 +77,7 @@ def main(node_name,threads_components):
                 workers[process]['res'] = thread_res
                 workers[process]['communicator'] = communicator_thread
                 workers[process]['status'] = True
+                channel.send_to_child('succeed')
             case "stop":
                 break
             

@@ -27,6 +27,7 @@ class communicator(Thread):
     
     def run(self):
         self.write_response('test improv.')
+        prev_action = ""
         while True:
             time.sleep(0.1)
             try:
@@ -36,7 +37,7 @@ class communicator(Thread):
                     f.close()
             except FileNotFoundError:
                 msg = ""
-            prev_action = ""
+
             
             if f"{self.node}" in msg:
                 
@@ -47,8 +48,8 @@ class communicator(Thread):
                     if not self.give_command('kill',process):
                         break
                     prev_action = action
-                elif action == "revieve":
-                    if not self.give_command('revieve',process):
+                elif action == "revive":
+                    if not self.give_command('revive',process):
                         break
                     prev_action = action
                 elif action == "stop":
