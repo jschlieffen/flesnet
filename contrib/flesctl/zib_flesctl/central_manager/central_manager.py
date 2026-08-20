@@ -220,8 +220,11 @@ class execution:
             self.central_manager_eth_ips += val['eth_ip']
         
     def get_ips(self):
-        if self.Par_.use_flescluster and self.Par_.is_flescluster:
-            self.central_manager_ips += self.Par_.cm_ip
+        if self.Par_.use_flescluster:
+            if self.Par_.is_flescluster and not self.Par_.central_manager_on_flescluster:
+                self.central_manager_ips += self.Par_.cm_ip
+            if not self.Par_.is_flescluster and self.Par_.central_manager_on_flescluster:
+                self.central_manager_ips += self.Par_.cm_ip
         else:
             for key,val in self.central_manager.items():
                 self.central_manager_ips += val['inf_ip']
