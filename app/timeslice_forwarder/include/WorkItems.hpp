@@ -44,16 +44,6 @@ public:
 };
 
 class WiWorkDone : public WorkItem {
-<<<<<<< HEAD
-public:
-  WiWorkDone() { type = static_cast<WorkItem::Type>(wi_work_done); }
-
-  // Boost
-  template <typename Archive>
-  void serialize(Archive& ar, const unsigned /*version*/) {
-    WI_SERIALIZE(ar);
-  }
-=======
     public:
         uint64_t cnt = 0;
     WiWorkDone() {
@@ -66,7 +56,6 @@ public:
         WI_SERIALIZE(ar);
         ar & cnt;
     }
->>>>>>> 5764767bdc99164b1892c899741fef556e7d5de2
 
   std::shared_ptr<char> serialize(uint64_t* size) override {
     std::ostringstream sstream;
@@ -82,16 +71,6 @@ public:
     return shared_ptr;
   }
 
-<<<<<<< HEAD
-  bool deserialize(std::shared_ptr<char> serialized) override {
-    std::string s(serialized.get());
-    std::istringstream sstream(s);
-    boost::archive::text_iarchive archive(sstream);
-    archive&* this;
-    return true;
-  }
-};
-=======
     bool deserialize(std::shared_ptr<char> serialized) override {
         std::string s(serialized.get());
         std::istringstream sstream(s);
@@ -100,4 +79,3 @@ public:
         return true;
     }
 };
->>>>>>> 5764767bdc99164b1892c899741fef556e7d5de2
