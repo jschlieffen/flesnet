@@ -82,6 +82,7 @@ class Params:
         self.is_flescluster = 0
         self.cm_ip = ""
         self.central_manager_on_flescluster = 0
+        self.sender_nodes_on_central_manager_node = 0
         self.config = cfg.ConfigParser(interpolation=None)
         self.config.read(config_file)
         self.get_params(config_file)
@@ -132,6 +133,7 @@ class Params:
         self.is_flescluster = self.get_value('mode','is_flescluster','int',required=True)
         self.cm_ip = self.get_value('mode', 'cm_ip', 'str',required=False)
         self.central_manager_on_flescluster = self.get_value('mode','central_manager_on_flescluster','int',required=True)
+        self.sender_nodes_on_central_manager_node = self.get_value('mode','sender_nodes_on_central_manager_node','int',required=True)
 
     def get_kill_par(self):
         self.activate_robustness_test = self.get_value('robustness_test','activate_robustness_test','int', self.activate_robustness_test, required=True)

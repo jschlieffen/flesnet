@@ -397,7 +397,6 @@ class execution:
                         'eth_ip' : node_eth_ip
                     }
                 cm_nodes_cnt += 1
-                unused_nodes.remove(node)
             elif input_nodes_cnt < self.Par_.num_input_nodes and node in self.Par_.input_node_list:
                 node_ip = infiniband_ip(node)
                 node_eth_ip = ethernet_ip(node)

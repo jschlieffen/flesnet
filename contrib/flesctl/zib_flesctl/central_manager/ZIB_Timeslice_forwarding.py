@@ -42,7 +42,7 @@ class Timeslice_forwarding_ZIB:
         collectl_cpu_command = f"collectl --plot --sep , -i 1 -sC > {cpu_collectl_logfile}"
         return collectl_network_command, collectl_cpu_command
         
-    def define_commands_cm(self,node_name,collectl_logfile, logfile):
+    def define_commands_cm(self,node_name,collectl_logfile,logfile,logfile_input='',logfile_tsclient='',input_file=[],idx='',node_ip=''):
         commands = {}
         if self.Par_.use_collectl:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
@@ -50,16 +50,24 @@ class Timeslice_forwarding_ZIB:
         if self.Par_.use_grafana:
             cm_command += f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
         commands['3'] = cm_command
+        print(commands)
+        print('------------------')
+        if self.Par_.sender_nodes_on_central_manager_node:
+            commands_input = self.define_commands_input(node_name, collectl_logfile, logfile_input, logfile_tsclient, input_file, idx, node_ip,True)
+            commands.update(commands_input)
+            print(commands)
+            print('------------------')
         return commands
         
-    def define_commands_input(self,node_name,collectl_logfile,logfile,logfile_tsclient,input_file,idx,node_ip):
+    def define_commands_input(self,node_name,collectl_logfile,logfile,logfile_tsclient,input_file,idx,node_ip,is_subprocess=False):
         commands = {}
         
-        if self.Par_.use_collectl:
+        if self.Par_.use_collectl and not is_subprocess:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
         #tsclient_command = f"{self.Par_.path}./timeslice_forwarder -l 1 -i file:\"{input_file}\" -o {shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
         print(self.Par_.num_sender_per_node)
         for i in range(1,self.Par_.num_sender_per_node+1):
+
             print(i)
             shm_str = f"fles_out_b{idx}_{i}"
             tsclient_command = (
@@ -83,8 +91,12 @@ class Timeslice_forwarding_ZIB:
             if self.Par_.use_grafana:
                 tsclient_command +=  f" -m influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
                 input_command +=  f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
-            commands[f'{2*i + 1}'] = tsclient_command
-            commands[f'{2*i + 2}'] = input_command
+            if is_subprocess:
+                commands[f'{2*i + 3}'] = tsclient_command
+                commands[f'{2*i + 4}'] = input_command
+            else:
+                commands[f'{2*i + 1}'] = tsclient_command
+                commands[f'{2*i + 2}'] = input_command
         return commands
     
     def define_commands_output(self,node_name,collectl_logfile,logfile, logfile_tsclient,idx,node_ip):
@@ -128,7 +140,39 @@ class Timeslice_forwarding_ZIB:
             logger.info(f'start central manager for timeslice-forwarding: {node}')
             logfile = "%s/logs/timeslice_forwarding/central_manager/central_manager_%s.log" % (self.Run_folder,node)
             logfile_collectl = "%s/logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % (self.Run_folder,node)
-            self.commands_cm[node] = self.define_commands_cm(node, logfile_collectl, logfile)
+            if self.Par_.sender_nodes_on_central_manager_node:
+                input_file = next(
+                    (tup[1] for tup in self.Par_.input_tsa_files
+                     if tup[0] == 'input_node_0'),
+                    []
+                )
+            
+                input_by_index = {item[0]: item for item in input_file}
+            
+                # Fill missing sender indices with the default
+                input_file = [
+                    input_by_index.get(
+                        index,
+                        (index, self.Par_.default_path, self.Par_.default_data_size)
+                    )
+                    for index in range(1, self.Par_.num_sender_per_node + 1)
+                ]
+            
+                for file_info in input_file:
+                    logger.info(
+                        f'start input node for timeslice-forwarding: '
+                        f'{node} with input file: {file_info}'
+                    )
+                logfile_input = "%s/logs/timeslice_forwarding/input_nodes/input_node_%s" % (self.Run_folder,node)
+                logfile_collectl = "%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,node)
+                logfile_tsclient = "%s/logs/timeslice_forwarding/tsclient/input_nodes/input_node_%s" % (self.Run_folder,node)
+                if self.Par_.use_infiniband:
+                    ip = self.central_manager[node]['inf_ip']
+                else:
+                    ip = self.central_manager[node]['eth_ip']
+                self.commands_cm[node] =  self.define_commands_cm(node, logfile_collectl, logfile, logfile_input, logfile_tsclient, input_file, node_cnt, ip)
+            else:
+                self.commands_cm[node] =  self.define_commands_cm(node, logfile_collectl, logfile)
             self.write_commands(node,self.commands_cm[node])
             start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,self.Par_.mem)
             if not start_successfull:
@@ -140,7 +184,7 @@ class Timeslice_forwarding_ZIB:
         return None
     
     def start_input_nodes(self):
-        node_cnt = 0
+        node_cnt = 1
         for node in self.input_nodes.keys():
             input_file = next(
                 (tup[1] for tup in self.Par_.input_tsa_files
