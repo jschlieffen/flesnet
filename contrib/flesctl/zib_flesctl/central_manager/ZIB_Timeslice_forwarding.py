@@ -60,8 +60,6 @@ class Timeslice_forwarding_ZIB:
         
         if self.Par_.use_collectl and not is_subprocess:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
-        #tsclient_command = f"{self.Par_.path}./timeslice_forwarder -l 1 -i file:\"{input_file}\" -o {shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
-        print(self.Par_.num_sender_per_node)
         for i in range(1,self.Par_.num_sender_per_node+1):
             shm_str = f"fles_out_b{idx}_{i}"
             tsclient_command = (
@@ -178,7 +176,7 @@ class Timeslice_forwarding_ZIB:
         return None
     
     def start_input_nodes(self):
-        node_cnt = 1
+        node_cnt = self.Par_.num_sender_per_node
         for node in self.input_nodes.keys():
             input_file = next(
                 (tup[1] for tup in self.Par_.input_tsa_files
