@@ -535,7 +535,7 @@ class params_checker:
                         
     def check_program_exists(self):
         logger.debug('check if the path to flesnet is correct')
-        for program in ['./mstool', './tsclient', './timeslice_forwarder','./archive_validator']:
+        for program in ['./mstool', './tsclient', './timeslice_forwarder']:
             program_path = self.Par_.path + program
             if not (os.path.isfile(program_path) and os.access(program_path, os.X_OK)):
                 logger.critical(f'Program {program} does not exist')

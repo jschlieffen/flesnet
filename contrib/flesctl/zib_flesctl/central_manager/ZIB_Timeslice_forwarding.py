@@ -46,17 +46,13 @@ class Timeslice_forwarding_ZIB:
         commands = {}
         if self.Par_.use_collectl:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
-        cm_command = f"{self.Par_.path}./timeslice_forwarder -l 1  -c {self.central_manager_ips}:{self.Par_.port} > {logfile} 2>&1 &"
+        cm_command = f"{self.Par_.path}./timeslice_forwarder -l 2  -c {self.central_manager_ips}:{self.Par_.port} > {logfile} 2>&1 &"
         if self.Par_.use_grafana:
             cm_command += f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
         commands['3'] = cm_command
-        print(commands)
-        print('------------------')
         if self.Par_.sender_nodes_on_central_manager_node:
             commands_input = self.define_commands_input(node_name, collectl_logfile, logfile_input, logfile_tsclient, input_file, idx, node_ip,True)
             commands.update(commands_input)
-            print(commands)
-            print('------------------')
         return commands
         
     def define_commands_input(self,node_name,collectl_logfile,logfile,logfile_tsclient,input_file,idx,node_ip,is_subprocess=False):
@@ -67,13 +63,11 @@ class Timeslice_forwarding_ZIB:
         #tsclient_command = f"{self.Par_.path}./timeslice_forwarder -l 1 -i file:\"{input_file}\" -o {shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
         print(self.Par_.num_sender_per_node)
         for i in range(1,self.Par_.num_sender_per_node+1):
-
-            print(i)
             shm_str = f"fles_out_b{idx}_{i}"
             tsclient_command = (
                 f"{self.Par_.path}./tsclient "
                 f"-L {logfile_tsclient}_{i}.log "
-                f"-l 1 "
+                f"-l 2 "
                 f"-i file:\"{input_file[i-1][1]}\" "
                 f"-o shm:{shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
             )
@@ -81,7 +75,7 @@ class Timeslice_forwarding_ZIB:
                 tsclient_command += " -D 1"
             input_command = (
                 f"{self.Par_.path}./timeslice_forwarder "
-                f"-l 1 "
+                f"-l 2 "
                 f"-c {self.central_manager_ips}:{self.Par_.port} "
                 f"-A {node_ip}:{int(self.Par_.port)+i} "
                 f"-N {idx + i-1} "
@@ -106,7 +100,7 @@ class Timeslice_forwarding_ZIB:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
         tsclient_command = (
             f"{self.Par_.path}./tsclient "
-            f"-l 1 "
+            f"-l 2 "
             f"-L {logfile_tsclient} "
             f"-i shm:{shm_str}"
         )
@@ -119,7 +113,7 @@ class Timeslice_forwarding_ZIB:
             tsclient_command += f"-o file:{self.Par_.path_to_output_file}/{run_id}/tsa_files/output_node_{node_name}.tsa"
         output_command = (
             f"{self.Par_.path}./timeslice_forwarder "
-            f"-l 1 "
+            f"-l 2 "
             f"-c {self.central_manager_ips}:{self.Par_.port}  "
             f"-A {node_ip}:{self.Par_.port} "
             f"-N {idx} "
