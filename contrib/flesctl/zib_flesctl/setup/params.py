@@ -636,7 +636,7 @@ class params_checker:
                 logger.critical(f"{node_type}: {node} not found on the cluster")
                 self.exit_program()
                 continue
-            if self.Par_.use_infiniband:
+            if self.Par_.use_infiniband and not self.Par_.use_flescluster:
                 features = node_features[node]
                 if "infiniband" not in features.lower():
                     logger.critical(f"{node_type}: {node} does not provide Infiniband")
