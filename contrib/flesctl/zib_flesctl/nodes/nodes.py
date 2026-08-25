@@ -21,12 +21,15 @@ import re
 import nodes_communicator as nc
 import thread_channel
 import nodes_help_functions as nh
+from datetime import datetime
 
 def threads_starter(command, communicator):
     print(command)
+    print(datetime.now().strftime("%I:%M:%S %p"))
     result = subprocess.Popen(command,  stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True, text=True, preexec_fn=os.setsid)
     while True:
         msg = communicator.get()
+        
         if msg == 'exit':
             #result.terminate()
             os.killpg(os.getpgid(result.pid),signal.SIGKILL)
@@ -42,7 +45,11 @@ def main(node_name,threads_components):
     communicator = nc.communicator(channel, node_name)
     communicator.start()
     workers = {}
+    cnt = 0
     for index, process_command in threads_components.items():
+        if 'tsclient' in process_command:
+            time.sleep(cnt*2)
+            cnt += 1
         communicator_thread = queue.Queue()
         thread_res = threading.Thread(
             target=threads_starter,

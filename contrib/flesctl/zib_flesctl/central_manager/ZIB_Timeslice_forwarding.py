@@ -46,9 +46,10 @@ class Timeslice_forwarding_ZIB:
         commands = {}
         if self.Par_.use_collectl:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
-        cm_command = f"{self.Par_.path}./timeslice_forwarder -l 2  -c {self.central_manager_ips}:{self.Par_.port} > {logfile} 2>&1 &"
+        cm_command = f"{self.Par_.path}./timeslice_forwarder -l 2  -c {self.central_manager_ips}:{self.Par_.port}"
         if self.Par_.use_grafana:
             cm_command += f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
+        cm_command += f" > {logfile} 2>&1 &"
         commands['3'] = cm_command
         if self.Par_.sender_nodes_on_central_manager_node:
             commands_input = self.define_commands_input(node_name, collectl_logfile, logfile_input, logfile_tsclient, input_file, idx, node_ip,True)
@@ -67,7 +68,8 @@ class Timeslice_forwarding_ZIB:
                 f"-L {logfile_tsclient}_{i}.log "
                 f"-l 2 "
                 f"-i file:\"{input_file[i-1][1]}\" "
-                f"-o shm:{shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size}"
+                f"-o shm:{shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size} "
+                f"{self.Par_.input_tsclient_customize_str}"
             )
             if self.Par_.use_dtsa_files:
                 tsclient_command += " -D 1"
@@ -78,11 +80,11 @@ class Timeslice_forwarding_ZIB:
                 f"-A {node_ip}:{int(self.Par_.port)+i} "
                 f"-N {idx + i-1} "
                 f"-i {shm_str} "
-                f"> {logfile}_{i}.log 2>&1 &"
             )
             if self.Par_.use_grafana:
-                tsclient_command +=  f" -m influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
-                input_command +=  f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
+                tsclient_command +=  f" --monitor influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
+                input_command +=  f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token} "
+            input_command += f"> {logfile}_{i}.log 2>&1 &"
             if is_subprocess:
                 commands[f'{2*i + 3}'] = tsclient_command
                 commands[f'{2*i + 4}'] = input_command
@@ -116,11 +118,11 @@ class Timeslice_forwarding_ZIB:
             f"-A {node_ip}:{self.Par_.port} "
             f"-N {idx} "
             f"-o {shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size} "
-            f"> {logfile} 2>&1 &"
         )
         if self.Par_.use_grafana:
             tsclient_command +=  f" -m influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
             output_command +=  f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token}"
+        output_command += f" > {logfile} 2>&1 &"
         commands['3'] = tsclient_command
         commands['4'] = output_command
         return commands

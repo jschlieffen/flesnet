@@ -578,7 +578,8 @@ class execution:
         with open('tmp/interface/interface_params.txt','a') as f:
             for logfile, file_data in filenames:
                 f.write(f"file_name: {logfile}, {file_data}\n")
-                
+    
+    #TODO:fix file data
     def get_interface_ZIB_TS_parameters(self):
         filenames = []
         input_nodes_cnt = 0
@@ -586,7 +587,24 @@ class execution:
         for input_node in self.input_nodes.keys():
             logfile = "../%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,input_node)
             file_data = 0
-            file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(input_nodes_cnt))), None)
+            print(self.Par_.input_tsa_files)
+            #file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(input_nodes_cnt))), None)
+            input_file = next(
+                (tup[1] for tup in self.Par_.input_tsa_files
+                 if tup[0] == 'input_node_0'),
+                []
+            )
+        
+            input_by_index = {item[0]: item for item in input_file}
+        
+            # Fill missing sender indices with the default
+            input_file = [
+                input_by_index.get(
+                    index,
+                    (index, self.Par_.default_path, self.Par_.default_data_size)
+                )
+                for index in range(1, self.Par_.num_sender_per_node + 1)
+            ]
             if file_data is None:
                 file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == 'i_default'), None)
             filenames.append((logfile,file_data))
