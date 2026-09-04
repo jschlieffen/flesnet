@@ -79,14 +79,19 @@ def setup_logger(write_logfile):
     matplotlib_logger.setLevel(logging.WARNING)  
     matplotlib_logger.propagate = False  
 
+    
+    asyncio_logger = logging.getLogger("asyncio")
+    asyncio_logger.setLevel(logging.WARNING)
+    asyncio_logger.propagate = False
+
     if write_logfile == '1':
-        config = configparser.ConfigParser()
-        config.read('config.cfg')
+        #config = configparser.ConfigParser()
+        #config.read('config.cfg')
         
-        run_id = config.getint('general', 'run_id')
-        config['general']['run_id'] = str(run_id+1)
-        timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-        file_handler = logging.FileHandler(f'Runs/{run_id}/logs/flesctl/Run_{str(run_id+1)}_{timestamp}.log')
+        #run_id = config.getint('general', 'run_id')
+        #config['general']['run_id'] = str(run_id+1)
+        #timestamp = datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+        file_handler = logging.FileHandler(f'debug.log')
         file_handler.setFormatter(BoostLogFormatter())
         logger.addHandler(file_handler)
     return logger

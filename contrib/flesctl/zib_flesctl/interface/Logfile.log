@@ -1,0 +1,18 @@
+Error: max() iterable argument is empty
+Traceback (most recent call last):
+  File "/home/htc/jschlieffen/flesnet_flesctl/flesnet/contrib/flesctl/zib_flesctl/interface/interface.py", line 343, in <module>
+    curses.wrapper(main,file_names,num_entrynodes, num_buildnodes, num_receivers, num_inputnodes, num_outputnodes, num_cm,
+    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+             use_flesnet, use_GSI_TS_forwarding, use_ZIB_TS_forwarding)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.13/curses/__init__.py", line 94, in wrapper
+    return func(stdscr, *args, **kwds)
+  File "/home/htc/jschlieffen/flesnet_flesctl/flesnet/contrib/flesctl/zib_flesctl/interface/interface.py", line 244, in main
+    result = draw_button_group(
+        stdscr,
+    ...<4 lines>...
+        info['nodes']
+    )
+  File "/home/htc/jschlieffen/flesnet_flesctl/flesnet/contrib/flesctl/zib_flesctl/interface/interface.py", line 160, in draw_button_group
+    max_label = max(len(node_name[0]) for node_name in node_names)
+ValueError: max() iterable argument is empty

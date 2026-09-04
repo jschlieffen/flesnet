@@ -1,0 +1,11 @@
+first frame:
+    params for allocating nodes. 
+    rewrite exec for interactive mode
+    config.cfg is then replaced with interactive config.
+    Start tmux session with salloc.
+second frame:
+    start run with given parameters
+third frame:
+    general overview over run. Look at already existing code.
+fourth frame:
+    node overview. Look at already existing code.
