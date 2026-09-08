@@ -24,29 +24,14 @@ import interface.node_viewer as node_viewer
 class StartFrame(Screen):
 
     def compose(self) -> ComposeResult:
-
-        # -------------------------------------------------
-        # Top bar
-        # -------------------------------------------------
-
         with Horizontal(id="top-bar"):
-
-            yield Static(
-                "flescontrol"
-            )
-
+            yield Static("flescontrol")
             yield Button(
                 "X",
                 id="exit",
                 variant="error",
             )
-
-        # -------------------------------------------------
-        # Top action area
-        # -------------------------------------------------
-
         with Vertical(id="top-area"):
-
             yield Horizontal(
                 Static(
                     "start simulation",
@@ -59,7 +44,6 @@ class StartFrame(Screen):
                 ),
                 classes="action-row",
             )
-
             yield Horizontal(
                 Static(
                     "allocate nodes",
@@ -71,21 +55,12 @@ class StartFrame(Screen):
                 ),
                 classes="action-row",
             )
-
-        # -------------------------------------------------
-        # Parameter editor
-        # -------------------------------------------------
-
         yield cp.ParameterEditor(
             self.app.parameters,
             id="parameter-editor",
         )
 
-    def on_button_pressed(
-        self,
-        event: Button.Pressed,
-    ):
-
+    def on_button_pressed(self, event: Button.Pressed):
         if event.button.id == "start":
             starter.start_flesctrl()
             self.app.push_screen(
@@ -109,149 +84,73 @@ class MainFrame(Screen):
         self.nodes_visible = False
         super().__init__()
     def compose(self) -> ComposeResult:
-
-        # =====================================================
-        # TOP BAR
-        # =====================================================
-
         with Horizontal(id="top-bar"):
-
-            yield Static(
-                "Simulation"
-            )
-
-            yield Button(
-                "X",
-                id="exit",
-                variant="error",
-            )
-
-        # =====================================================
-        # CONTROLS
-        # =====================================================
-
+            yield Static("Simulation")
+            yield Button("X", id="exit", variant="error")
         with Vertical(id="main-controls"):
-
             yield Horizontal(
                 Static(
                     "stop simulation",
                     classes="action-label",
                 ),
-
                 Button(
                     "Stop",
                     id="stop",
                     variant="error",
                 ),
-
                 classes="action-row",
             )
-
             yield Horizontal(
                 Static(
                     "Show nodes",
                     classes="action-label",
                 ),
-
                 Button(
                     "Show nodes",
                     id="show-nodes",
                 ),
-
                 classes="action-row",
             )
+        yield VerticalScroll( id="node-area")
 
-        # =====================================================
-        # NODE AREA
-        # =====================================================
-
-        yield VerticalScroll(
-            id="node-area"
-        )
-
-    # =========================================================
-    # BUTTON HANDLER
-    # =========================================================
-
-    def on_button_pressed(
-        self,
-        event: Button.Pressed,
-    ):
-
+    def on_button_pressed(self,event: Button.Pressed,):
         button_id = event.button.id
-
-        # -----------------------------------------------------
-        # STOP
-        # -----------------------------------------------------
-
         if button_id == "stop":
-
             starter.stop_flesctrl()
-
             self.app.exit()
-            
             return
-
-        # -----------------------------------------------------
-        # EXIT
-        # -----------------------------------------------------
-
         if button_id == "exit":
-
             self.app.result_main = "exit"
-
             self.app.exit()
-
             return
-
-        # -----------------------------------------------------
-        # SHOW NODES
-        # -----------------------------------------------------
-
         if button_id == "show-nodes":
-
             self.show_nodes()
-
             return
-
-        # -----------------------------------------------------
-        # NODE BUTTON
-        # -----------------------------------------------------
-
-    
         if event.button.has_class("node-button"):
-    
             node_type = event.button.node_type
             node = event.button.node
             filename = event.button.filename
-    
             self.app.push_screen(
                 node_info.NodeInfoScreen(
                     node_type,
                     node,
+                    filename
                 )
             )
-    
             return
 
             
     def show_nodes(self):
         node_area = self.query_one("#node-area")
-    
-        # Toggle off
+
         if self.nodes_visible:
             node_area.display = False
             self.nodes_visible = False
             return
-    
-        # Toggle on
         node_area.display = True
         self.nodes_visible = True
-    
-        # Already created -> don't mount them again
         if len(node_area.children) > 0:
             return
-    
         try:
             file_names, parameters = self.get_params()
         except FileNotFoundError:
@@ -262,69 +161,45 @@ class MainFrame(Screen):
                 )
             )
             return
-    
         num_input_nodes = parameters["num_input_nodes"]
         num_output_nodes = parameters["num_output_nodes"]
         num_cm = parameters["num_cm"]
-    
-        # Split file_names according to the information in params.py
-        input_nodes = file_names[
-            :num_input_nodes
-        ]
-    
+        input_nodes = file_names[:num_input_nodes]
         output_start = num_input_nodes
         output_end = output_start + num_output_nodes
-    
-        output_nodes = file_names[
-            output_start:output_end
-        ]
-    
+        output_nodes = file_names[output_start:output_end]
         cm_start = output_end
         cm_end = cm_start + num_cm
-    
-        central_managers = file_names[
-            cm_start:cm_end
-        ]
-    
+        central_managers = file_names[cm_start:cm_end]
         groups = [
             ("Input nodes", "Input node", input_nodes),
             ("Output nodes", "Output node", output_nodes),
             ("Central managers", "Central manager", central_managers),
         ]
-    
         for group_name, node_type, filenames in groups:
-    
             if not filenames:
                 continue
-    
             node_area.mount(
                 Static(
                     group_name,
                     classes="node-group-title"
                 )
             )
-    
             for index, filename in enumerate(filenames):
-    
-                # This is where we get the actual hostname.
                 node = self.get_node_name(filename)
-    
                 button_id = (
                     f"node-button-"
                     f"{node_type.lower().replace(' ', '-')}-"
                     f"{index}"
                 )
-    
                 button = Button(
                     node,
                     id=f"node-button-{index}-{node_type.lower().replace(' ', '-')}",
                     classes="node-button",
                 )
-                
                 button.node_type = node_type
                 button.node = node
                 button.filename = filename
-                
                 node_area.mount(button)
                 
                 
@@ -347,129 +222,44 @@ class MainFrame(Screen):
         num_inputnodes = 0
         num_outputnodes = 0
         num_cm = 0
-        enable_graph = False
-        enable_progess_bar = False
         use_GSI_TS_forwarding = False
         use_ZIB_TS_forwarding = False
         with open("tmp/interface/interface_params.txt","r",) as f:
-
             for line in f:
-
                 line = line.strip()
-
-                if line.startswith(
-                    "file_name:"
-                ):
-
+                if line.startswith("file_name:"):
                     _, data = line.split(
                         "file_name: ",
                         1,
                     )
-
                     logfile, file_data = data.split(
                         ", ",
                         1,
                     )
-
                     file_names.append(
                         logfile
                     )
-
-                elif line.startswith(
-                    "num_receivers: "
-                ):
-
-                    num_receivers = int(
-                        line.split(": ", 1)[1]
-                    )
-
-                elif line.startswith(
-                    "num_inputnodes: "
-                ):
-
-                    num_inputnodes = int(
-                        line.split(": ", 1)[1]
-                    )
-
-                elif line.startswith(
-                    "num_outputnodes: "
-                ):
-
-                    num_outputnodes = int(
-                        line.split(": ", 1)[1]
-                    )
-
-                elif line.startswith(
-                    "num_cm: "
-                ):
-
-                    num_cm = int(
-                        line.split(": ", 1)[1]
-                    )
-
-                elif line.startswith(
-                    "enable_graph:"
-                ):
-
-                    enable_graph = (
-                        line.split(": ", 1)[1]
-                        == "1"
-                    )
-
-                elif line.startswith(
-                    "enable_progess_bar:"
-                ):
-
-                    enable_progess_bar = (
-                        line.split(": ", 1)[1]
-                        == "1"
-                    )
-
-                elif line.startswith(
-                    "use_GSI_TS_forwarding: "
-                ):
-
-                    use_GSI_TS_forwarding = (
-                        line.split(": ", 1)[1]
-                        == "1"
-                    )
-
-                elif line.startswith(
-                    "use_ZIB_TS_forwarding: "
-                ):
-
-                    use_ZIB_TS_forwarding = (
-                        line.split(": ", 1)[1]
-                        == "1"
-                    )
+                elif line.startswith("num_receivers: "):
+                    num_receivers = int(line.split(": ", 1)[1])
+                elif line.startswith("num_inputnodes: "):
+                    num_inputnodes = int(line.split(": ", 1)[1])
+                elif line.startswith("num_outputnodes: "):
+                    num_outputnodes = int(line.split(": ", 1)[1])
+                elif line.startswith("num_cm: "):
+                    num_cm = int(line.split(": ", 1)[1])
+                elif line.startswith("use_GSI_TS_forwarding: "):
+                    use_GSI_TS_forwarding = (line.split(": ", 1)[1] == "1")
+                elif line.startswith("use_ZIB_TS_forwarding: "):
+                    use_ZIB_TS_forwarding = (line.split(": ", 1)[1] == "1")
 
         parameters = {
-
-            "num_receiver_nodes":
-                num_receivers,
-
-            "num_input_nodes":
-                num_inputnodes,
-
-            "num_output_nodes":
-                num_outputnodes,
-
-            "num_cm":
-                num_cm,
-
-            "enable_graph":
-                enable_graph,
-
-            "enable_progess_bar":
-                enable_progess_bar,
-
-            "use_GSI_TS_forwarding":
-                use_GSI_TS_forwarding,
-
-            "use_ZIB_TS_forwarding":
-                use_ZIB_TS_forwarding,
+            "num_receiver_nodes": num_receivers,
+            "num_input_nodes": num_inputnodes,
+            "num_output_nodes": num_outputnodes,
+            "num_cm": num_cm,
+            "use_GSI_TS_forwarding": use_GSI_TS_forwarding,
+            "use_ZIB_TS_forwarding": use_ZIB_TS_forwarding,
         }
-
         return file_names, parameters
 
     # =========================================================
@@ -478,70 +268,30 @@ class MainFrame(Screen):
 
     @staticmethod
     def get_node_name(filename):
-
-        """
-        Convert a filename such as:
-
-            logs/collectl/tsclient/sender_node_node01.csv
-
-        into:
-
-            node01
-
-        """
-
         patterns = [
-
-            r"sender_node_(.+?)\.csv",
-
-            r"receiving_node_(.+?)\.csv",
-
-            r"input_node_(.+?)\.csv",
-
-            r"output_node_(.+?)\.csv",
-
-            r"central_manager_(.+?)\.csv",
-
-            r"build_node_(.+?)\.csv",
-
-            r"entry_node_(.+?)\.csv",
+            r"sender_node_(.+?)\.log",
+            r"receiving_node_(.+?)\.log",
+            r"input_node_(.+?)\.log",
+            r"output_node_(.+?)\.log",
+            r"central_manager_(.+?)\.log",
         ]
-
         for pattern in patterns:
-
-            match = re.search(
-                pattern,
-                filename,
-            )
-
+            match = re.search(pattern, filename,)
             if match:
-
                 return match.group(1)
-
         return None
 
 
 class IntermediateFrame(Screen):
-
     def compose(self):
-
         with Horizontal(id="top-bar"):
-
-            yield Static(
-                "Starting simulation"
-            )
-
+            yield Static("Starting simulation")
             yield Button(
                 "X",
                 id="exit",
                 variant="error",
             )
-
-        yield Static(
-            "Starting simulation...",
-            id="starting",
-        )
-
+        yield Static("Starting simulation...", id="starting")
         yield Static(
             "To see the current state open a new terminal,\n"
             "connect to cluster and enter:\n"
@@ -550,51 +300,27 @@ class IntermediateFrame(Screen):
         )
 
     def on_mount(self):
-
-        # Start monitoring the response file
         self.monitor_startup()
 
     @work(thread=True)
     def monitor_startup(self):
-
-        response_file = Path(
-            "tmp/interface/interface_response.txt"
-        )
-
+        response_file = Path("tmp/interface/interface_response.txt")
         while True:
-
             try:
                 msg = response_file.read_text().strip()
-
             except FileNotFoundError:
                 msg = ""
-
             if msg == "0: done starting":
-
-                # We are currently in a worker thread.
-                self.app.call_from_thread(
-                    self.startup_finished
-                )
-
+                self.app.call_from_thread(self.startup_finished)
                 return
             time.sleep(0.1)
 
     def startup_finished(self):
-
-        # This runs in Textual's event loop
         self.app.pop_screen()
+        self.app.push_screen("main")
 
-        self.app.push_screen(
-            "main"
-        )
-
-    def on_button_pressed(
-        self,
-        event: Button.Pressed,
-    ):
-
+    def on_button_pressed(self, event: Button.Pressed):
         if event.button.id == "exit":
-
             self.app.result_start = "exit"
             self.app.exit()
 
@@ -859,7 +585,6 @@ class flesApp(App):
     }
 
     """
-
     SCREENS = {
         "start": StartFrame,
         "main": MainFrame,
@@ -871,15 +596,6 @@ class flesApp(App):
         self.result_start = None
 
     def on_mount(self):
-
-        self.parameters = (
-            ipc.params_interactive()
-        )
-        self.push_screen(
-            "start"
-        )
-
-
-if __name__ == "__main__":
-    MyApp().run()
+        self.parameters = (ipc.params_interactive())
+        self.push_screen("start")
 

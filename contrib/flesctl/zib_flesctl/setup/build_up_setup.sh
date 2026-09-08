@@ -15,6 +15,8 @@ function create_venv() {
 
     pip install influxdb_client
 
+    pip install textual
+    
     deactivate
 }
 

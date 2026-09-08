@@ -563,7 +563,7 @@ class execution:
         total_file_data = 0
         num_receivers_nodes = self.Par_.num_receivers
         for sender_node in self.sender_nodes.keys():
-            logfile = '../%s/logs/collectl/tsclient/sender_node_%s.csv' % (self.Run_folder,sender_node)
+            logfile = '../%s/logs/tsclient/sender_node_%s.log' % (self.Run_folder,sender_node)
             file_data = 0
             #file_data = next((tup))
             file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(sender_nodes_cnt))), None)
@@ -573,19 +573,20 @@ class execution:
             sender_nodes_cnt += 1
             total_file_data += file_data
         for receiver_node in self.receiver_nodes.keys():
-            logfile = '../%s/logs/collectl/tsclient/receiving_node_%s.csv' % (self.Run_folder,receiver_node)
+            logfile = '../%s/logs/tsclient/receiving_node_%s.log' % (self.Run_folder,receiver_node)
             filenames.append((logfile,total_file_data/num_receivers_nodes))
         with open('tmp/interface/interface_params.txt','a') as f:
             for logfile, file_data in filenames:
                 f.write(f"file_name: {logfile}, {file_data}\n")
     
     #TODO:fix file data
+    #TODO:fix filename input nodes
     def get_interface_ZIB_TS_parameters(self):
         filenames = []
         input_nodes_cnt = 0
         total_file_data = 0
         for input_node in self.input_nodes.keys():
-            logfile = "../%s/logs/collectl/timeslice_forwarding/input_nodes/input_node_%s.csv" % (self.Run_folder,input_node)
+            logfile = "%s/logs/timeslice_forwarding/input_nodes/input_node_%s_1.log" % (self.Run_folder,input_node)
             file_data = 0
             print(self.Par_.input_tsa_files)
             #file_data = next((tup[2] for tup in self.Par_.input_tsa_files if tup[0] == ('input_node_' + str(input_nodes_cnt))), None)
@@ -611,10 +612,10 @@ class execution:
             input_nodes_cnt += 1
             total_file_data += file_data
         for output_node in self.output_nodes.keys():
-            logfile = "../%s/logs/collectl/timeslice_forwarding/output_nodes/output_node_%s.csv" % (self.Run_folder,output_node)
+            logfile = "%s/logs/timeslice_forwarding/output_nodes/output_node_%s.log" % (self.Run_folder,output_node)
             filenames.append((logfile,total_file_data/self.Par_.num_output_nodes))
         for cm in self.central_manager.keys():
-            logfile = "../%s//logs/collectl/timeslice_forwarding/central_manager/central_manager_%s.csv" % (self.Run_folder,cm)
+            logfile = "%s/logs/timeslice_forwarding/central_manager/central_manager_%s.log" % (self.Run_folder,cm)
             filenames.append((logfile,total_file_data/self.Par_.num_central_manager))
         with open('tmp/interface/interface_params.txt','a') as f:
             for logfile,file_data in filenames:

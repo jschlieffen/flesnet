@@ -17,28 +17,18 @@ from interface.rate_screen import RateScreen
 
 class NodeInfoScreen(Screen):
 
-    def __init__(self, node_type, node):
+    def __init__(self, node_type, node,filename):
         super().__init__()
 
         self.node_type = node_type
         self.node = node
+        self.filename = filename
             
     def compose(self) -> ComposeResult:
-    
         with Horizontal(id="node-info-header"):
-    
-            yield Button(
-                "<",
-                id="back",
-            )
-    
-            yield Static(
-                f"{self.node_type} {self.node}",
-                id="node-title",
-            )
-    
+            yield Button("<", id="back")
+            yield Static(f"{self.node_type} {self.node}", id="node-title")
         with Vertical(id="node-actions"):
-    
             with Horizontal(classes="node-action"):
                 yield Static(
                     "node info:",
@@ -48,7 +38,6 @@ class NodeInfoScreen(Screen):
                     "OFF",
                     id="node-info",
                 )
-    
             with Horizontal(classes="node-action"):
                 yield Static(
                     "check active:",
@@ -58,7 +47,6 @@ class NodeInfoScreen(Screen):
                     "OFF",
                     id="check-active",
                 )
-    
             with Horizontal(classes="node-action"):
                 yield Static(
                     "kill:",
@@ -68,7 +56,6 @@ class NodeInfoScreen(Screen):
                     "OFF",
                     id="kill",
                 )
-    
             with Horizontal(classes="node-action"):
                 yield Static(
                     "revive:",
@@ -78,7 +65,6 @@ class NodeInfoScreen(Screen):
                     "OFF",
                     id="revive",
                 )
-    
             with Horizontal(classes="node-action"):
                 yield Static(
                     "remove node:",
@@ -89,56 +75,27 @@ class NodeInfoScreen(Screen):
                     id="remove-node",
                 )
 
-    def on_button_pressed(
-        self,
-        event: Button.Pressed,
-    ):
-
+    def on_button_pressed(self, event: Button.Pressed):
         button_id = event.button.id
-
-        # -------------------------------------------------
-        # Back
-        # -------------------------------------------------
-
         if button_id == "back":
-
             self.app.pop_screen()
             return
-
         if button_id == 'node-info':
-            self.app.push_screen(RateScreen(self.node_type,self.node))
+            self.app.push_screen(RateScreen(self.node_type,self.node, self.filename))
             return
-        # -------------------------------------------------
-        # Node actions
-        # -------------------------------------------------
-
         commands = {
             "check-active": "check active",
             "kill": "kill",
             "revive": "revive",
             "remove-node": "remove node",
         }
-
         if button_id not in commands:
             return
-
         command = commands[button_id]
-
-        # Toggle visual state
         if event.button.label == "OFF":
-
             event.button.label = "ON"
             event.button.variant = "success"
-
         else:
-
             event.button.label = "OFF"
             event.button.variant = "default"
-
-        # Your existing communication mechanism
-        comm.give_command(
-            self.node_type,
-            self.node,
-            0,
-            command,
-        )
+        comm.give_command(self.node_type,self.node, 0, command)
