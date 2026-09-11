@@ -109,7 +109,7 @@ function set_exclude_node_list() {
     EXCLUDE_COMMAND=""
     if [ "$USE_FLESNET" -eq 1 ]; then
             EXCLUDE_NODE_LIST="$EXCLUDE_TSMANAGER,$EXCLUDE_STSERVER,$EXCLUDE_TSBUILDER,$EXCLUDE_SENDER_NODES"
-
+    fi
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         EXCLUDE_NODE_LIST="$EXCLUDE_NODE_LIST,$EXCLUDE_PROCESS_NODES"
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
@@ -134,15 +134,15 @@ function set_exclude_node_list() {
 function set_cluster_commands() {
     CLUSTER_COMMAND=""
 
-    if [ "$USE_FLESCLUSTER" -eq 1 ]; then
-        if [ "$IS_FLESCLUSTER" -eq 1 ]; then
-            CLUSTER_COMMAND=""
-        else
+    if [ "$IS_FLESCLUSTER" -eq 1 ]; then
+        if [ "$USE_FLESCLUSTER" -eq 1 ]; then
             CLUSTER_COMMAND="--singularity-container=container_flesctrl.sif"
+        else
+            CLUSTER_COMMAND=""
         fi
     else
         CLUSTER_COMMAND="-p big --constraint=Infiniband"
-    fi
+
 }
 
 

@@ -109,9 +109,9 @@ class flesnet:
             logger.info(f'starting stserver: {node}')
             logfile_collectl = "%s/logs/collectl/flesnet/stserver/stserver_%s.csv" % (self.Run_folder,node)
             logfile = "%s/logs/flesnet/stserver/stserver_%s.log" % (self.Run_folder,node)
-             if self.Par_.use_infiniband:
-                  ip = self.stervers[node]['inf_ip']
-             else:
+            if self.Par_.use_infiniband:
+                  ip = self.stservers[node]['inf_ip']
+            else:
                   ip = self.stservers[node]['eth_ip']
             self.commands_sts[node] = self.define_commands_sts(node,logfile_collectl,logfile,ip)
             self.write_commands(node,self.commands_sts[node])
