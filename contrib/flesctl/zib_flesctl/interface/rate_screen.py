@@ -105,41 +105,7 @@ class RateChart(Static):
 
 
 class RateScreen(Screen):
-    CSS = """
-    Screen {
-        layout: vertical;
-    }
-
-    #toolbar {
-        height: 3;
-        padding: 0 1;
-    }
-
-    #toolbar Button {
-        margin-right: 1;
-    }
-
-    #main {
-        height: 1fr;
-    }
-
-    #log {
-        width: 1fr;
-        height: 1fr;
-        border: solid green;
-    }
-
-    #chart {
-        width: 1fr;
-        height: 1fr;
-        border: solid cyan;
-    }
-
-    #status {
-        height: 1;
-        padding-left: 1;
-    }
-    """
+    CSS_PATH = "css_files/ratescreen.tcss"
     def __init__(self, node_type,node, logfile):
         super().__init__()
 

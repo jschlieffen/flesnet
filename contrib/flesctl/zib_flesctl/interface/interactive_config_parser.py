@@ -16,12 +16,12 @@ class params_interactive:
         self.Par_ = par.Params('setup/config_interactive.cfg')
         self.display_params = self.check_display_params()
         self.groups = self.form_groups()
-        
+
     def check_display_params(self):
         display_params = [
             "use_collectl",
             "use_flescluster",
-            "activate_timesliceforwarding",
+            "GSI_Timesliceforwarding",
             "ZIB_timesliceforwarding",
             "num_cpus",
             'mem',
@@ -44,7 +44,7 @@ class params_interactive:
         ]
         if self.Par_.use_flescluster:
             display_params += ['is_flescluster','cm_ip']
-        if self.Par_.activate_timesliceforwarding:
+        if self.Par_.GSI_Timesliceforwarding:
             display_params += ['num_receivers']
             if self.Par_.set_node_list:
                 display_params += ['sender_node_list','receiver_node_list']
@@ -120,7 +120,7 @@ class params_interactive:
         ]
     
         groups['mode'] = [
-            'activate_timesliceforwarding',
+            'GSI_Timesliceforwarding',
             'ZIB_timesliceforwarding',
             'use_flescluster',
             'is_flescluster',

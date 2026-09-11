@@ -98,4 +98,10 @@ class NodeInfoScreen(Screen):
         else:
             event.button.label = "OFF"
             event.button.variant = "default"
-        comm.give_command(self.node_type,self.node, 0, command)
+        if self.node_type == "Central manager":    
+            comm.give_command(self.node_type,self.node, 3, command)
+        elif self.node_type == "Output node":
+            comm.give_command(self.node_type,self.node, 4, command)
+        elif self.node_type == "Input node":
+            node,process = self.node.split("_")
+            comm.give_command(self.node_type,node, int(process)*2 + 2, command)
