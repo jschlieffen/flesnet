@@ -142,7 +142,7 @@ function set_cluster_commands() {
         fi
     else
         CLUSTER_COMMAND="-p big --constraint=Infiniband"
-
+    fi
 }
 
 
