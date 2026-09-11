@@ -10,7 +10,6 @@ import time
 import subprocess
 import os
 from logging_lib.log_msg import *
-import central_manager.Slurm_starter as ss
 
 class Timeslice_forwarding_ZIB:
     
@@ -52,27 +51,28 @@ class Timeslice_forwarding_ZIB:
         cm_command += f" > {logfile} 2>&1 &"
         commands['3'] = cm_command
         if self.Par_.sender_nodes_on_central_manager_node:
-            commands_input = self.define_commands_input(node_name, collectl_logfile, logfile_input, logfile_tsclient, input_file, idx, node_ip,True)
+            commands_input = self.define_commands_input(node_name, collectl_logfile, logfile_input, logfile_tsclient, input_file, idx, node_ip,is_subprocess=True)
             commands.update(commands_input)
         return commands
         
-    def define_commands_input(self,node_name,collectl_logfile,logfile,logfile_tsclient,input_file,idx,node_ip,is_subprocess=False):
+    def define_commands_input(self,node_name,collectl_logfile,logfile,logfile_tsclient,input_file,idx,node_ip,is_subprocess=False,use_tsclient=True):
         commands = {}
         
         if self.Par_.use_collectl and not is_subprocess:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
         for i in range(1,self.Par_.num_sender_per_node+1):
             shm_str = f"fles_out_b{idx}_{i}"
-            tsclient_command = (
-                f"{self.Par_.path}./tsclient "
-                f"-L {logfile_tsclient}_{i}.log "
-                f"-l 2 "
-                f"-i file:\"{input_file[i-1][1]}\" "
-                f"-o shm:{shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size} "
-                f"{self.Par_.input_tsclient_customize_str}"
-            )
-            if self.Par_.use_dtsa_files:
-                tsclient_command += " -D 1"
+            if use_tsclient:
+                tsclient_command = (
+                    f"{self.Par_.path}./tsclient "
+                    f"-L {logfile_tsclient}_{i}.log "
+                    f"-l 2 "
+                    f"-i file:\"{input_file[i-1][1]}\" "
+                    f"-o shm:{shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size} "
+                    f"{self.Par_.input_tsclient_customize_str}"
+                )
+                if self.Par_.use_dtsa_files:
+                    tsclient_command += " -D 1"
             input_command = (
                 f"{self.Par_.path}./timeslice_forwarder "
                 f"-l 2 "
@@ -82,11 +82,13 @@ class Timeslice_forwarding_ZIB:
                 f"-i {shm_str} "
             )
             if self.Par_.use_grafana:
-                tsclient_command +=  f" --monitor influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
+                if use_tsclient:
+                    tsclient_command +=  f" --monitor influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
                 input_command +=  f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token} "
             input_command += f"> {logfile}_{i}.log 2>&1 &"
             if is_subprocess:
-                commands[f'{2*i + 3}'] = tsclient_command
+                if use_tsclient:
+                    commands[f'{2*i + 3}'] = tsclient_command
                 commands[f'{2*i + 4}'] = input_command
             else:
                 commands[f'{2*i + 1}'] = tsclient_command
@@ -259,10 +261,16 @@ class Timeslice_forwarding_ZIB:
     def stop_input_nodes(self):
         for node in self.input_nodes.keys():
             logger.info(f"stopping TF Input node: {node}")
-            stdout,stderr = self.Slurm_starter.stop_process(node, False)
-            if stdout != "":
-                logger.debug(f"Output from TF input node: {node} \n {stdout}")
-                logger.debug(f"Error from TF input node: {node} \n {stderr}")
+            if self.Par_.use_flesnet:
+                stdout,stderr = self.Slurm_starter.stop_process(node, True)
+                if stdout == "1":
+                    logger.debug(f"TF Input node: {node} stopped. See build nodes for output")
+            else:
+                stdout,stderr = self.Slurm_starter.stop_process(node, False)
+                if stdout != "":
+                    logger.debug(f"Output from TF Input node: {node} \n {stdout}")
+                    logger.debug(f"Error from TF Input node: {node} \n {stderr}")
+                    
                     
     def stop_output_nodes(self):
         for node in self.output_nodes.keys():

@@ -16,7 +16,7 @@ fi
 
 
 function set_general_params(){
-    RECEIVER_NODES_CNT=$(grep -E '^receiver_nodes=' "$CONFIG_FILE" | cut -d'=' -f2)
+    RECEIVER_NODES_CNT=$(grep -E '^num_receivers=' "$CONFIG_FILE" | cut -d'=' -f2)
     TIME=$(grep -E '^time=' "$CONFIG_FILE" | cut -d'=' -f2)
     SET_NODE_LIST=$(grep -E '^set_node_list=' "$CONFIG_FILE" | cut -d'=' -f2)
     EXCLUDE_NODES=$(grep -E '^exclude_nodes=' "$CONFIG_FILE" | cut -d'=' -f2)
@@ -24,17 +24,23 @@ function set_general_params(){
     MEM=$(grep -E '^mem=' "$CONFIG_FILE" | cut -d'=' -f2)
     ACTIVATE_TIMESLICEFORWARDING=$(grep "^GSI_Timesliceforwarding" "$CONFIG_FILE" | cut -d'=' -f2)
     ZIB_TIMESLICEFORWARDING=$(grep "^ZIB_Timesliceforwarding" "$CONFIG_FILE" | cut -d'=' -f2)
-    CENTRAL_MANAGER_CNT=$(grep -E '^central_manager=' "$CONFIG_FILE" | cut -d'=' -f2)
-    INPUT_NODES_CNT=$(grep -E '^input_nodes=' "$CONFIG_FILE" | cut -d'=' -f2)
-    OUTPUT_NODES_CNT=$(grep -E '^output_nodes=' "$CONFIG_FILE" | cut -d'=' -f2)
+    USE_FLESNET=$(grep "^use_flesnet" "$CONFIG_FILE" | cut -d'=' -f2)
+    TSMANAGER_CNT=$(grep -E '^num_tsmanager=' "$CONFIG_FILE" | cut -d'=' -f2)
+    STSERVER_CNT=$(grep -E '^num_stserver=' "$CONFIG_FILE" | cut -d'=' -f2)
+    TSBUILDER_CNT=$(grep -E '^num_tsbuilder=' "$CONFIG_FILE" | cut -d'=' -f2)
+    CENTRAL_MANAGER_CNT=$(grep -E '^num_central_manager=' "$CONFIG_FILE" | cut -d'=' -f2)
+    INPUT_NODES_CNT=$(grep -E '^num_input_nodes=' "$CONFIG_FILE" | cut -d'=' -f2)
+    OUTPUT_NODES_CNT=$(grep -E '^num_output_nodes=' "$CONFIG_FILE" | cut -d'=' -f2)
     USE_FLESCLUSTER=$(grep "^use_flescluster" "$CONFIG_FILE" | cut -d'=' -f2)
     IS_FLESCLUSTER=$(grep "^is_flescluster" "$CONFIG_FILE" | cut -d'=' -f2)
 
-    USE_INPUT_NODES=$(( ( !USE_FLESCLUSTER || IS_FLESCLUSTER ) ))
+    USE_INPUT_NODES=$(( !USE_FLESNET && ( !USE_FLESCLUSTER || IS_FLESCLUSTER ) ))
     USE_OUTPUT_NODES=$(( !USE_FLESCLUSTER || !IS_FLESCLUSTER ))
 
     NODES=0
 
+    if [ "$USE_FLESNET" -eq 1 ];then
+        ((NODES=TSMANAGER_CNT+STSERVER_CNT+TSBUILDER_CNT))
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         ((NODES=2*RECEIVER_NODES_CNT))
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
@@ -53,6 +59,10 @@ function set_general_params(){
 
 
 function set_node_list() {
+    TSMANAGER_NODE_LIST=$(grep '^tsmanager_list=' "$CONFIG_FILE" | cut -d'=' -f2)
+    STSERVER_NODE_LIST=$(grep '^stserver_list=' "$CONFIG_FILE" | cut -d'=' -f2)
+    TSBUILDER_NODE_LIST=$(grep '^tsbuilder_list=' "$CONFIG_FILE" | cut -d'=' -f2)
+    SENDER_NODES_LIST=$(grep '^sender_nodes_list=' "$CONFIG_FILE" | cut -d'=' -f2)
     PROCESS_NODES_LIST=$(grep "^process_nodes_list" "$CONFIG_FILE" | cut -d'=' -f2)
     CENTRAL_MANAGER_NODE_LIST=$(grep '^central_manager_node_list=' "$CONFIG_FILE" | cut -d'=' -f2)
     INPUT_NODE_LIST=$(grep '^input_node_list=' "$CONFIG_FILE" | cut -d'=' -f2)
@@ -60,6 +70,8 @@ function set_node_list() {
 
     NODELIST=""
     NODELIST_COMMAND=""
+    if [ "$USE_FLESNET" -eq 1 ]; then
+        NODELIST="$TSMANAGER_NODE_LIST,$STSERVER_NODE_LIST,$TSBUILDER_NODE_LIST,$SENDER_NODES_LIST"
 
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         NODELIST="$NODELIST,$PROCESS_NODES_LIST"
@@ -83,6 +95,10 @@ function set_node_list() {
 
 
 function set_exclude_node_list() {
+    EXCLUDE_TSMANAGER=$(grep '^exclude_tsmanager=' "$CONFIG_FILE" | cut -d'=' -f2)
+    EXCLUDE_STSERVER=$(grep '^exclude_stserver=' "$CONFIG_FILE" | cut -d'=' -f2)
+    EXCLUDE_TSBUILDER=$(grep '^exclude_tsbuilder=' "$CONFIG_FILE" | cut -d'=' -f2)
+    EXCLUDE_SENDER_NODES=$(grep '^exclude_sender_nodes=' "$CONFIG_FILE" | cut -d'=' -f2)
     EXCLUDE_PROCESS_NODES=$(grep "^exclude_process_nodes" "$CONFIG_FILE" | cut -d'=' -f2)
     EXCLUDE_CENTRAL_MANAGER=$(grep "^exclude_central_manager" "$CONFIG_FILE" | cut -d'=' -f2)
     EXCLUDE_INPUT_NODES=$(grep "^exclude_input_nodes" "$CONFIG_FILE" | cut -d'=' -f2)
@@ -90,6 +106,8 @@ function set_exclude_node_list() {
 
     EXCLUDE_NODE_LIST=""
     EXCLUDE_COMMAND=""
+    if [ "$USE_FLESNET" -eq 1 ]; then
+            EXCLUDE_NODE_LIST="$EXCLUDE_TSMANAGER,$EXCLUDE_STSERVER,$EXCLUDE_TSBUILDER,$EXCLUDE_SENDER_NODES"
 
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         EXCLUDE_NODE_LIST="$EXCLUDE_NODE_LIST,$EXCLUDE_PROCESS_NODES"

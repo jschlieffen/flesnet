@@ -32,6 +32,13 @@ class Params:
         self.num_cpus = 2
         self.mem="64GB"
         self.loglevel="DEBUG"
+        self.use_flesnet = 0
+        self.num_tsmanager = 1
+        self.custom_str_tsmanager=""
+        self.num_stserver = 1
+        self.custom_str_stserver=""
+        self.num_tsbuilder = 1
+        self.custom_str_tsbuilder=""
         self.activate_robustness_test = 1
         self.timer_for_kills= timedelta(minutes=1)
         self.num_min_sender_nodes_alive=2
@@ -40,6 +47,9 @@ class Params:
         self.num_min_central_manager_alive=2
         self.num_min_output_nodes_alive=2
         self.set_node_list=0
+        self.tsmanager_list=[]
+        self.stserver_list=[]
+        self.tsbuilder_list=[]
         self.sender_node_list=[]
         self.process_nodes_list=[]
         self.input_node_list=[]
@@ -55,7 +65,7 @@ class Params:
         self.path = ""
         self.desc_size = 19
         self.data_size = 27
-        self.activate_timesliceforwarding = 0
+        self.GSI_Timesliceforwarding = 0
         self.write_data_to_file = 0
         self.path_to_output_file = ""
         self.analyze_data = 0
@@ -114,11 +124,14 @@ class Params:
         self.get_influx_par()
 
     def get_num_nodes_par(self):
-        self.num_receivers = self.get_value('Number_of_Nodes', 'receiver_nodes','int',required=True)
-        self.num_central_manager = self.get_value('Number_of_Nodes', 'central_manager', 'int', True)
-        self.num_input_nodes = self.get_value('Number_of_Nodes', 'input_nodes', 'int', True)
+        self.num_tsmanager = self.get_value('Number_of_Nodes','num_tsmanager','int',True)
+        self.stserver = self.get_value('Number_of_Nodes','num_stserver','int',True)
+        self.tsbuilder = self.get_value('Number_of_Nodes','num_tsbuilder','int',True)
+        self.num_receivers = self.get_value('Number_of_Nodes', 'num_receivers','int',required=True)
+        self.num_central_manager = self.get_value('Number_of_Nodes', 'num_central_manager', 'int', True)
+        self.num_input_nodes = self.get_value('Number_of_Nodes', 'num_input_nodes', 'int', True)
         self.num_sender_per_node = self.get_value('Number_of_Nodes', 'num_sender_per_node','int',False)
-        self.num_output_nodes = self.get_value('Number_of_Nodes', 'output_nodes','int',True)
+        self.num_output_nodes = self.get_value('Number_of_Nodes', 'num_output_nodes','int',True)
         
     def get_general_par(self):
         self.use_collectl = self.get_value('general', 'use_collectl','int',required=True)
@@ -128,7 +141,8 @@ class Params:
         self.check_log_lvl()
         
     def get_mode(self):
-        self.activate_timesliceforwarding = self.get_value('mode', 'GSI_Timesliceforwarding','int', True)
+        self.use_flesnet = self.get_value('mode','use_flesnet','int',True)
+        self.GSI_Timesliceforwarding = self.get_value('mode', 'GSI_Timesliceforwarding','int', True)
         self.ZIB_timesliceforwarding = self.get_value('mode', 'ZIB_Timesliceforwarding','int',True)
         self.use_flescluster = self.get_value('mode', 'use_flescluster','int',required=True)
         self.is_flescluster = self.get_value('mode','is_flescluster','int',required=True)
@@ -138,7 +152,7 @@ class Params:
 
     def get_kill_par(self):
         self.activate_robustness_test = self.get_value('robustness_test','activate_robustness_test','int', self.activate_robustness_test, required=True)
-        self.timer_for_kills = self.get_value('robustness_test', 'time_for_kills','time',self.timer_for_kills, required=False)
+        self.timer_for_kills = self.get_value('robustness_test', 'timer_for_kills','time',self.timer_for_kills, required=False)
         self.num_min_sender_nodes_alive = self.get_value('robustness_test','num_min_sender_nodes_alive','int', self.num_min_sender_nodes_alive, required=False)
         self.num_min_process_nodes_alive = self.get_value('robustness_test','num_min_process_nodes_alive','int', self.num_min_process_nodes_alive, required=False)
         self.num_min_input_nodes_alive = self.get_value('robustness_test','num_min_input_nodes_alive','int', self.num_min_input_nodes_alive, required=False)
@@ -147,6 +161,9 @@ class Params:
 
     def get_node_list_par(self):
         self.set_node_list = self.get_value('set_node_list', 'set_node_list', 'int',self.set_node_list, False)
+        self.tsmanager_list = list(set(self.get_node_list('set_node_list','tsmanager_list',self.tsmanager_list,False)))
+        self.stserver_list = list(set(self.get_node_list('set_node_list','stserver_list',self.stserver_list,False)))
+        self.tsbuilder_list = list(set(self.get_node_list('set_node_list','tsbuilder_list',self.tsbuilder_list,False)))
         self.sender_node_list = list(set(self.get_node_list('set_node_list','sender_nodes_list',self.sender_node_list,False)))
         self.process_nodes_list = list(set(self.get_node_list('set_node_list', 'process_nodes_list', self.process_nodes_list, False)))
         self.input_node_list = list(set(self.get_node_list('set_node_list','input_node_list',self.input_node_list,False)))
@@ -154,6 +171,9 @@ class Params:
         self.output_node_list = list(set(self.get_node_list('set_node_list','output_node_list',self.output_node_list,False)))
         self.exclude_nodes = self.get_value('set_node_list','exclude_nodes','int', self.exclude_nodes,False)
         if self.exclude_nodes == 1:
+            self.exclude_tsmanager = self.get_node_list('set_node_list','exclude_tsmanager',self.exclude_tsmanager,False)
+            self.exclude_stserver = self.get_node_list('set_node_list','exclude_stserver',self.exclude_stserver,False)
+            self.exclude_tsbuilder = self.get_node_list('set_node_list','exclude_tsbuilder',self.exclude_tsbuilder,False)
             self.exclude_sender_nodes = self.get_node_list('set_node_list', 'exclude_sender_nodes', self.exclude_sender_nodes, False)
             self.exclude_process_nodes = self.get_node_list('set_node_list', 'exclude_process_nodes', self.exclude_process_nodes, False)
             self.exclude_input_nodes = self.get_node_list('set_node_list','exclude_input_nodes',self.exclude_input_nodes,False)
@@ -163,6 +183,9 @@ class Params:
             
     def get_flesnet_par(self):
         self.path = self.get_value('flesnet_commands', 'path_to_flesnet', 'str', required=True)
+        self.custom_str_tsmanager = self.get_value('flesnet_commands','custom_str_tsmanager','str',self.custom_str_tsmanager,False)
+        self.custom_str_stserver = self.get_value('flesnet_commands','custom_str_stserver','str',self.custom_str_stserver,False)
+        self.custom_str_tsbuilder = self.get_value('flesnet_commands','custom_str_tsbuilder','str',self.custom_str_tsbuilder,False)
         self.use_infiniband = self.get_value('flesnet_commands','use_infiniband','int', self.use_infiniband, False)
         
     def get_shm_commands(self):
@@ -479,15 +502,6 @@ class params_checker:
                 "SLURM_NODELIST is not set, maybe you forgot to allocate the nodes"
             )
             sys.exit(1)
-    
-        # Matches:
-        # htc-cmp[001-004]
-        # htc-cmp[001,005,010]
-        # ccexe0001
-        # en[01-16]
-        # en01
-        # node[1-8]
-        # node01
         parts = re.findall(r"([a-zA-Z\-]+)(?:\[(.*?)\]|(\d+))", node_str)
     
         for prefix, bracket_content, single_number in parts:
@@ -545,15 +559,15 @@ class params_checker:
                 
     def check_mode(self):
         logger.debug('checking the mode')
-        if not self.Par_.activate_timesliceforwarding and not self.Par_.ZIB_timesliceforwarding:
+        if not self.Par_.GSI_Timesliceforwarding and not self.Par_.ZIB_timesliceforwarding:
             logger.critical("no active mode. Nothing will happen when executing the program")
             self.exit_program()
-        if self.Par_.activate_timesliceforwarding and self.Par_.ZIB_timesliceforwarding:
+        if self.Par_.GSI_Timesliceforwarding and self.Par_.ZIB_timesliceforwarding:
             logger.critical("Two different timesliceforwardings are active.")
             self.exit_program()
 
     def check_for_duplicates(self):
-        if self.Par_.activate_timesliceforwarding:
+        if self.Par_.GSI_Timesliceforwarding:
             for sender_node in self.Par_.sender_node_list:
                 if sender_node in self.Par_.process_nodes_list:
                     logger.critical(f'sender node: {sender_node} is also an receiver node. This is not allowed')
@@ -578,7 +592,7 @@ class params_checker:
         logger.debug('check the number of nodes')
         num_tot_nodes_req = 0
         num_nodes_req_list = 0
-        if self.Par_.activate_timesliceforwarding:
+        if self.Par_.GSI_Timesliceforwarding:
             num_tot_nodes_req += 2*self.Par_.num_receivers
             if self.Par_.set_node_list:
                 num_nodes_req_list += len(self.Par_.process_nodes_list) + len(self.Par_.sender_node_list)
@@ -624,7 +638,7 @@ class params_checker:
             features = parts[1] if len(parts) > 1 else ""
             node_features[node] = features 
         req_node_list = []
-        if self.Par_.activate_timesliceforwarding:
+        if self.Par_.GSI_Timesliceforwarding:
             req_node_list += [("Sender node", node) for node in self.Par_.sender_node_list]
             req_node_list += [("Process node", node) for node in self.Par_.process_nodes_list]
         elif self.Par_.ZIB_timesliceforwarding:
@@ -653,7 +667,7 @@ class params_checker:
         req_node_list = []
         req_node_list += [("Entry node", node) for node in self.Par_.entry_nodes_list]
         req_node_list += [("Build node", node) for node in self.Par_.build_nodes_list]
-        if self.Par_.activate_timesliceforwarding:
+        if self.Par_.GSI_Timesliceforwarding:
             if self.Par_.use_flesnet:
                 req_node_list += [("Sender node", node) for node in self.Par_.sender_node_list]
             req_node_list += [("Process node", node) for node in self.Par_.process_nodes_list]
@@ -678,7 +692,7 @@ class params_checker:
         excluded_node_list = []
         excluded_node_list += [("Entry node",node) for node in self.Par_.exclude_entry_nodes]
         excluded_node_list += [("Build node",node) for node in self.Par_.exclude_build_nodes]
-        if self.Par_.activate_timesliceforwarding:
+        if self.Par_.GSI_Timesliceforwarding:
             excluded_node_list += [("Process node",node) for node in self.Par_.exclude_process_nodes]
             excluded_node_list += [("Sender node", node) for node in self.Par_.exclude_sender_nodes]
         if self.Par_.ZIB_timesliceforwarding:
@@ -699,7 +713,7 @@ class params_checker:
         excluded_node_list = []
         use_input_nodes = (not self.Par_.use_flescluster or (self.Par_.use_flescluster and self.Par_.is_flescluster))
         use_output_nodes = not self.Par_.use_flescluster or (self.Par_.use_flescluster and not self.Par_.is_flescluster)
-        if self.Par_.activate_timesliceforwarding:
+        if self.Par_.GSI_Timesliceforwarding:
             excluded_node_list += [("Process node",node) for node in self.Par_.exclude_process_nodes]
             excluded_node_list += [("Sender node", node) for node in self.Par_.exclude_sender_nodes]
         if self.Par_.ZIB_timesliceforwarding:
@@ -711,7 +725,7 @@ class params_checker:
                 excluded_node_list += [("Output node",node) for node in self.Par_.exclude_output_nodes]
         if os.getenv('SLURM_JOB_NUM_NODES') and self.Par_.set_node_list:
             req_node_list = []
-            if self.Par_.activate_timesliceforwarding:
+            if self.Par_.GSI_Timesliceforwarding:
                 req_node_list += self.Par_.process_nodes_list
             if self.Par_.ZIB_timesliceforwarding:
                 if use_input_nodes:
@@ -724,7 +738,7 @@ class params_checker:
                     logger.critical(f"excluded {node_type}: {node} is both excluded and explicitly set to allocate. This will lead to a conflict when trying to alloacate the nodes")
                     self.exit_program()
         if self.Par_.set_node_list:
-            if self.Par_.activate_timesliceforwarding:
+            if self.Par_.GSI_Timesliceforwarding:
                 for excluded_process in self.Par_.exclude_process_nodes:
                     if excluded_process in self.Par_.process_nodes_list:
                         logger.warning(f'excluded process node: {excluded_process} is both excluded and wished. So it is not used as an process node.')
@@ -753,7 +767,7 @@ class params_checker:
             if self.Par_.num_min_build_nodes_alive > self.Par_.num_buildnodes:
                 logger.critical(f'The number of minimal nodes that are supposed to let be online: {self.Par_.num_min_build_nodes_alive} outmatches the total number of build nodes: {self.Par_.num_buildnodes}')
                 self.exit_program()
-        if self.Par_.activate_timesliceforwarding:
+        if self.Par_.GSI_Timesliceforwarding:
        
         
             if self.Par_.num_min_sender_nodes_alive > self.Par_.num_receivers:
@@ -792,7 +806,7 @@ class params_checker:
     
     def check_timeslice_forwarding(self):
         logger.debug('check for timesliceforwarding params')
-        if self.Par_.activate_timesliceforwarding == 1 or self.Par_.ZIB_timesliceforwarding == 1:
+        if self.Par_.GSI_Timesliceforwarding == 1 or self.Par_.ZIB_timesliceforwarding == 1:
             if int(self.Par_.port) < 1023:
                 logger.critical(f"used port for timeslice-forwarding: {self.Par_.port} is privileged, thus cannot be used")
                 self.exit_program()

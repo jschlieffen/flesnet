@@ -14,6 +14,7 @@ import curses
 import subprocess
 import shutil
 import sys
+import argparse
 
 def get_params():
     file_names = []
@@ -78,9 +79,20 @@ def main_V2():
         starter.stop_flesctrl()
 
 def main():
-    create_com_files()
-    shutil.copy2("setup/config.cfg", "setup/config_interactive.cfg")
-    flesapp = main_frame.flesApp()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--attach_session",
+        action="store_true",
+        help="Run in interactive mode"
+    )
+    
+    args = parser.parse_args()
+    
+    attach_session = args.attach_session
+    if not attach_session:
+        create_com_files()
+        shutil.copy2("setup/config.cfg", "setup/config_interactive.cfg")
+    flesapp = main_frame.flesApp(attach_session)
     flesapp.run()
 
 

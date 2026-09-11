@@ -18,12 +18,7 @@ from logging_lib import logfile_gen as Logfile
 from pathlib import Path
 import argparse
 
-#TODO: make timeslice-forwarding cpu ids 
-# =============================================================================
-# TODOs:
-#       1. restructure file and folder org.                                Done
-#       2. make implementation for libfrabric
-# =============================================================================
+
 
 # =============================================================================
 # This file is the execution file. It starts the logger, signal handler and 
@@ -53,17 +48,6 @@ class exec_:
     def start_sim(self):
         signal.signal(signal.SIGINT, self.signal_handler)
         signal.signal(signal.SIGTERM, self.signal_handler)
-        '''
-        self.execution_cls = cm.execution(self.Par_.input_file_list, self.Par_.entry_nodes, self.Par_.build_nodes, 
-                                     self.Par_.show_total_data, self.Par_.influx_node_ip, self.Par_.influx_token,
-                                     self.Par_.use_grafana, self.Par_.overlap_usage_of_nodes, self.Par_.path, 
-                                     self.Par_.transport_method, self.Par_.customize_string, self.Par_.show_graph,
-                                     self.Par_.show_progress_bar, self.Par_.show_only_entry_nodes, self.Par_.use_pattern_gen,
-                                     self.Par_.use_dmsa_files, self.Par_.set_node_list, self.Par_.entry_nodes_list,
-                                     self.Par_.build_nodes_list, self.Par_.activate_timesliceforwarding, 
-                                     self.Par_.write_data_to_file, self.Par_.analyze_data, self.Par_.port, self.Par_.use_infiniband, 
-                                     self.Par_.use_collectl)
-        '''
         self.build_up_run_folders()
         self.execution_cls = cm.execution(self.Par_, self.Run_folder_name)
         Logfile.logfile.infiniband_used = self.Par_.use_infiniband
@@ -99,7 +83,7 @@ class exec_:
         with open('tmp/communication/central_manager.txt','w') as file:
             file.write('test runtime improv')
             file.close()
-        if (self.Par_.activate_timesliceforwarding or self.Par_.ZIB_timesliceforwarding) and self.Par_.write_data_to_file:
+        if (self.Par_.GSI_Timesliceforwarding or self.Par_.ZIB_timesliceforwarding) and self.Par_.write_data_to_file:
             os.mkdir(f'{self.Par_.path_to_output_file}/{run_id}')
             os.mkdir(f'{self.Par_.path_to_output_file}/{run_id}/tsa_files')
         os.mkdir(f'Runs/{run_id}')
@@ -107,9 +91,9 @@ class exec_:
         os.mkdir(f'Runs/{run_id}/logs/general')
         if self.Par_.use_collectl:
             os.mkdir(f'Runs/{run_id}/logs/collectl')
-        if self.Par_.activate_timesliceforwarding:
+        if self.Par_.GSI_Timesliceforwarding:
             os.mkdir(f'Runs/{run_id}/logs/flesnet')
-            if self.Par_.activate_timesliceforwarding:
+            if self.Par_.GSI_Timesliceforwarding:
                 os.mkdir(f'Runs/{run_id}/logs/flesnet/tsclient')
                 if self.Par_.use_collectl:
                     os.mkdir(f'Runs/{run_id}/logs/collectl/tsclient')
@@ -179,7 +163,7 @@ def main():
     parser.add_argument(
         "--interactive",
         action="store_true",
-        help="Run in interactive mode"
+        help="Run in interface mode"
     )
     
     args = parser.parse_args()
