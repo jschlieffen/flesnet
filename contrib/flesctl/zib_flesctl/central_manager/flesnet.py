@@ -7,7 +7,7 @@ Created on Thu Sep 10 13:51:50 2026
 """
 
 from logging_lib.log_msg import *
-from central_manager import ZIB_
+import time
 from central_manager import ZIB_Timeslice_forwarding as ZIB_T
 
 class flesnet:
@@ -57,7 +57,7 @@ class flesnet:
             commands['1'], commands['2'] = self.define_collectl_commands(collectl_logfile)
         sts_command = (
             f"{self.Par_.path}./stserver -l 2 -L {logfile} "
-            f"--tsmanager-address {self.Par_.tsmanager_ip}:{self.Par_.port} "
+            f"--tsmanager-address {self.tsmanager_ip}:{self.Par_.port} "
             f"--advertise-host {node_ip}:{self.Par_.port} "
             f"{self.Par_.custom_str_stserver} "
         )
@@ -74,13 +74,13 @@ class flesnet:
         tsb_command = (
             f"{self.Par_.path}./tsbuilder -l 2 -L {logfile} "
             f"--shm-id {shm_str} "
-            f"--tsmanager-address {self.Par_.tsmanager_ip}:{self.Par_.port} "
+            f"--tsmanager-address {self.tsmanager_ip}:{self.Par_.port} "
             f"{self.Par_.custom_str_tsbuilder} "
         )
         if self.Par_.use_grafana:
             tsb_command  += f"--monitor influx2:{self.Par_.influx_node_ip}:flesnet_status:{self.Par_.influx_token}"
         commands['3'] = tsb_command
-        if self.Par_.ZIB_Timeslice_forwarding:
+        if self.Par_.ZIB_timesliceforwarding:
             commands_input = self.ZIB_timeslice_forwarding_cls.define_commands_input(node_name,collectl_logfile,logfile_input,"","",idx,node_ip,is_subprocess=True,use_tsclient=False)
             commands.update(commands_input)
         return commands
@@ -109,7 +109,11 @@ class flesnet:
             logger.info(f'starting stserver: {node}')
             logfile_collectl = "%s/logs/collectl/flesnet/stserver/stserver_%s.csv" % (self.Run_folder,node)
             logfile = "%s/logs/flesnet/stserver/stserver_%s.log" % (self.Run_folder,node)
-            self.commands_sts[node] = self.define_commands_sts(node,logfile_collectl,logfile)
+             if self.Par_.use_infiniband:
+                  ip = self.stervers[node]['inf_ip']
+             else:
+                  ip = self.stservers[node]['eth_ip']
+            self.commands_sts[node] = self.define_commands_sts(node,logfile_collectl,logfile,ip)
             self.write_commands(node,self.commands_sts[node])
             start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,self.Par_.mem)
             if not start_successfull:
@@ -126,11 +130,15 @@ class flesnet:
             logger.info(f'starting tsbuilder: {node}')
             logfile_collectl = "%s/logs/collectl/flesnet/tsbuilder/tsbuilder_%s.csv" % (self.Run_folder,node)
             logfile = "%s/logs/flesnet/tsbuilder/tsbuilder_%s.log" % (self.Run_folder,node)
-            if self.Par_.ZIB_Timeslice_forwarding:
-                logfile_input = "%s/logs/timeslice_forwarding/input_nodes/input_node_%s" % (self.Run_folder,node)
-                self.commands_tsb[node] = self.define_commands_tsb(node,logfile_collectl,logfile,logfile_input)
+            if self.Par_.use_infiniband:
+                ip = self.tsbuilders[node]['inf_ip']
             else:
-                self.commands_tsb[node] = self.define_commands_tsb(node,logfile_collectl,logfile)
+                ip = self.tsbuilders[node]['eth_ip']
+            if self.Par_.ZIB_timesliceforwarding:
+                logfile_input = "%s/logs/timeslice_forwarding/input_nodes/input_node_%s" % (self.Run_folder,node)
+                self.commands_tsb[node] = self.define_commands_tsb(node,logfile_collectl,logfile,ip,node_cnt,logfile_input)
+            else:
+                self.commands_tsb[node] = self.define_commands_tsb(node,logfile_collectl,logfile,ip,node_cnt)
             self.write_commands(node,self.commands_tsb[node])
             start_successfull = self.Slurm_starter.start_process(node,self.Par_.num_cpus,self.Par_.mem)
             if not start_successfull:
@@ -163,4 +171,4 @@ class flesnet:
             stdout,stderr = self.Slurm_starter.stop_process(node,False)
             if stdout != "":
                 logger.debug(f'Output from tsbuilder: {node} \n {stdout}')
-                logger.debug(f'Error from tsbuilder: {node} \n stderr')
+                logger.debug(f'Error from tsbuilder: {node} \n {stderr}')

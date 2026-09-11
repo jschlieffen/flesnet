@@ -559,7 +559,7 @@ class params_checker:
                 
     def check_mode(self):
         logger.debug('checking the mode')
-        if not self.Par_.GSI_Timesliceforwarding and not self.Par_.ZIB_timesliceforwarding:
+        if not self.Par_.GSI_Timesliceforwarding and not self.Par_.ZIB_timesliceforwarding and not self.Par_.use_flesnet:
             logger.critical("no active mode. Nothing will happen when executing the program")
             self.exit_program()
         if self.Par_.GSI_Timesliceforwarding and self.Par_.ZIB_timesliceforwarding:
@@ -574,7 +574,7 @@ class params_checker:
         if self.Par_.ZIB_timesliceforwarding:
             use_input_nodes = (not self.Par_.use_flescluster or (self.Par_.use_flescluster and self.Par_.is_flescluster))
             use_output_nodes = not self.Par_.use_flescluster or (self.Par_.use_flescluster and not self.Par_.is_flescluster)
-            if self.Par_.use_input_nodes:
+            if use_input_nodes:
                 for input_node in self.Par_.input_node_list:
                     if input_node in self.Par_.output_node_list:
                         logger.critical(f'input node: {input_node} is also an output node. This is not allowed')
@@ -582,7 +582,7 @@ class params_checker:
                     if input_node in self.Par_.central_manager_list:
                         logger.critical(f'input node: {input_node} is also a central manager. This is not allowed')
                         self.exit_program()
-            if self.Par_.use_output_nodes:
+            if use_output_nodes:
                 for central_manager in self.Par_.central_manager_list:
                     if central_manager in self.Par_.output_node_list:
                         logger.critical(f'central manager: {central_manager} is also an output node. This is not allowed')
@@ -665,8 +665,6 @@ class params_checker:
         logger.debug('check if all nodes that are wished via the list are allocated')
         node_list = self.get_node_list_cluster()
         req_node_list = []
-        req_node_list += [("Entry node", node) for node in self.Par_.entry_nodes_list]
-        req_node_list += [("Build node", node) for node in self.Par_.build_nodes_list]
         if self.Par_.GSI_Timesliceforwarding:
             if self.Par_.use_flesnet:
                 req_node_list += [("Sender node", node) for node in self.Par_.sender_node_list]

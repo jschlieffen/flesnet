@@ -93,7 +93,7 @@ class execution:
             self.rec2build = []
             #self.assemble_receiving_nodes2build_nodes()
             self.assemble_GSI_timeslice_forwarding_nodes()
-
+        self.ZIB_timeslice_forwarding_cls = None
         if self.Par_.ZIB_timesliceforwarding:
             self.ZIB_timeslice_forwarding_cls = ZIB_T.Timeslice_forwarding_ZIB(self.central_manager, self.central_manager_ips, self.central_manager_eth_ips, 
                                                                         self.output_nodes, self.input_nodes, self.Par_, self.Run_folder, self.Slurm_starter)
@@ -798,8 +798,8 @@ class execution:
         if self.Par_.GSI_Timesliceforwarding:
             self.timeslice_forwarding_cls.stop_timeslice_forwarding()
             self.timeslice_forwarding_cls.stop_timeslice_forwarding_sender()
-        if self.Par_.ZIB_timesliceforawrding:
-            self.ZIB_timeslice_forwarding_cls.start_cm()
+        if self.Par_.ZIB_timesliceforwarding:
+            self.ZIB_timeslice_forwarding_cls.stop_central_manager()
             
             self.ZIB_timeslice_forwarding_cls.stop_output_nodes()
             if not self.Par_.use_flesnet:

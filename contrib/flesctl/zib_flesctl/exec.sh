@@ -41,6 +41,7 @@ function set_general_params(){
 
     if [ "$USE_FLESNET" -eq 1 ];then
         ((NODES=TSMANAGER_CNT+STSERVER_CNT+TSBUILDER_CNT))
+    fi
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         ((NODES=2*RECEIVER_NODES_CNT))
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
@@ -72,7 +73,7 @@ function set_node_list() {
     NODELIST_COMMAND=""
     if [ "$USE_FLESNET" -eq 1 ]; then
         NODELIST="$TSMANAGER_NODE_LIST,$STSERVER_NODE_LIST,$TSBUILDER_NODE_LIST,$SENDER_NODES_LIST"
-
+    fi
     if [ "$ACTIVATE_TIMESLICEFORWARDING" -eq 1 ]; then
         NODELIST="$NODELIST,$PROCESS_NODES_LIST"
     elif [ "$ZIB_TIMESLICEFORWARDING" -eq 1 ]; then
