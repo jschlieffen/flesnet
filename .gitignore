@@ -17,8 +17,6 @@ contrib/flesctl/zib_flesctl/benchmark_eval/plots
 contrib/flesctl/zib_flesctl/Runs/
 contrib/flesctl/zib_flesctl/tmp/
 contrib/flesctl/zib_flesctl/n_to_n_test/
-contrib/flesctl/zib_flesctl/interface/
-contrib/flesctl/zib_flesctl/start.py
-
+contrib/flesctl/zib_flesctl/container_flesctrl.sif
 __pycache__/
 *.pyc

@@ -24,6 +24,11 @@ function create_config() {
     cp setup/config_example.cfg setup/config.cfg
 }
 
+function create_apptainer() {
+
+    apptainer build container_flesctrl.sif container_flesctrl.def
+}
+
 function create_folders() {
 
     mkdir logs
@@ -40,6 +45,12 @@ function create_folders() {
 
     mkdir tmp
 
+    mkdir tmp/communication
+
+    mkdir tmp/interface
+
+    mkdir tmp/params
+
     touch tmp/run_id.txt
 
     echo '0' > tmp/run_id.txt
@@ -55,4 +66,5 @@ cd ..
 create_venv
 create_config
 create_folders
+create_apptainer
 cd setup

@@ -38,6 +38,8 @@ def ethernet_ip(node_id):
         logger.error(f'ERROR: {e} Error occurred at reading ips')
         sys.exit(1)
     match = re.search(r'eth0:(.*?)scope global eth0',stdout,re.DOTALL)
+    if not match:
+        return ''
     content = match.group(1)
     match2 = re.search(r'inet (.*?)/',content,re.DOTALL)
     content2 = match2.group(1)

@@ -63,6 +63,7 @@ class flesnet:
         )
         if self.Par_.use_grafana:
             sts_command += f"--monitor influx2:{self.Par_.influx_node_ip}:flesnet_status:{self.Par_.influx_token}"
+        sts_command += "> /dev/null 2>&1 &"
         commands['3'] = sts_command
         return commands
     
@@ -79,6 +80,7 @@ class flesnet:
         )
         if self.Par_.use_grafana:
             tsb_command  += f"--monitor influx2:{self.Par_.influx_node_ip}:flesnet_status:{self.Par_.influx_token}"
+        tsb_command += f"> /dev/null 2>&1 &"
         commands['3'] = tsb_command
         if self.Par_.ZIB_timesliceforwarding:
             commands_input = self.ZIB_timeslice_forwarding_cls.define_commands_input(node_name,collectl_logfile,logfile_input,"","",idx,node_ip,is_subprocess=True,use_tsclient=False)

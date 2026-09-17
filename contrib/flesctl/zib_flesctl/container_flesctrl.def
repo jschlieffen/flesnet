@@ -1,0 +1,116 @@
+Bootstrap: docker
+From: ubuntu:24.04
+
+%labels
+    Author Jannik Graf von Schlieffen
+    Description "Apptainer environment for flesctrl"
+
+
+%environment
+    export DEBIAN_FRONTEND=noninteractive
+
+
+    export LANG=de_DE.UTF-8
+    export LANGUAGE=de_DE:de
+    export LC_ALL=de_DE.UTF-8
+
+    #
+    # Terminal / tmux
+    #
+    export TERM=${TERM:-xterm-256color}
+    export COLORTERM=${COLORTERM:-truecolor}
+    export TERMINFO=/usr/share/terminfo
+
+    # Enable colors for common tools
+    export CLICOLOR=1
+    export LS_COLORS='di=1;34:ln=1;36:so=1;35:pi=33:ex=1;32:bd=33;1:cd=33;1:su=41;30:sg=46;30:tw=42;30:ow=43;30'
+    #
+    # Terminal prompt
+    #
+    export PS1='\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+
+    #
+    # Lmod
+    #
+    if [ -f /etc/profile.d/lmod.sh ]; then
+        . /etc/profile.d/lmod.sh
+    fi
+
+
+
+%post
+    set -eux
+
+
+    echo "============================================================"
+    echo "Installing base packages"
+    echo "============================================================"
+
+    apt-get update && apt-get install -y \
+    	build-essential \
+	    cmake \
+        git \
+        nano \
+	    vim \
+	    tmux \
+	    htop \
+        libboost-all-dev \
+        libssl-dev \
+        iproute2 \
+        libfabric-dev \
+        librdmacm-dev \
+        libibverbs-dev \
+        libnuma-dev \
+        doxygen \
+        graphviz \
+    	autoconf \
+   	    automake \
+   	    libtool \
+   	    pkg-config \
+    	locales \
+        gdb \
+        strace \
+        lsof \
+	    collectl \
+        python3 \
+        python3-dev \
+        python3-pip \
+        python3-venv \
+        python3-setuptools \
+        python3-wheel \
+	
+    # ============================================================
+    # Locale
+    # ============================================================
+    #
+
+    echo "de_DE.UTF-8 UTF-8" >> /etc/locale.gen
+    locale-gen
+    update-locale LANG=de_DE.UTF-8
+
+    
+    echo "============================================================"
+    echo "Installing Python packages"
+    echo "============================================================"
+
+    python3 -m venv /opt/venv
+
+    /opt/venv/bin/pip install --upgrade \
+        pip \
+        setuptools \
+        wheel
+
+    /opt/venv/bin/pip install --no-cache-dir \
+        numpy \
+        scipy \
+        matplotlib \
+        plotly \
+        plotext \
+        docopt \
+        seaborn \
+        deepdiff \
+        influxdb_client \
+        textual
+
+
+    rm -rf /var/lib/apt/lists/*

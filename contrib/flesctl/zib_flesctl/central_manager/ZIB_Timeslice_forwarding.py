@@ -86,6 +86,7 @@ class Timeslice_forwarding_ZIB:
                     tsclient_command +=  f" --monitor influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
                 input_command +=  f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token} "
             input_command += f"> {logfile}_{i}.log 2>&1 &"
+            tsclient_command += f"> /dev/null 2>&1 &"
             if is_subprocess:
                 if use_tsclient:
                     commands[f'{2*i + 3}'] = tsclient_command
