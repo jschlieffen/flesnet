@@ -21,6 +21,7 @@ class params_interactive:
         display_params = [
             "use_collectl",
             "use_flescluster",
+            "use_flesnet",
             "GSI_Timesliceforwarding",
             "ZIB_timesliceforwarding",
             "num_cpus",
@@ -44,6 +45,14 @@ class params_interactive:
         ]
         if self.Par_.use_flescluster:
             display_params += ['is_flescluster','cm_ip']
+        if self.Par_.use_flesnet:
+            display_params += ['num_stserver','num_tsmanager','num_tsbuilder','custom_str_tsmanager','custom_str_stserver','custom_str_tsbuilder']
+            if self.Par_.set_node_list:
+                display_params += ['stserver_list','tsmanager_list','tsbuilder_list']
+            if self.Par_.exclude_nodes:
+                display_params += ['exclude_stserver','exclude_tsmanager','exclude_tsbuilder']
+            if self.Par_.activate_robustness_test:
+                display_params += ['num_min_stserver_alive','num_min_tsmanager_alive','num_min_tsbuilder_alive']
         if self.Par_.GSI_Timesliceforwarding:
             display_params += ['num_receivers']
             if self.Par_.set_node_list:
@@ -98,6 +107,9 @@ class params_interactive:
         groups = {}
     
         groups['Number_of_Nodes'] = [
+            'num_stserver',
+            'num_tsmanager',
+            'num_tsbuilder',
             'num_receivers',
             'num_central_manager',
             'num_input_nodes',
@@ -107,11 +119,17 @@ class params_interactive:
         groups['set_node_list'] = [
             'set_node_list',
             'exclude_nodes',
+            'stserver_list',
+            'tsmanager_list',
+            'tsbuilder_list',
             'sender_node_list',
             'receiver_node_list',
             'central_manager_list',
             'output_node_list',
             'input_node_list',
+            'exclude_stserver',
+            'exclude_tsmanager',
+            'exclude_tsbuilder',
             'exclude_sender_nodes',
             'exclude_process_nodes',
             'exclude_central_manager_nodes',
@@ -120,6 +138,7 @@ class params_interactive:
         ]
     
         groups['mode'] = [
+            'use_flesnet',
             'GSI_Timesliceforwarding',
             'ZIB_timesliceforwarding',
             'use_flescluster',
@@ -146,6 +165,9 @@ class params_interactive:
         groups['flesnet_commands'] = [
             'path',
             'use_infiniband',
+            'custom_str_tsmanager',
+            'custom_str_stserver',
+            'custom_str_tsbuilder',
         ]
     
         groups['shm_commands'] = [

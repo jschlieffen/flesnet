@@ -56,6 +56,9 @@ class Params:
         self.central_manager_list=[]
         self.output_node_list=[]
         self.exclude_nodes=0
+        self.exclude_tsmanager = []
+        self.exclude_stserver = []
+        self.exclude_tsbuilder = []
         self.exclude_sender_nodes=[]
         self.exclude_process_nodes=[]
         self.exclude_input_nodes=[]

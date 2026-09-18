@@ -151,7 +151,5 @@ if [ "$ON_VAE_CLUSTER" = true ]; then
 fi
 create_config
 create_folders
-if [ "$ON_VAE_CLUSTER" = true ]; then
-    create_apptainer
-fi
+
 cd setup

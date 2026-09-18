@@ -69,7 +69,7 @@ class Timeslice_forwarding_ZIB:
                     f"-l 2 "
                     f"-i file:\"{input_file[i-1][1]}\" "
                     f"-o shm:{shm_str}?n={self.Par_.num_components}\\&descsize={self.Par_.desc_size}\\&datasize={self.Par_.data_size} "
-                    f"{self.Par_.input_tsclient_customize_str}"
+                    f"{self.Par_.input_tsclient_customize_str} "
                 )
                 if self.Par_.use_dtsa_files:
                     tsclient_command += " -D 1"
@@ -86,7 +86,8 @@ class Timeslice_forwarding_ZIB:
                     tsclient_command +=  f" --monitor influx2:{self.Par_.influx_node_ip}:tsclient_status:{self.Par_.influx_token}"
                 input_command +=  f" -m influx2:{self.Par_.influx_node_ip}:timeslice_forwarder_state:{self.Par_.influx_token} "
             input_command += f"> {logfile}_{i}.log 2>&1 &"
-            tsclient_command += f"> /dev/null 2>&1 &"
+            if use_tsclient:
+                tsclient_command += f"> /dev/null 2>&1 &"
             if is_subprocess:
                 if use_tsclient:
                     commands[f'{2*i + 3}'] = tsclient_command
