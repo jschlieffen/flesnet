@@ -1,0 +1,9 @@
+#%Module1.0
+
+set root $env(HOME)/opt/python-3.11.9
+
+prepend-path PATH $root/bin
+prepend-path LD_LIBRARY_PATH $root/lib
+prepend-path PYTHONPATH $root/lib/python3.11/site-packages
+
+setenv PYTHONHOME $root
