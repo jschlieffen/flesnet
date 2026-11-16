@@ -2,7 +2,7 @@
 
 #include "Application.hpp"
 #include "Parameters.hpp"
-#include "log.hpp"
+#include "log_short.hpp"
 #include <csignal>
 #include <cstdlib>
 
@@ -16,10 +16,18 @@ int main(int argc, char* argv[]) {
   std::signal(SIGINT, signal_handler);
   std::signal(SIGTERM, signal_handler);
 
-  Parameters par(argc, argv);
-  Application app(par, &signal_status);
-  app.run();
+  try {
+    Parameters par(argc, argv);
+    Application app(par, &signal_status);
+    app.run();
+  } catch (ParametersException const& e) {
+    ERROR("Parameter error: {}", e.what());
+    return EXIT_FAILURE;
+  } catch (std::exception const& e) {
+    FATAL("Unknown exception: {}", e.what());
+    std::abort();
+  }
 
-  L_(info) << "exiting";
+  INFO("exiting");
   return EXIT_SUCCESS;
 }

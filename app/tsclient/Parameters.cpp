@@ -1,51 +1,33 @@
 // Copyright 2012-2013 Jan de Cuveland <cmail@cuveland.de>
 
 #include "Parameters.hpp"
-#include "GitRevision.hpp"
+#include "CommonOptions.hpp"
 #include "System.hpp"
 #include "log.hpp"
-#include <boost/log/sinks/syslog_constants.hpp>
+#include "log_program_options.hpp"
 #include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
 #include <boost/program_options/value_semantic.hpp>
 #include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/parsers.hpp>
 #include <cstdint>
 #include <cstdlib>
-#include <iostream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
 namespace po = boost::program_options;
 
 void Parameters::parse_options(int argc, char* argv[]) {
-  unsigned log_level = 2;
-  unsigned log_syslog = 2;
-  std::string log_file;
-
   auto terminal_width = fles::system::current_terminal_width();
   po::options_description desc("Allowed options", terminal_width,
                                terminal_width / 2);
   auto desc_add = desc.add_options();
-  desc_add("version,V", "print version string");
-  desc_add("help,h", "produce this help message");
-  desc_add("log-level,l",
-           po::value<unsigned>(&log_level)
-               ->default_value(log_level)
-               ->value_name("N"),
-           "set the console/file (see -L) log level (all:0)");
-  desc_add("log-file,L",
-           po::value<std::string>(&log_file)->value_name("FILENAME"),
-           "write log also to FILENAME in addition to console output");
-  desc_add("log-syslog",
-           po::value<unsigned>(&log_syslog)
-               ->implicit_value(log_syslog)
-               ->value_name("N"),
-           "enable logging to syslog at given log level");
+  fles::add_general_options(desc);
+  logging::add_program_options(desc);
   desc_add("client-index,c",
            po::value<int32_t>(&client_index_)->value_name("N"),
            "index of this executable in the list of processor tasks");
-  desc_add("analyze-pattern,a",
-           po::bool_switch(&analyze_),
+  desc_add("analyze-pattern,a", po::bool_switch(&analyze_),
            "enable pattern check");
   desc_add("monitor,m",
            po::value<std::string>(&monitor_uri_)
@@ -57,38 +39,40 @@ void Parameters::parse_options(int argc, char* argv[]) {
            "run local CRC benchmark test only");
   desc_add("verbose,v", po::value<size_t>(&verbosity_),
            "set verbosity for outputs (option -o or --output-uri);\n"
-           "larger means more details (e.g., 1 or 2); needs log level <= 1 to be visible");
+           "larger means more details (e.g., 1 or 2); needs log level <= 1 to "
+           "be visible");
   desc_add("histograms", po::bool_switch(&histograms_),
            "enable microslice histogram data output (needs -a as well)");
   desc_add("input-uri,i",
            po::value<std::string>(&input_uri_)->value_name("URI"),
            "uri of a timeslice source");
-  desc_add("output-uri,o",
-           po::value<std::vector<std::string>>()->multitoken()->value_name(
-               "scheme://host/path?param=value ..."),
-           "specify an output. The URI scheme determines the type of output, "
-           "which can be one of:\n"
-           " 'file' \t(write to an output file archive),\n"
-           " 'shm' \t(write to a flesnet shared memory segment managed by this "
-           "process),\n"
-           " 'tcp' \t(enable timeslice publisher on given address).\n"
-           "Supported parameters for 'file':\n"
-           " 'c' \t(compression 'none' (default) or 'zstd'),\n"
-           " 'items' \t(limit number of timeslices per file to given number, "
-           "create sequence of output archive files; use placeholder %n in "
-           "filename),\n"
-           " 'bytes' \t(limit number of bytes per file to given number, create "
-           "sequence of output archive files; use placeholder "
-           "%n in filename).\n"
-           " Example: 'file:///tmp/output%n.tsa?items=100&c=zstd'.\n"
-           "Supported parameters for 'shm':\n"
-           "'n' \t(number of components), 'datasize', 'descsize'.\n"
-           " Example: "
-           "'shm://127.0.0.1/tsclient_0?n=10&datasize=27&descsize=19'.\n"
-           "Supported parameters for 'tcp':\n"
-           " 'hwm' \t(high-water mark for the publisher, in TS, TS drop happens "
-           "if more buffered; default: 1).\n"
-           " Example: 'tcp://*:5556?hwm=2'.");
+  desc_add(
+      "output-uri,o",
+      po::value<std::vector<std::string>>()->multitoken()->value_name(
+          "scheme://host/path?param=value ..."),
+      "specify an output. The URI scheme determines the type of output, "
+      "which can be one of:\n"
+      " 'file' \t(write to an output file archive),\n"
+      " 'shm' \t(write to a flesnet shared memory segment managed by this "
+      "process),\n"
+      " 'tcp' \t(enable timeslice publisher on given address).\n"
+      "Supported parameters for 'file':\n"
+      " 'c' \t(compression 'none' (default) or 'zstd'),\n"
+      " 'items' \t(limit number of timeslices per file to given number, "
+      "create sequence of output archive files; use placeholder %n in "
+      "filename),\n"
+      " 'bytes' \t(limit number of bytes per file to given number, create "
+      "sequence of output archive files; use placeholder "
+      "%n in filename).\n"
+      " Example: 'file:///tmp/output%n.tsa?items=100&c=zstd'.\n"
+      "Supported parameters for 'shm':\n"
+      " 'size' \t(size of the shared memory buffer, supports units like MiB "
+      "or GB; default: 1GiB).\n"
+      " Example: 'shm://127.0.0.1/tsclient_0?size=4GiB'.\n"
+      "Supported parameters for 'tcp':\n"
+      " 'hwm' \t(high-water mark for the publisher, in TS, TS drop happens "
+      "if more buffered; default: 1).\n"
+      " Example: 'tcp://*:5556?hwm=2'.");
   desc_add("maximum-number,n",
            po::value<uint64_t>(&maximum_number_)->value_name("N"),
            "set the maximum number of timeslices to process (default: "
@@ -103,8 +87,7 @@ void Parameters::parse_options(int argc, char* argv[]) {
            "limit the item rate to given frequency (in Hz)");
   desc_add("speed", po::value<double>(&native_speed_)->value_name("X"),
            "limit the item rate to given factor of original speed");
-  desc_add("release-mode,R",
-           po::bool_switch(&release_mode_),
+  desc_add("release-mode,R", po::bool_switch(&release_mode_),
            "copy and release each timeslice immediately after receiving it");
   desc_add("create-descriptor-ts,C",
           po::value<bool>(&create_descriptor_ts_)->implicit_value(false));
@@ -126,29 +109,23 @@ void Parameters::parse_options(int argc, char* argv[]) {
                         "To set the pointer after the data size, this param needs to be set to -1");
 
   po::variables_map vm;
-  po::store(po::parse_command_line(argc, argv, desc), vm);
-  po::notify(vm);
-
-  if (vm.count("help") != 0u) {
-    std::cout << "tsclient, git revision " << g_GIT_REVISION << std::endl;
-    std::cout << desc << std::endl;
-    exit(EXIT_SUCCESS);
+  try {
+    po::store(po::parse_command_line(argc, argv, desc), vm);
+    po::notify(vm);
+  } catch (po::error const& e) {
+    throw ParametersException(e.what());
   }
 
-  if (vm.count("version") != 0u) {
-    std::cout << "tsclient " << g_PROJECT_VERSION_GIT << ", git revision "
-              << g_GIT_REVISION << std::endl;
-    exit(EXIT_SUCCESS);
-  }
+  fles::handle_general_options(vm, "tsclient", desc);
 
-  logging::add_console(static_cast<severity_level>(log_level));
-  if (vm.count("log-file") != 0u) {
-    L_(info) << "Logging output to " << log_file;
-    logging::add_file(log_file, static_cast<severity_level>(log_level));
-  }
-  if (vm.count("log-syslog") != 0u) {
-    logging::add_syslog(logging::syslog::local0,
-                        static_cast<severity_level>(log_syslog));
+  try {
+    auto options = fles::log_options(vm);
+    if (client_index_ != -1) {
+      options.instance = std::to_string(client_index_);
+    }
+    logging::setup(options);
+  } catch (std::runtime_error const& e) {
+    throw ParametersException(e.what());
   }
 
   if (vm.count("output-uri") != 0u) {
@@ -157,10 +134,12 @@ void Parameters::parse_options(int argc, char* argv[]) {
 
   size_t input_sources = vm.count("input-uri");
   if (input_sources == 0 && !benchmark_) {
-    throw ParametersException("no input source specified (use option -i or --input-uri)");
+    throw ParametersException(
+        "no input source specified (use option -i or --input-uri)");
   }
   if (input_sources > 1) {
-    throw ParametersException("more than one input source specified (option -i or --input-uri)");
+    throw ParametersException(
+        "more than one input source specified (option -i or --input-uri)");
   }
 
   if ((histograms_) && (!analyze_)) {

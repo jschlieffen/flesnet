@@ -1,6 +1,14 @@
 name: CMake
 
-on: [push]
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# A new push to a pull request supersedes its running jobs
+concurrency:
+  group: ${{github.workflow}}-${{github.ref}}
+  cancel-in-progress: ${{github.event_name == 'pull_request'}}
 
 env:
   BUILD_TYPE: Release
@@ -10,18 +18,18 @@ jobs:
     strategy:
       matrix:
         include:
-        - cc: gcc-12
-          cxx: g++-12
-          os: ubuntu-22.04
         - cc: gcc-13
           cxx: g++-13
           os: ubuntu-24.04
         - cc: gcc-14
           cxx: g++-14
           os: ubuntu-24.04
-        - cc: clang-18
-          cxx: clang++-18
-          os: ubuntu-24.04
+        - cc: gcc-15
+          cxx: g++-15
+          os: ubuntu-26.04
+        - cc: clang-22
+          cxx: clang++-22
+          os: ubuntu-26.04
       fail-fast: false
 
     runs-on: ${{matrix.os}}
@@ -32,13 +40,14 @@ jobs:
 
     steps:
     - name: Check out repository code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Install dependencies
       run: |
         sudo apt-get update -y
-        sudo apt-get install -yq libboost-dev libboost-iostreams-dev libboost-log-dev libboost-program-options-dev libboost-serialization-dev libboost-system-dev libboost-test-dev libboost-thread-dev libfabric-dev libibverbs-dev libnuma-dev librdmacm-dev libgnutls28-dev libfmt-dev ninja-build
-        sudo apt-get install -yq libkmod-dev libpci-dev libtool-bin
+        sudo apt-get install -yq libboost-dev libboost-iostreams-dev libboost-program-options-dev libboost-serialization-dev libboost-system-dev libboost-test-dev libboost-thread-dev libnuma-dev libzmq3-dev libfmt-dev ninja-build
+        sudo apt-get install -yq libkmod-dev libpci-dev libtool-bin libucx-dev
+        sudo apt-get install -yq libibverbs-dev libibverbs1 librdmacm-dev librdmacm1 libboost-log-dev
 
     - name: Install additional dependencies
       run: |
@@ -65,7 +74,57 @@ jobs:
       run: cpack
 
     - name: Archive .deb package
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: flesnet-${{matrix.os}}-${{matrix.cc}}
         path: ${{github.workspace}}/build/*.deb
+
+  image:
+    needs: build
+    # Pull requests from forks only get a read-only token
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
+
+    runs-on: ubuntu-24.04
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Check out repository code
+      uses: actions/checkout@v7
+
+    - name: Set up Buildx
+      uses: docker/setup-buildx-action@v4
+
+    - name: Log in to the container registry
+      uses: docker/login-action@v4
+      with:
+        registry: ghcr.io
+        username: ${{github.actor}}
+        password: ${{github.token}}
+
+    - name: Generate image tags
+      id: meta
+      uses: docker/metadata-action@v6
+      with:
+        images: ghcr.io/${{github.repository}}
+        tags: |
+          type=ref,event=pr
+          type=ref,event=branch
+          type=sha,enable=${{github.event_name == 'push'}}
+          type=raw,value=latest,enable=${{github.event_name == 'push'}}
+
+    # No provenance attestation: it adds an untagged manifest to the image,
+    # which the untagged cleanup in container-cleanup.yml would delete
+    - name: Build and push image
+      uses: docker/build-push-action@v7
+      with:
+        context: .
+        file: contrib/container/Dockerfile
+        push: true
+        provenance: false
+        tags: ${{steps.meta.outputs.tags}}
+        labels: ${{steps.meta.outputs.labels}}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max

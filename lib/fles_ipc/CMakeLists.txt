@@ -4,6 +4,23 @@
 file(GLOB LIB_SOURCES *.cpp)
 file(GLOB LIB_HEADERS *.hpp)
 
+# The shared memory producer classes need std::format. Projects building
+# fles_ipc with an older standard library (e.g., GCC 12) get it without them.
+include(CheckCXXSourceCompiles)
+set(OLD_CMAKE_CXX_STANDARD ${CMAKE_CXX_STANDARD})
+set(CMAKE_CXX_STANDARD 23)
+check_cxx_source_compiles("
+#include <format>
+int main() { return static_cast<int>(std::format(\"{}\", 1).size()); }"
+  FLES_IPC_HAS_STD_FORMAT)
+set(CMAKE_CXX_STANDARD ${OLD_CMAKE_CXX_STANDARD})
+if(NOT FLES_IPC_HAS_STD_FORMAT)
+  message(STATUS "=> No std::format, building fles_ipc without TimesliceShmBuffer and TimesliceShmSink.")
+  list(REMOVE_ITEM LIB_SOURCES
+       ${CMAKE_CURRENT_SOURCE_DIR}/TimesliceShmBuffer.cpp
+       ${CMAKE_CURRENT_SOURCE_DIR}/TimesliceShmSink.cpp)
+endif()
+
 #------------------------------------------------------------------------------#
 set(OLD_CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS})
 set(OLD_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
@@ -40,6 +57,10 @@ set(CMAKE_REQUIRED_LIBRARIES ${OLD_CMAKE_REQUIRED_LIBRARIES})
 
 add_library(fles_ipc ${LIB_SOURCES} ${LIB_HEADERS})
 
+# The headers used outside flesnet stay C++17; SubTimeslice.hpp,
+# OptionValues.hpp and TimesliceShm*.hpp need C++23
+target_compile_features(fles_ipc PUBLIC cxx_std_17 PRIVATE cxx_std_23)
+
 target_compile_definitions(fles_ipc PUBLIC BOOST_ALL_DYN_LINK)
 if(BOOST_IOS_HAS_ZSTD)
   target_compile_definitions(fles_ipc PUBLIC BOOST_IOS_HAS_ZSTD)
@@ -55,4 +76,11 @@ target_link_libraries(fles_ipc
   PUBLIC shm_ipc
   PUBLIC zmq::cppzmq
   PUBLIC logging
+  PUBLIC Boost::serialization
+  PUBLIC Boost::iostreams
 )
+
+install(TARGETS fles_ipc DESTINATION lib COMPONENT dev)
+install(FILES ${LIB_HEADERS} DESTINATION include COMPONENT dev)
+
+add_library(fles::fles_ipc ALIAS fles_ipc)

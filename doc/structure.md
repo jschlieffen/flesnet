@@ -18,8 +18,16 @@ Libraries with internal dependencies
 - logging
   -> shm_ipc
     -> fles_ipc
-      -> fles_core (with crcutil, monitoring)
-        -> fles_libfabric
-        -> fles_rdma
-        -> fles_zeromq
-        -> flib_ipc
+      -> fles_tools (with crcutil, monitoring)
+      -> tsb_ucx (with UCX)
+
+Roles:
+
+- logging: process-wide logging. Built as the shared library
+  libfles_logging, so that each process has exactly one instance, also
+  when several shared libraries use it
+- fles_ipc: the microslice/timeslice API used by consumers (data structures,
+  archives, sources and sinks, shared memory reader and writer)
+- fles_tools: analysis and debugging tools on top of fles_ipc (pattern
+  checkers, analyzers, dumpers)
+- tsb_ucx: UCX-specific building blocks of the timeslice building chain

@@ -38,13 +38,16 @@ constexpr const char* ArchiveTypeToString(ArchiveType e) noexcept
 /// The archive compression enum
 enum class ArchiveCompression { None, Zstd };
 
-constexpr const char* ArchiveCompressionToString(ArchiveCompression e) noexcept
-{
-    switch (e) {
-    case ArchiveCompression::None: return "none";
-    case ArchiveCompression::Zstd: return "zstd";
-    default: return "unknown compression type";
-    }
+constexpr const char*
+ArchiveCompressionToString(ArchiveCompression e) noexcept {
+  switch (e) {
+  case ArchiveCompression::None:
+    return "none";
+  case ArchiveCompression::Zstd:
+    return "zstd";
+  default:
+    return "unknown compression type";
+  }
 }
 
 template <class Base, class Derived, ArchiveType archive_type>
@@ -106,18 +109,18 @@ private:
   template <class Archive>
   void serialize(Archive& ar, const unsigned int version) {
     if (version > 0) {
-      ar& archive_type_;
+      ar & archive_type_;
     } else {
       archive_type_ = ArchiveType::TimesliceArchive;
     };
     if (version > 1) {
-      ar& archive_compression_;
+      ar & archive_compression_;
     } else {
       archive_compression_ = ArchiveCompression::None;
     };
-    ar& time_created_;
-    ar& hostname_;
-    ar& username_;
+    ar & time_created_;
+    ar & hostname_;
+    ar & username_;
   }
 
   ArchiveType archive_type_{};
