@@ -202,11 +202,19 @@ public:
     return 0;
   }
 
+  /// The duration of the timeslice in nanoseconds
+  [[nodiscard]] uint64_t duration() const {
+    return timeslice_descriptor_.duration;
+  }
+
+  /// The flags of the timeslice
+  [[nodiscard]] uint32_t flags() const { return timeslice_descriptor_.flags; }
+
 protected:
 
 
   friend class StorableTimesliceDescriptor;
-  friend class ::ManagedTDescriptorBuffer;
+  friend class TDescriptorShmSink;
 
   /// The timeslice descriptor.
   TimesliceDescriptor timeslice_descriptor_{};

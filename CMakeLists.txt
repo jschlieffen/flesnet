@@ -265,11 +265,11 @@ if(CLANG_TIDY)
 endif()
 
 
-
+add_subdirectory(app/mstool)
 # tsclient and timeslice_forwarder need std::format, which is missing e.g. in
 # GCC 12
 if(FLES_IPC_HAS_STD_FORMAT)
-  add_subdirectory(app/mstool)
+
   add_subdirectory(app/tsclient)
   add_subdirectory(app/dtsatool)
   if(USE_LIBFABRIC AND IBVERBS_LIBRARY AND RDMACM_LIBRARY)

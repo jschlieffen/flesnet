@@ -1,6 +1,5 @@
 
 #include "Application.hpp"
-#include "ManagedTimesliceBuffer.hpp"
 #include "MicrosliceDescriptor.hpp"
 #include "StorableTimeslice.hpp"
 #include "StorableTimesliceDescriptor.hpp"

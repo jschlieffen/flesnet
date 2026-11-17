@@ -11,6 +11,7 @@
 #include "TimesliceBuilder.hpp"
 #include "log.hpp"
 #include "TimesliceAutoSource.hpp"
+#include "TimesliceDescriptorAutoSource.hpp"
 #include <chrono>
 #include <csignal>
 #include <memory>
@@ -39,8 +40,8 @@ private:
   /// The application's ZeroMQ context
   zmq::context_t zmq_context_{1};
 
-  std::unique_ptr<fles::TimesliceSource> source_;
-  std::unique_ptr<fles::TimesliceDescriptorSource> source_descriptors;
+  std::unique_ptr<fles::TimesliceAutoSource> source_;
+  std::unique_ptr<fles::TimesliceDescriptorAutoSource> source_descriptors;
   std::vector<std::unique_ptr<fles::TimesliceSink>> sinks_;
   std::vector<std::unique_ptr<fles::TimesliceDescriptorSink>> sinks_descriptor;
   std::unique_ptr<Benchmark> benchmark_;

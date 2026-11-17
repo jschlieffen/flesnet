@@ -119,7 +119,7 @@ protected:
   Timeslice() = default;
 
   friend class StorableTimeslice;
-  friend class ::ManagedTimesliceBuffer;
+  friend class TimesliceShmSink;
   friend class TimesliceBuilder;
 
   /// The timeslice descriptor.

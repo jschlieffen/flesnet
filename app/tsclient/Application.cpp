@@ -3,8 +3,6 @@
 #include "Application.hpp"
 #include "ArchiveDescriptor.hpp"
 #include "Benchmark.hpp"
-#include "ManagedTimesliceBuffer.hpp"
-#include "ManagedTDescriptorBuffer.hpp"
 #include "Monitor.hpp"
 #include "OptionValues.hpp"
 #include "Parameters.hpp"
@@ -15,6 +13,7 @@
 #include "Timeslice.hpp"
 #include "TDescriptor.hpp"
 #include "TimesliceAnalyzer.hpp"
+#include "TimesliceSource.hpp"
 #include "TimesliceAutoSource.hpp"
 #include "TimesliceDescriptorAutoSource.hpp"
 #include "TimesliceDebugger.hpp"
@@ -22,6 +21,7 @@
 #include "TimesliceDescriptorOutputArchive.hpp"
 #include "TimeslicePublisher.hpp"
 #include "TimesliceShmSink.hpp"
+#include "TDescriptorShmSink.hpp"
 #include "Utility.hpp"
 #include "log_short.hpp"
 #include <chrono>
@@ -50,24 +50,37 @@ Application::Application(Parameters const& par,
 
   if (par_.descriptor_source()){
     source_descriptors = std::make_unique<fles::TimesliceDescriptorAutoSource>(par_.input_uri());
-  }
+      if (monitor_) {
+        // The callback runs on the source's communication thread, which is why it
+        // reports a connection loss even while the main loop is blocked in get().
+        const std::string prefix = output_prefix_.empty() ? ":" : output_prefix_;
+        source_descriptors->set_state_callback(
+            [this, prefix](ConnectionState state, const std::string& reason) {
+              monitor_->QueueMetric(
+                  "timeslice_source_status",
+                  {{"host", monitor_->HostName()}, {"output_prefix", prefix}},
+                  {{"state", to_string(state)}, {"reason", reason}});
+            });
+      }
+    }
   else{
     source_ = std::make_unique<fles::TimesliceAutoSource>(par_.input_uri());  
+    if (monitor_) {
+      // The callback runs on the source's communication thread, which is why it
+      // reports a connection loss even while the main loop is blocked in get().
+      const std::string prefix = output_prefix_.empty() ? ":" : output_prefix_;
+      source_->set_state_callback(
+          [this, prefix](ConnectionState state, const std::string& reason) {
+            monitor_->QueueMetric(
+                "timeslice_source_status",
+                {{"host", monitor_->HostName()}, {"output_prefix", prefix}},
+                {{"state", to_string(state)}, {"reason", reason}});
+          });
+    }
   }
   
 
-  if (monitor_) {
-    // The callback runs on the source's communication thread, which is why it
-    // reports a connection loss even while the main loop is blocked in get().
-    const std::string prefix = output_prefix_.empty() ? ":" : output_prefix_;
-    source_->set_state_callback(
-        [this, prefix](ConnectionState state, const std::string& reason) {
-          monitor_->QueueMetric(
-              "timeslice_source_status",
-              {{"host", monitor_->HostName()}, {"output_prefix", prefix}},
-              {{"state", to_string(state)}, {"reason", reason}});
-        });
-  }
+
 
   if (par_.analyze()) {
     if (par_.histograms()) {
@@ -170,15 +183,13 @@ Application::Application(Parameters const& par,
       }
       const auto shm_identifier = split(uri.path, "/").at(0);
       if (par_.descriptor_source()){
-      sinks_descriptor.push_back(std::unique_ptr<fles::TimesliceDescriptorSink>(
-          new ManagedTDescriptorBuffer(zmq_context_, shm_identifier, datasize,
-                                     descsize, num_components)));
+      sinks_descriptor.push_back(std::make_unique<fles::TDescriptorShmSink>(
+              zmq_context_, shm_identifier, size));
       has_shm_output = true;
       }
       else{     
-       sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
-          new ManagedTimesliceBuffer(zmq_context_, shm_identifier, datasize,
-                                     descsize, num_components)));
+          sinks_.push_back(std::make_unique<fles::TimesliceShmSink>(
+              zmq_context_, shm_identifier, size));
       has_shm_output = true;}
     } else {
       throw ParametersException("invalid output scheme: " + uri.scheme);
@@ -255,20 +266,30 @@ std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t*& conte
   fles::TimesliceBuilder TSBuild(ts_num_corems, ts_index,ts_pos);
   for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++) {
     uint64_t num_ms = ts->num_microslices(tsc);
+    std::cout<<"test13"<<std::endl;
     TSBuild.append_component(num_ms);
-    for (uint64_t msc = 0; msc < (ts->num_core_microslices()) + 1; msc++){ //overlap berücksichtigen
+    std::cout<<"test14"<<std::endl;
+    for (uint64_t msc = 0; msc < (ts->num_core_microslices()); msc++){ //overlap berücksichtigen
+      std::cout<<"test15"<<std::endl;
       fles::MicrosliceDescriptor ms_desc = ts->descriptor(tsc, msc);  
+      std::cout<<"test16"<<std::endl;
       data_size = ms_desc.size;
+      std::cout<<"test17"<<std::endl;
       if (acc_size+data_size >= 1000000000){
         content_ptr = original_ptr;
         acc_size = 0;
       }
+      std::cout<<"test18"<<std::endl;
       std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_desc, content_ptr);
+      std::cout<<"test19"<<std::endl;
+      std::cout<<"num comps: "<<TSBuild.num_components()<<std::endl;
       TSBuild.append_microslice(tsc,msc,*ms);
+      std::cout<<"test2"<<std::endl;
       acc_size += data_size;
       content_ptr += data_size;
     } 
   }
+  std::cout<<"test12"<<std::endl;
   auto timeslice = std::shared_ptr<fles::Timeslice>(std::make_shared<fles::TimesliceBuilder>(std::move(TSBuild))); 
   return std::static_pointer_cast<fles::Timeslice>(timeslice);
 }
@@ -285,7 +306,7 @@ std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& con
     uint64_t num_ms = ts->num_microslices(tsc);
     TSDescBuild.append_component(num_ms);
     uint64_t size_component = (ts->num_microslices(tsc)*sizeof(fles::MicrosliceDescriptor));
-    for (uint64_t msc = 0; msc < (ts->num_core_microslices()) + 1; msc++){ //overlap berücksichtigen
+    for (uint64_t msc = 0; msc < (ts->num_core_microslices()); msc++){ //overlap berücksichtigen
       fles::MicrosliceDescriptor ms_desc = ts->descriptor(tsc, msc);  
       data_size = ms_desc.size;
       if (acc_size+data_size >= par_.malloc_size()){
@@ -412,18 +433,22 @@ void Application::run() {
           break;
         }
         // avoid unneccessary pipelining
-        timeslice.reset();
-      
+        //timeslice.reset();
+
         for (auto& sink : sinks_){
           sink->put(ts);
         ts.reset();
         }
       }
     }
+    for (auto& sink : sinks_descriptor) {
+      sink->end_stream();
+    }
     free(free_ptr);
   }
   else{    
     while (auto timeslice = source_->get()) {
+      std::cout<<"test1"<<std::endl;
       if (index >= par_.offset() &&
           (index - par_.offset()) % par_.stride() == 0) {
         ++index;
@@ -456,7 +481,11 @@ void Application::run() {
       // avoid unneccessary pipelining
       timeslice.reset();
     }
+    for (auto& sink : sinks_) {
+      sink->end_stream();
+    }
   }
+
   // Loop over sinks. For all sinks of type ManagedTimesliceBuffer, check if
   // they are empty. If at least one of them is not empty, wait for 100 ms.
   // Repeat until all sinks are empty.

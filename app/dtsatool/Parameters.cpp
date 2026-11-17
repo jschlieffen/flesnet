@@ -1,7 +1,10 @@
 
 #include "Parameters.hpp"
 #include "GitRevision.hpp"
+#include "CommonOptions.hpp"
+#include "System.hpp"
 #include "log.hpp"
+#include "log_program_options.hpp"
 #include <boost/program_options.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -81,30 +84,20 @@ void Parameters::parse_options(int argc, char* argv[]){
     desc.add(general).add(source).add(sink);
 
     po::variables_map vm;
-    po::store(po::parse_command_line(argc, argv, desc),vm);
-    po::notify(vm);
-
-    if (vm.count("help") != 0u){
-        std::cout << "mstool, git revision " << g_GIT_REVISION << std::endl;
-        std::cout << desc << std::endl;
-        exit(EXIT_SUCCESS);
+    try {
+        po::store(po::parse_command_line(argc, argv, desc), vm);
+        po::notify(vm);
+    } catch (po::error const& e) {
+        throw ParametersException(e.what());
     }
 
-    if (vm.count("version") != 0u) {
-        std::cout << "mstool " << g_PROJECT_VERSION_GIT << ", git revision "
-            << g_GIT_REVISION << std::endl;
-        exit(EXIT_SUCCESS);
-    }
+    fles::handle_general_options(vm, "tsclient", desc);
 
-    logging::add_console(static_cast<severity_level>(log_level));
-    if (vm.count("log-file") != 0u) {
-        L_(info) << "Logging output to " << log_file;
-        logging::add_file(log_file, static_cast<severity_level>(log_level));
-    }
-    if (vm.count("log-syslog") != 0u) {
-        logging::add_syslog(logging::syslog::local0,
-                        static_cast<severity_level>(log_syslog));
-
+    try {
+        auto options = fles::log_options(vm);
+        logging::setup(options);
+    } catch (std::runtime_error const& e) {
+        throw ParametersException(e.what());
     }
 
 }

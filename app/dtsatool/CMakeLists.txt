@@ -15,7 +15,7 @@ target_include_directories(dtsatool PRIVATE "${PROJECT_SOURCE_DIR}/config")
 target_include_directories(dtsatool SYSTEM PUBLIC ${Boost_INCLUDE_DIRS})
 
 target_link_libraries(dtsatool
-  fles_ipc fles_core logging crcutil monitoring
+  fles_ipc fles_tools logging crcutil monitoring
   ${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT}
 )
 
