@@ -266,30 +266,20 @@ std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t*& conte
   fles::TimesliceBuilder TSBuild(ts_num_corems, ts_index,ts_pos);
   for (uint64_t tsc = 0; tsc < ts->num_components(); tsc++) {
     uint64_t num_ms = ts->num_microslices(tsc);
-    std::cout<<"test13"<<std::endl;
     TSBuild.append_component(num_ms);
-    std::cout<<"test14"<<std::endl;
     for (uint64_t msc = 0; msc < (ts->num_core_microslices()); msc++){ //overlap berücksichtigen
-      std::cout<<"test15"<<std::endl;
       fles::MicrosliceDescriptor ms_desc = ts->descriptor(tsc, msc);  
-      std::cout<<"test16"<<std::endl;
       data_size = ms_desc.size;
-      std::cout<<"test17"<<std::endl;
       if (acc_size+data_size >= 1000000000){
         content_ptr = original_ptr;
         acc_size = 0;
       }
-      std::cout<<"test18"<<std::endl;
       std::shared_ptr<fles::Microslice> ms = std::make_shared<fles::MicrosliceView>(ms_desc, content_ptr);
-      std::cout<<"test19"<<std::endl;
-      std::cout<<"num comps: "<<TSBuild.num_components()<<std::endl;
       TSBuild.append_microslice(tsc,msc,*ms);
-      std::cout<<"test2"<<std::endl;
       acc_size += data_size;
       content_ptr += data_size;
     } 
   }
-  std::cout<<"test12"<<std::endl;
   auto timeslice = std::shared_ptr<fles::Timeslice>(std::make_shared<fles::TimesliceBuilder>(std::move(TSBuild))); 
   return std::static_pointer_cast<fles::Timeslice>(timeslice);
 }
@@ -389,7 +379,6 @@ void Application::run() {
         timeslice.reset();
         test_vec.push_back(ts);
       }
-      std::cout<<"test123"<<std::endl;
       auto t1 = std::chrono::high_resolution_clock::now();
       for (std::shared_ptr<const fles::TDescriptor> ts : test_vec){
         for (auto& sink : sinks_descriptor){
@@ -448,7 +437,6 @@ void Application::run() {
   }
   else{    
     while (auto timeslice = source_->get()) {
-      std::cout<<"test1"<<std::endl;
       if (index >= par_.offset() &&
           (index - par_.offset()) % par_.stride() == 0) {
         ++index;

@@ -68,13 +68,8 @@ public:
     assert(component < timeslice_descriptor_.num_components);
     std::vector<uint8_t>& this_data = data_[component];
     TimesliceComponentDescriptor& this_desc = desc_[component];
-    std::cout<<component<<std::endl;
-    std::cout<<microslice<<std::endl;
-    std::cout<<this_desc.num_microslices<<std::endl;
     assert(microslice < this_desc.num_microslices);
-    std::cout<<"test3"<<std::endl;
     auto* desc_bytes = reinterpret_cast<uint8_t*>(&descriptor);
-    std::cout<<"test31"<<std::endl;
     // set offset relative to first microslice
     if (microslice > 0) {
       uint64_t offset = this_data.size() - this_desc.num_microslices *
@@ -83,21 +78,11 @@ public:
           reinterpret_cast<MicrosliceDescriptor*>(this_data.data())->offset;
       descriptor.offset = offset + first_offset;
     }
-    std::cout<<"test32"<<std::endl;
-
     std::copy(desc_bytes, desc_bytes + sizeof(MicrosliceDescriptor),
               &this_data[microslice * sizeof(MicrosliceDescriptor)]);
-    std::cout<<"test33"<<std::endl;
-    std::cout<<std::endl;
-    std::cout<<this_data.size()<<std::endl;
-    std::cout<<reinterpret_cast<const int*>(content)<<std::endl;
-    std::cout<<descriptor.size<<std::endl;
     this_data.insert(this_data.end(), content, content + descriptor.size);
-    std::cout<<"test34"<<std::endl;
     this_desc.size = this_data.size();
-    std::cout<<"test35"<<std::endl;
     init_pointers();
-    std::cout<<"test36"<<std::endl;
     return microslice;
   }
 

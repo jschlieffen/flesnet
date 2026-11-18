@@ -43,7 +43,7 @@ Application::Application(Parameters const& par) : par_(par){
             sources_.push_back(std::make_shared<fles::TimesliceAutoSource>(input_archive));  
             output_string = std::filesystem::path(input_archive).filename().string();
             output_string.resize(output_string.find(".tsa"));
-            output_string = par_.output_folder() +output_string + ".dtsa";
+            output_string = par_.output_folder() +"/" +output_string + ".dtsa";
             output_archives.push_back(output_string);
         }
     }
@@ -238,11 +238,8 @@ void Application::run() {
             auto sink = sinks_[index];
             L_(info) << "current file: "<<par_.input_archives()[index];
             while (auto ts = source->get()) {
-                //std::cout<<"test1"<<std::endl;
                 std::shared_ptr<fles::TDescriptor> TD = std::make_shared<fles::TDescriptor>(create_descriptor_ts(std::move(ts)));
-                //std::cout<<"test"<<std::endl;
                 sink->put(TD);
-                //std::cout<<"test123"<<std::endl;
                 ++count_;
                 
                 if (count_ == limit) {
