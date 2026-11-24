@@ -20,6 +20,14 @@ namespace fles {
 
 class TDescriptor;
 
+/*
+  The class deals with shm buffer writing for TDescriptors. It expects TDescriptors instead of timeslices.
+  It is nearly completly copied from TimesliceShmSink, but the put function has been rewritten.
+  Here every single microslice is added manually, instead of the usual approach, where the data vector is just copied
+  into the shm. The reason is that with that procedure, the content of the microslice does not needed to be copied in the data
+  vector of the timeslice. This spares one copy of a large amount of data
+*/
+
 /**
  * \brief The TDescriptorShmSink class copies timeslices into a shared memory
  * segment and publishes them to the connected workers.

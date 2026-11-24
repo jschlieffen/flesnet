@@ -12,6 +12,12 @@
 
 namespace fles{
 
+/*
+  The class TimesliceBuilder is used to create a new timeslice outside of the StorableTimeslice,shm and tcp classes. 
+  It is used to create Timeslices from TDescriptors. It is mostly a copy from StorableTimeslice, without the serialiation and 
+  deserialization stuff.
+*/
+
 class TimesliceBuilder : public Timeslice {
 
 public:

@@ -66,6 +66,7 @@ void TDescriptorShmSink::put(std::shared_ptr<const TDescriptor> timeslice) {
   //   std::memcpy(buffer + component.ms_data_offset, timeslice->data_ptr_[c],
   //               component.ms_data_size);
   // }
+  //This for loop was added. It copies each microslice into the shm by hand.
   for (uint64_t c = 0; c < timeslice->num_components(); ++c) {
     const auto& component = desc.components[c];
     const uint64_t n = component.num_microslices;

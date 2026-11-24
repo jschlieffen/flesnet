@@ -20,6 +20,15 @@ namespace fles{
 
 class TDescriptor {
 
+/*
+This class is meant to implement the TDescriptors (Timeslice Descriptor + TimesliceComponent Descriptor + Microslice Descriptor). 
+Usually a timeslice stores the timeslice descriptor and the timeslice component descriptor in a desc vector and the microslices,
+including content in a data vector. Here only the Microslice Descriptors are stored in the data vector and the contentpointer,
+either points to nothing or to a memory cell outside of the data vector. 
+Since the implementation requires that I can build these datatypes outside of serialization, shm etc. a building routine is also 
+implemented here. The building routine is mostly inhereted from StorableTimeslice(.hpp and .cpp)
+*/
+
 public:
 
   TDescriptor() = default;

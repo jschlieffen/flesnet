@@ -18,6 +18,8 @@
 // reasons to avoid segfault similar to
 // http://lists.debian.org/debian-hppa/2009/11/msg00069.html
 
+// This script is just a complete copy of the Storable Timeslice scripts. It deals with the serialization and deserialization of TDescriptors.
+
 namespace fles {
 
 template <class Base, class Storable, ArchiveType archive_type>

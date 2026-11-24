@@ -255,7 +255,10 @@ void Application::try_delay(std::chrono::nanoseconds sleep_duration) const {
 }
 
 
-
+/*
+  This function creates timeslices from TDescriptors, by setting the pointer for the content to the given memory cell (content_ptr is the pointer 
+  to the memory cell). The function is used, when given TDescriptors should be used to write the corresponding timeslices to a file.
+*/
 std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t*& content_ptr,uint8_t* original_ptr, std::shared_ptr<fles::TDescriptor> ts,
                                                                 long long& acc_size){
   size_t data_size = 1;
@@ -284,6 +287,10 @@ std::shared_ptr<fles::Timeslice> Application::create_microslices(uint8_t*& conte
   return std::static_pointer_cast<fles::Timeslice>(timeslice);
 }
 
+/*
+  This function is used to set the pointers of each microslice correctly to a given memory cell, without actually copying the data.
+  It is used, when TDescriptors are used to fill the shared memory.
+*/
 std::shared_ptr<fles::TDescriptor> Application::create_ms_cpointer(uint8_t*& content_ptr, uint8_t* original_ptr, 
                                                                   std::shared_ptr<fles::TDescriptor> ts, long long& acc_size){
   size_t data_size = 1;
@@ -342,9 +349,12 @@ void Application::run() {
     }
     
     long long acc_size;
-    //std::cout<<"test"<<std::endl;
-    L_(info)<<"start";
+    
     uint8_t* content_ptr = free_ptr;
+    /*
+      here TDescriptors are written to the shm, by not creating a new timeslice. This method can only work, if every single sink 
+      is a shared memory. 
+    */
     if (only_shm_outputschemes){
       std::vector<std::shared_ptr<const fles::TDescriptor>> test_vec;
       while (auto TDesc = source_descriptors->get()) {
@@ -379,6 +389,7 @@ void Application::run() {
         timeslice.reset();
         test_vec.push_back(ts);
       }
+      L_(debug)<<"preprocessing finished. starting with distribution to the shm";
       auto t1 = std::chrono::high_resolution_clock::now();
       for (std::shared_ptr<const fles::TDescriptor> ts : test_vec){
         for (auto& sink : sinks_descriptor){
@@ -393,7 +404,12 @@ void Application::run() {
 
       
 
-    } else {
+    } 
+      /*
+        This is used when one or more sinks are not an shm. Here timeslices are created from TDescriptors and then given to the sink. 
+        (There is probably a runtime cost by doing so).
+      */
+    else {
       while (auto TDesc = source_descriptors->get()) {
 
         if (index >= par_.offset() &&
@@ -435,6 +451,9 @@ void Application::run() {
     }
     free(free_ptr);
   }
+  /*
+    The standard while loop from the tsclient
+  */
   else{    
     while (auto timeslice = source_->get()) {
       if (index >= par_.offset() &&
