@@ -31,7 +31,7 @@ void PatternGenerator::generate_desc(){
     eq_id = 0xE001;
     flags = 0x0000;
     sys_id = static_cast<uint8_t>(fles::Subsystem::FLES);
-    sys_ver = static_cast<uint8_t>(fles::SubsystemFormatFLES::BasicRampPattern);
+    sys_ver = static_cast<uint8_t>(fles::SubsystemFormatFLES::Uninitialized); //uninitalized to remove the flesnet pattern check, otherwise the analyzer finds errors in the ts
     idx = index_given;
     offset = offset_current;
     crc = 0x00000000; //currently w.o crc.

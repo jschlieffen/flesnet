@@ -49,7 +49,7 @@ Application::Application(Parameters const& par) : par_(par){
     }
         if (par_.create_dtsa()){
         uint64_t offset = 0;
-        for (uint64_t i = 0; i <= par_.num_ts()*(par_.timeslice_size()-1); i++){
+        for (uint64_t i = 0; i <= par_.num_ts()*(par_.timeslice_size()); i++){
             generated_descriptors.push_back(std::make_shared<fles::MicrosliceDescriptor>(
                 static_cast<fles::MicrosliceDescriptor>(PatternGenerator(i,
                                                                         par_.content_size_min(),
@@ -217,9 +217,10 @@ void Application::run() {
         int i = 0;
         uint64_t ts_index = 0;
         uint64_t ts_pos = 0;
+
         for (unsigned long j = 0; j < par_.num_ts(); j++){
-            fles::TDescriptor TD = create_new_descriptor_ts(ts_index, ts_pos, par_.timeslice_size() - 1, i);
-            i += par_.timeslice_size() - 1;
+            fles::TDescriptor TD = create_new_descriptor_ts(ts_index, ts_pos, par_.timeslice_size(), i);
+            i += par_.timeslice_size();
             std::shared_ptr<fles::TDescriptor> test = std::make_shared<fles::TDescriptor> (TD);
             sink->put(std::make_shared<fles::TDescriptor> (TD));
             ++count_;
