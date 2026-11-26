@@ -1,12 +1,19 @@
 # Copyright 2013-2025 Jan de Cuveland <cmail@cuveland.de>
 
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.25)
 project(flesnet DESCRIPTION "CBM FLES Timeslice Building" VERSION 0.0 LANGUAGES CXX)
 set(CMAKE_INSTALL_DEFAULT_COMPONENT_NAME "bin")
 
-if(NOT CMAKE_BUILD_TYPE)
+# Embedded in another project (e.g., cbmroot via FetchContent), flesnet builds
+# its libraries and the basic applications. It leaves the build type, output
+# directories and packaging to the parent and enables no optional features.
+if(PROJECT_IS_TOP_LEVEL AND NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
+
+# Remove NDEBUG from RelWithDebInfo and Release builds to keep assertions enabled for now
+string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 
 # emit 'compile_commands.json' used by some IDEs
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -23,7 +30,7 @@ git_describe(GIT_REVISION "--all" "--tags" "--long" "--always")
 git_log(GIT_COMMIT "--date=format:%Y%m%d.%H%M" "--format=git%cd.%h" "-n1")
 set(PROJECT_VERSION_GIT ${PROJECT_VERSION}~${GIT_COMMIT})
 configure_file("${PROJECT_SOURCE_DIR}/config/GitRevision.cpp.in"
-               "${CMAKE_BINARY_DIR}/config/GitRevision.cpp" @ONLY)
+               "${PROJECT_BINARY_DIR}/config/GitRevision.cpp" @ONLY)
 
 if(DEFINED ENV{SIMPATH})
   message(WARNING "SIMPATH set, using Fairroot external packages in build.")
@@ -33,83 +40,25 @@ if(DEFINED ENV{SIMPATH})
   set(Boost_ROOT $ENV{SIMPATH})
 endif()
 
-set(INCLUDE_ZMQ TRUE CACHE BOOL "Download, build and statically link ZeroMQ library.")
-
 include(ExternalProject)
 set_directory_properties(PROPERTIES EP_UPDATE_DISCONNECTED true)
 set_directory_properties(PROPERTIES EP_PREFIX ${PROJECT_BINARY_DIR})
 
-# find or fetch ZeroMQ
-if(INCLUDE_ZMQ)
-  message(STATUS "Downloading and building static ZeroMQ library.")
-
-  if ("${CMAKE_GENERATOR}" MATCHES "Make")
-    set(ZMQ_BUILD_COMMAND "$(MAKE)")
-  elseif("${CMAKE_GENERATOR}" MATCHES "Ninja")
-    set(ZMQ_BUILD_COMMAND "ninja")
-  else()
-    set(ZMQ_BUILD_COMMAND "${CMAKE_COMMAND} --build . --target")
-  endif()
-
-  # override ZMQ's cmake version allowing builds with modern cmakes
-  set(__cmake_params
-    "-DCMAKE_POLICY_VERSION_MINIMUM:STRING=3.16"
-    "-DCMAKE_SUPPRESS_DEVELOPER_WARNINGS:BOOL=TRUE"
-    "-DWITH_LIBBSD:BOOL=FALSE"
-    "-DWITH_LIBSODIUM:BOOL=FALSE"
-  )
-
-  if(APPLE AND CMAKE_OSX_SYSROOT)
-    set(__cmake_params ${__cmake_params}
-      "-DCMAKE_OSX_SYSROOT:PATH=${CMAKE_OSX_SYSROOT}"
-    )
-  endif()
-
-  ExternalProject_Add(
-    zeromq
-    GIT_REPOSITORY "https://github.com/zeromq/libzmq.git"
-    GIT_TAG "622fc6dde99ee172ebaa9c8628d85a7a1995a21d" # v4.3.5
-    GIT_CONFIG advice.detachedHead=false
-    CMAKE_CACHE_ARGS ${__cmake_params}
-    BUILD_COMMAND ${ZMQ_BUILD_COMMAND} libzmq-static
-    BUILD_BYPRODUCTS src/zeromq-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zmq${CMAKE_STATIC_LIBRARY_SUFFIX}
-    INSTALL_COMMAND ""
-  )
-
-  # pre-create empty directory to make INTERFACE_INCLUDE_DIRECTORIES happy
-  file(MAKE_DIRECTORY ${PROJECT_BINARY_DIR}/src/zeromq/include)
-
-  add_library(zmq::libzmq STATIC IMPORTED GLOBAL)
-  add_dependencies(zmq::libzmq zeromq)
-
-  find_package("GnuTLS")
-  if(GNUTLS_FOUND)
-    target_link_libraries(zmq::libzmq
-                          INTERFACE ${GNUTLS_LIBRARIES}
-    )
-  endif()
-
-  set_target_properties(zmq::libzmq PROPERTIES
-    IMPORTED_LOCATION ${PROJECT_BINARY_DIR}/src/zeromq-build/lib/${CMAKE_STATIC_LIBRARY_PREFIX}zmq${CMAKE_STATIC_LIBRARY_SUFFIX}
-    INTERFACE_INCLUDE_DIRECTORIES ${PROJECT_BINARY_DIR}/src/zeromq/include
-    INTERFACE_COMPILE_DEFINITIONS ZMQ_BUILD_DRAFT_API=1
-  )
-elseif(DEFINED SIMPATH)
+# find ZeroMQ
+if(DEFINED SIMPATH)
   find_package(ExternalZMQ REQUIRED)
-  add_library(zmq::libzmq IMPORTED GLOBAL)
+  add_library(zmq::libzmq UNKNOWN IMPORTED GLOBAL)
   set_target_properties(zmq::libzmq PROPERTIES
     IMPORTED_LOCATION ${ZMQ_LIBRARY_SHARED}
-    INTERFACE_INCLUDE_DIRECTORIES ${ZMQ_INCLUDE_DIRS}
-    INTERFACE_COMPILE_DEFINITIONS ZMQ_BUILD_DRAFT_API=1
+    INTERFACE_INCLUDE_DIRECTORIES "${ZMQ_INCLUDE_DIRS}"
   )
 elseif(APPLE)
   find_package(cppzmq REQUIRED)
   set(ZMQ_INCLUDE_DIRS ${PC_LIBZMQ_INCLUDE_DIRS} /usr/local/include)
-  add_library(zmq::libzmq IMPORTED GLOBAL)
+  add_library(zmq::libzmq UNKNOWN IMPORTED GLOBAL)
   set_target_properties(zmq::libzmq PROPERTIES
     IMPORTED_LOCATION ${ZeroMQ_LIBRARY}
-    INTERFACE_INCLUDE_DIRECTORIES ${ZMQ_INCLUDE_DIRS}
-    INTERFACE_COMPILE_DEFINITIONS ZMQ_BUILD_DRAFT_API=1
+    INTERFACE_INCLUDE_DIRECTORIES "${ZMQ_INCLUDE_DIRS}"
   )
 else()
   find_package(PkgConfig)
@@ -118,89 +67,123 @@ else()
 endif()
 
 # find or fetch CppZmq
-find_file(CPPZMQ zmq.hpp)
-find_file(CPPZMQ_ADDON zmq_addon.hpp)
-if(INCLUDE_ZMQ OR CPPZMQ STREQUAL "CPPZMQ-NOTFOUND" OR CPPZMQ_ADDON STREQUAL "CPPZMQ_ADDON-NOTFOUND")
-  message(STATUS "Downloading CppZmq header-only library.")
-  ExternalProject_Add(
-    cppzmq
-    GIT_REPOSITORY "https://github.com/zeromq/cppzmq.git"
-    GIT_TAG "dd663fafd830466d34cba278c2cfd0f92eb67614" # v4.8.1
-    GIT_CONFIG advice.detachedHead=false
-    CONFIGURE_COMMAND ""
-    BUILD_COMMAND ""
-    INSTALL_COMMAND ""
-  )
-
-  add_library(zmq::cppzmq INTERFACE IMPORTED GLOBAL)
-  add_dependencies(zmq::cppzmq cppzmq)
-  set_target_properties(zmq::cppzmq PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES ${PROJECT_BINARY_DIR}/src/cppzmq
-    INTERFACE_LINK_LIBRARIES zmq::libzmq
-  )
+find_package(cppzmq CONFIG)
+if(cppzmq_FOUND)
+  add_library(zmq::cppzmq ALIAS cppzmq)
 else()
-  add_library(zmq::cppzmq ALIAS PkgConfig::zeromq)
+  find_file(CPPZMQ zmq.hpp)
+  find_file(CPPZMQ_ADDON zmq_addon.hpp)
+  if(CPPZMQ STREQUAL "CPPZMQ-NOTFOUND" OR CPPZMQ_ADDON STREQUAL "CPPZMQ_ADDON-NOTFOUND")
+    message(STATUS "Downloading CppZmq header-only library.")
+    ExternalProject_Add(
+      cppzmq
+      GIT_REPOSITORY "https://github.com/zeromq/cppzmq.git"
+      GIT_TAG "3bcbd9dad2f57180aacd4b4aea292a74f0de7ef4" # v4.11.0
+      GIT_CONFIG advice.detachedHead=false
+      CONFIGURE_COMMAND ""
+      BUILD_COMMAND ""
+      INSTALL_COMMAND ""
+    )
+
+    add_library(zmq::cppzmq INTERFACE IMPORTED GLOBAL)
+    add_dependencies(zmq::cppzmq cppzmq)
+    set_target_properties(zmq::cppzmq PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES ${PROJECT_BINARY_DIR}/src/cppzmq
+      INTERFACE_LINK_LIBRARIES zmq::libzmq
+    )
+  else()
+    add_library(zmq::cppzmq INTERFACE IMPORTED GLOBAL)
+    set_target_properties(zmq::cppzmq PROPERTIES
+      INTERFACE_LINK_LIBRARIES zmq::libzmq
+    )
+  endif()
 endif()
 
-# fetch libfmt formatting library, used by lib/monitoring. Should be already included in FairSoft.
+include(FetchContent)
+
+# fetch libfmt formatting library, used by lib/monitoring and, in code without std::format, by lib/logging. Should be already included in FairSoft.
 find_package(fmt CONFIG)
 if(NOT fmt_FOUND)
-  if(CMAKE_VERSION VERSION_GREATER "3.26.0")
-    set(FetchContent_Declare_SYSTEM "SYSTEM")
-  else()
-    set(FetchContent_Declare_SYSTEM "")
-  endif()
   message(STATUS "Downloading and building fmtlib.")
-  include(FetchContent)
   FetchContent_Declare(
     fmtlib
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
     GIT_TAG 9.1.0
-    ${FetchContent_Declare_SYSTEM})
+    SYSTEM)
   FetchContent_MakeAvailable(fmtlib) # Adds fmt::fmt
 endif()
 
 if(APPLE)
   set(Boost_USE_MULTITHREADED TRUE)
 endif()
-find_package(Boost 1.74.0 REQUIRED CONFIG COMPONENTS filesystem log program_options serialization thread unit_test_framework iostreams)
+find_package(Boost 1.74.0 REQUIRED CONFIG COMPONENTS program_options serialization thread unit_test_framework iostreams)
 find_package(Threads REQUIRED)
 
-find_package(LIBFABRIC)
-find_package(RDMA)
-find_package(PDA)
-find_package(NUMA)
-find_package(Doxygen)
+option(USE_UCX "Use UCX libraries and build UCX transport." ${PROJECT_IS_TOP_LEVEL})
+option(USE_PDA "Use libpda and build CRI interface." ${PROJECT_IS_TOP_LEVEL})
+option(USE_NUMA "Use libnuma to schedule on specific NUMA nodes." ${PROJECT_IS_TOP_LEVEL})
+option(USE_LIBFABRIC "Fetch libfabric and build the timeslice forwarder." ${PROJECT_IS_TOP_LEVEL})
+option(USE_DOXYGEN "Generate documentation using doxygen." ${PROJECT_IS_TOP_LEVEL})
+
+if(USE_UCX)
+  find_package(UCX CONFIG 1.16.0)
+  if (UCX_FOUND)
+    message(STATUS "UCX found: ${UCX_VERSION}")
+  else()
+    message(STATUS "Libraries not found: ucx. Building without UCX transport.")
+  endif()
+endif()
+if(USE_PDA)
+  find_package(PDA)
+  if(NOT PDA_FOUND)
+    message(STATUS "Library not found: libpda. Building without CRI interface.")
+  endif()
+endif()
+if(USE_NUMA)
+  find_package(NUMA)
+  if(NOT NUMA_FOUND)
+    message(STATUS "Library not found: libnuma. Building without.")
+  endif()
+endif()
+if(USE_LIBFABRIC)
+  find_library(IBVERBS_LIBRARY ibverbs)
+  find_library(RDMACM_LIBRARY rdmacm)
+  if(NOT (IBVERBS_LIBRARY AND RDMACM_LIBRARY))
+    message(STATUS "Libraries not found: libibverbs, librdmacm. Building without timeslice forwarder.")
+  endif()
+endif()
+if(USE_DOXYGEN)
+  find_package(Doxygen)
+  if(NOT DOXYGEN_FOUND)
+    message(STATUS "Binary not found: Doxygen. Not building documentation.")
+  endif()
+endif()
+
+# Workaround for https://bugs.launchpad.net/ubuntu/+source/ucx/+bug/2076529
+# If UCX is found and the prefix variable is equal to "/usr/lib", change
+# the IMPORTED_LOCATION and INTERFACE_INCLUDE_DIRECTORIES properties
+# of the imported libraries ucx::ucp, ucx::uct, and ucx::ucs by replacing
+# the "/usr/lib" prefix with "/usr".
+# This is necessary because the UCX package on Ubuntu 22.04 is broken.
+if (UCX_FOUND AND prefix STREQUAL "/usr/lib")
+  message(STATUS "UCX found, but prefix is /usr/lib. Fixing imported libraries.")
+  foreach(component IN ITEMS ucp uct ucs)
+    get_target_property(${component}_location ucx::${component} IMPORTED_LOCATION)
+    get_target_property(${component}_include_dirs ucx::${component} INTERFACE_INCLUDE_DIRECTORIES)
+    string(REPLACE "/usr/lib" "/usr" ${component}_location ${${component}_location})
+    string(REPLACE "/usr/lib" "/usr" ${component}_include_dirs ${${component}_include_dirs})
+    set_target_properties(ucx::${component} PROPERTIES
+      IMPORTED_LOCATION ${${component}_location}
+      INTERFACE_INCLUDE_DIRECTORIES ${${component}_include_dirs}
+    )
+  endforeach()
+endif()
+# End of workaround. Delete this block when the UCX package is fixed.
 
 find_package(OpenSSL REQUIRED)
 if(APPLE)
   find_package(ZSTD)
   get_filename_component(ZSTD_LIB_DIR ${ZSTD_LIBRARY} DIRECTORY)
-endif()
-
-set(USE_RDMA TRUE CACHE BOOL "Use RDMA libraries and build RDMA transport.")
-if(USE_RDMA AND NOT RDMA_FOUND)
-  message(STATUS "Libraries not found: rdma. Building without RDMA transport.")
-endif()
-
-set(USE_LIBFABRIC TRUE CACHE BOOL "Use LIBFABRIC libraries and build LIBFABRIC transport.")
-if(USE_LIBFABRIC AND NOT LIBFABRIC_FOUND)
-	message(STATUS "Library not found: libfabric. Building without.")
-endif()
-
-set(USE_PDA TRUE CACHE BOOL "Use libpda and build CRI interface.")
-if(USE_PDA AND NOT PDA_FOUND)
-  message(STATUS "Library not found: libpda. Building without CRI interface.")
-endif()
-
-set(USE_NUMA TRUE CACHE BOOL "Use libnuma to schedule on specific NUMA nodes.")
-if(USE_NUMA AND NOT NUMA_FOUND)
-  message(STATUS "Library not found: libnuma. Building without.")
-endif()
-
-set(USE_DOXYGEN TRUE CACHE BOOL "Generate documentation using doxygen.")
-if(USE_DOXYGEN AND NOT DOXYGEN_FOUND)
-	message(STATUS "Binary not found: Doxygen. Not building documentation.")
 endif()
 
 set(USE_CLANG_TIDY FALSE CACHE BOOL "Run clang-tidy during build.")
@@ -216,7 +199,15 @@ if(USE_CLANG_TIDY)
   endif()
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
+# C++23 unless a consumer explicitly requests otherwise. Projects embedding the
+# externally consumed libraries (logging, monitoring, fles_ipc, shm_ipc,
+# tsclient) may still be on an older toolchain and can pass
+# -DCMAKE_CXX_STANDARD=17. Targets that genuinely need C++23 declare it via
+# target_compile_features().
+if(NOT DEFINED CMAKE_CXX_STANDARD)
+  set(CMAKE_CXX_STANDARD 23)
+endif()
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if( NOT "arm64" STREQUAL ${CMAKE_SYSTEM_PROCESSOR} )
     add_compile_options(-msse4.2)
@@ -229,58 +220,86 @@ if (COVERALLS)
   coveralls_turn_on_coverage()
 endif()
 
+# Executables find libfles_logging both in the build tree (next to lib/) and
+# when installed (bin/ next to lib/).
+if(APPLE)
+  set(CMAKE_BUILD_RPATH "@executable_path/lib;@executable_path/../lib")
+  set(CMAKE_INSTALL_RPATH "@executable_path/../lib")
+else()
+  set(CMAKE_BUILD_RPATH "$ORIGIN/lib;$ORIGIN/../lib")
+  set(CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
+endif()
+
+# The software version, for the applications
+add_library(git_revision STATIC
+  "${PROJECT_BINARY_DIR}/config/GitRevision.cpp"
+  config/GitRevision.hpp
+  config/CommonOptions.hpp
+)
+target_include_directories(git_revision PUBLIC config)
+target_link_libraries(git_revision INTERFACE logging)
+
 add_subdirectory(lib/logging)
 add_subdirectory(lib/monitoring)
 add_subdirectory(lib/crcutil)
-add_subdirectory(lib/flib_ipc)
 if(CLANG_TIDY)
   set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY})
 endif()
 add_subdirectory(lib/fles_ipc)
-add_subdirectory(lib/fles_core)
-add_subdirectory(lib/fles_zeromq)
+add_subdirectory(lib/fles_tools)
 add_subdirectory(lib/shm_ipc)
-if (USE_RDMA AND RDMA_FOUND)
-  add_subdirectory(lib/fles_rdma)
+if (USE_UCX AND UCX_FOUND)
+  add_subdirectory(lib/tsb_ucx)
 endif()
 if (USE_PDA AND PDA_FOUND)
   add_subdirectory(lib/cri)
   add_subdirectory(lib/pda)
 endif()
 unset(CMAKE_CXX_CLANG_TIDY)
-if (USE_LIBFABRIC AND LIBFABRIC_FOUND)
-  add_subdirectory(lib/fles_libfabric)
-endif()
 
 set(CMAKE_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
      OWNER_READ OWNER_WRITE OWNER_EXECUTE
      GROUP_READ GROUP_EXECUTE
      WORLD_READ WORLD_EXECUTE)
 
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
+if(PROJECT_IS_TOP_LEVEL)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
+endif()
 if(CLANG_TIDY)
   set(CMAKE_CXX_CLANG_TIDY ${CLANG_TIDY})
 endif()
 
-add_subdirectory(app/mstool)
-add_subdirectory(app/msconsumer)
-add_subdirectory(app/tsclient)
-add_subdirectory(app/flesnet)
+# tsclient and timeslice_forwarder need std::format, which is missing e.g. in
+# GCC 12
+if(FLES_IPC_HAS_STD_FORMAT)
+  add_subdirectory(app/tsclient)
+  enable_testing()
+  add_subdirectory(app/tsa2msa)
+  if(USE_LIBFABRIC AND IBVERBS_LIBRARY AND RDMACM_LIBRARY)
+    add_subdirectory(app/timeslice_forwarder)
+  endif()
+else()
+  message(STATUS "No std::format, building flesnet without tsclient and timeslice_forwarder")
+endif()
+add_subdirectory(app/archive_validator)
 
-# enable testing must be called before the first add_subdirectory that
-# contains tests
-enable_testing()
-add_subdirectory(app/tsa2msa)
 if (USE_PDA AND PDA_FOUND)
   add_subdirectory(app/cri_tools)
   add_subdirectory(app/cri_cfg)
-  add_subdirectory(app/cri_server)
+  if (USE_UCX AND UCX_FOUND)
+    add_subdirectory(app/stserver)
+    add_subdirectory(app/tsmanager)
+    add_subdirectory(app/tsbuilder)
+  endif()
 endif()
 unset(CMAKE_CXX_CLANG_TIDY)
 unset(CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 
-add_subdirectory(contrib)
-add_subdirectory(contrib/flesctl)
+if(PROJECT_IS_TOP_LEVEL)
+  add_subdirectory(contrib)
+  add_subdirectory(contrib/flesctl)
+  add_subdirectory(flesctl)
+endif()
 if (USE_DOXYGEN AND DOXYGEN_FOUND)
   add_subdirectory(doc)
 endif()
@@ -290,11 +309,18 @@ if (COVERALLS)
   coveralls_setup("${LIB_SRC}" ${COVERALLS_UPLOAD})
 endif()
 
-add_subdirectory(test)
+option(FLES_BUILD_TESTS "Build the test suite" ${PROJECT_IS_TOP_LEVEL})
 
-if (UNIX)
+if(FLES_BUILD_TESTS)
+  #enable_testing()
+  add_subdirectory(test)
+endif()
+
+if (PROJECT_IS_TOP_LEVEL AND UNIX)
   set(CPACK_GENERATOR DEB)
   set(CPACK_DEB_COMPONENT_INSTALL ON)
+  # No package for the dev component (libraries and headers for other projects)
+  set(CPACK_COMPONENTS_ALL bin flesctl)
   set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION_GIT})
   set(CPACK_PACKAGE_CONTACT "Jan de Cuveland <cuveland@compeng.uni-frankfurt.de>")
   set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "")

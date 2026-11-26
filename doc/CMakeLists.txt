@@ -59,11 +59,6 @@ set(DOXYGEN_ALIASES "glos{1}=\\1")
 # https://github.com/doxygen/doxygen/issues/10165
 # i.e. duplicate class names in different files. Possibly introducing
 # appropriate namespaces would fix this.
-#
-# 3) 	warning: documented symbol 'logging::LogBuffer::LogBuffer' was not
-# 		declared or defined. (and similar)
-#
-# Unclear issue.
 
 ## Extended documentation:
 # Since the documentation currently is not complete or up-to-date,
@@ -87,15 +82,6 @@ if (EXTENDED_DOXYGEN_DOCUMENTATION)
   set(DOXYGEN_DOT_GRAPH_MAX_NODES 100)
 endif()
 
-# In order to include documentation for code guarded by preprocessor
-# macros passed by cmake to the compiler, we must instruct doxygen
-# to define these macros as well.
-set(DOXYGEN_PREDEFINED "")
-# Note that the escaped quotes are necessary. Doxygen expects the macro
-# definitions to be a list of quoted strings.
-string(APPEND DOXYGEN_PREDEFINED "\"HAVE_LIBFABRIC=1\"")
-string(APPEND DOXYGEN_PREDEFINED " \"HAVE_RDMA=1\"")
-
 set(DOXYGEN_MARKDOWN_SUPPORT YES)
 set(DOXYGEN_USE_MDFILE_AS_MAINPAGE README.md)
 
@@ -111,62 +97,18 @@ set(DOXYGEN_USE_MATHJAX YES)
 # to have them only in the documentation where they are relevant.
 set(MARKDOWN_DOCS_FOR_DOXYGEN
   README.md
-  HOWTO.md
-  INSTALL.md
-  doc/Ctrl-C.md
-  doc/monitoring.md
-  doc/flesnet_minimal_example.md
-  doc/monitoring_with_podman.md
+  doc/INSTALL.md
+  doc/FAQ.md
   doc/TS_Source_Identifier.md
-  doc/versions.md
+  doc/logging.md
   doc/structure.md)
-
-set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/flesnet-doc)
-doxygen_add_docs(doc-flesnet
-  ${MARKDOWN_DOCS_FOR_DOXYGEN}
-  app/flesnet
-  lib/logging
-  lib/shm_ipc
-  lib/fles_core
-  lib/fles_zeromq
-  lib/fles_rdma
-  lib/fles_libfabric
-  lib/fles_ipc
-  lib/monitoring
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-	COMMENT "Generating flesnet documentation with doxygen")
-
-# In contrast to other doxygen targets (at the time of writing), the
-# tsa2msa utility has its own main page.
-set(DOXYGEN_MDFILE_AS_MAINPAGE_OLD ${DOXYGEN_USE_MDFILE_AS_MAINPAGE})
-unset(DOXYGEN_USE_MDFILE_AS_MAINPAGE)
-
-# At the time of writing, other doxygen targets do not generate a tree
-# view. Possibly it is a good idea to enable this for all targets, but
-# for now we will only enable it for the tsa2msa target.
-set(DOXYGEN_GENERATE_TREEVIEW_OLD ${DOXYGEN_GENERATE_TREEVIEW})
-set(DOXYGEN_GENERATE_TREEVIEW YES)
-
-# In order to include code snippets and alike in the documentation, we
-# need to provide the path to the source files from which the snippets
-# are extracted.
-string(APPEND DOXYGEN_EXAMPLE_PATH ${CMAKE_SOURCE_DIR}/app/tsa2msa)
-
-set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/tsa2msa-doc)
-doxygen_add_docs(doc-tsa2msa
-	app/tsa2msa
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-	COMMENT "Generating tsa2msa documentation with doxygen"
-)
-set(DOXYGEN_USE_MDFILE_AS_MAINPAGE ${DOXYGEN_MDFILE_AS_MAINPAGE_OLD})
-set(DOXYGEN_GENERATE_TREEVIEW ${DOXYGEN_GENERATE_TREEVIEW_OLD})
 
 set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/mstool-doc)
 doxygen_add_docs(doc-mstool
   ${MARKDOWN_DOCS_FOR_DOXYGEN}
   app/mstool
   lib/logging
-  lib/fles_core
+  lib/fles_tools
   lib/fles_ipc
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   COMMENT "Generating mstool documentation with doxygen")
@@ -176,19 +118,12 @@ doxygen_add_docs(doc-tsclient
   ${MARKDOWN_DOCS_FOR_DOXYGEN}
   app/tsclient
   lib/logging
-  lib/fles_core
+  lib/fles_tools
   lib/fles_ipc
   lib/monitoring
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   COMMENT "Generating tsclient documentation wit doxygen" )
   
-set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/msconsumer-doc)
-doxygen_add_docs(doc-msconsumer app/msconsumer lib test
-  ${MARKDOWN_DOCS_FOR_DOXYGEN}
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  COMMENT "Generating msconsumer documentation with doxygen (doxygen error \
-  \"FileDefImpl::insertMembers()...\" is expected)")
-
 set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cri_cfg-doc)
 doxygen_add_docs(doc-cri_cfg
   ${MARKDOWN_DOCS_FOR_DOXYGEN}
@@ -198,18 +133,6 @@ doxygen_add_docs(doc-cri_cfg
   lib/pda
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   COMMENT "Generating cri_cfg documentation with doxygen")
-
-set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cri_server-doc)
-doxygen_add_docs(doc-cri_server
-  ${MARKDOWN_DOCS_FOR_DOXYGEN}
-  app/cri_server
-  lib/logging
-  lib/fles_ipc/MicrosliceDescriptor.hpp
-  lib/fles_ipc/Utility.hpp
-  lib/cri
-  lib/pda
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
-  COMMENT "Generating cri_server documentation with doxygen" )
 
 set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/cri_tools-doc/cri_en_pgen-doc)
 doxygen_add_docs(doc-cri_en_pgen
@@ -252,6 +175,13 @@ doxygen_add_docs(doc-cri_test_rf
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
   COMMENT "Generating cri_test_rf documentation with doxygen")
 
+set(DOXYGEN_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/archive_validator-doc)
+doxygen_add_docs(doc-archive_validator
+  ${MARKDOWN_DOCS_FOR_DOXYGEN}
+  app/archive_validator
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+  COMMENT "Generating archive_validator documentation with doxygen" )
+
 add_custom_target(doc-cri_tools
   DEPENDS
     doc-cri_info
@@ -261,11 +191,9 @@ add_custom_target(doc-cri_tools
 
 add_custom_target(doc
   DEPENDS
-    doc-flesnet
     doc-mstool
     doc-tsclient
-    doc-msconsumer
     doc-tsa2msa
+    doc-archive_validator
     doc-cri_cfg
-    doc-cri_server
     doc-cri_tools)

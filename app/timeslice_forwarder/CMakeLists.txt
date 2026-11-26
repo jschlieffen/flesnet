@@ -1,0 +1,94 @@
+# The data_forwarder library uses Boost.Log
+find_package(Boost CONFIG QUIET COMPONENTS log)
+if(NOT TARGET Boost::log)
+  message(STATUS "Library not found: Boost.Log. Building without timeslice forwarder.")
+  return()
+endif()
+
+add_executable(timeslice_forwarder)
+
+set(LIBFABRIC_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/libfabric_build/install_dir")
+set(LIBFABRIC_INCLUDE_DIR "${LIBFABRIC_INSTALL_DIR}/include")
+set(LIBFABRIC_LIB_DIR     "${LIBFABRIC_INSTALL_DIR}/lib")
+set(LIBFABRIC_LIBRARY "${LIBFABRIC_LIB_DIR}/libfabric.a")
+
+include(ExternalProject)
+ExternalProject_Add(libfabric
+    GIT_REPOSITORY    https://github.com/ofiwg/libfabric.git
+    GIT_TAG           v2.5.1
+    CONFIGURE_COMMAND ./autogen.sh COMMAND ./configure --prefix=${LIBFABRIC_INSTALL_DIR} --disable-sockets --disable-udp --disable-tcp --disable-opx --disable-psm2 --disable-psm3 --disable-rxm --disable-usnic --disable-shm --disable-efa --enable-verbs
+    UPDATE_DISCONNECTED 1
+    BUILD_IN_SOURCE 1
+    BUILD_BYPRODUCTS ${LIBFABRIC_LIBRARY}
+)
+
+IF (DATA_FORWARDER_INSTALL_PATH)
+    add_dependencies(timeslice_forwarder libfabric)
+    message("Using installed data forwarder library at: ${DATA_FORWARDER_INSTALL_PATH}")
+    set(DATA_FORWARDER_INSTALL_DIR "${DATA_FORWARDER_INSTALL_PATH}")
+    set(DATA_FORWARDER_INCLUDE_DIR "${DATA_FORWARDER_INSTALL_DIR}/include")
+    set(DATA_FORWARDER_LIB_DIR     "${DATA_FORWARDER_INSTALL_DIR}/lib")
+    set(DATA_FORWARDER_LIBRARY "${DATA_FORWARDER_LIB_DIR}/libdata_forwarder.a")
+
+ELSE ()
+    message("Pulling data forwarder lib from git")
+    set(DATA_FORWARDER_INSTALL_DIR "${CMAKE_CURRENT_BINARY_DIR}/data_forwarder_lib_build/install_dir")
+    set(DATA_FORWARDER_INCLUDE_DIR "${DATA_FORWARDER_INSTALL_DIR}/include")
+    set(DATA_FORWARDER_LIB_DIR     "${DATA_FORWARDER_INSTALL_DIR}/lib")
+    set(DATA_FORWARDER_LIBRARY "${DATA_FORWARDER_LIB_DIR}/libdata_forwarder.a")
+    set(DATA_FORWARDER_COMMIT "1040728822e88e2c330f4617d6e2064eed157b56") # dev, 2026-10-27
+    # A separate CMake run, which gets the Boost found here
+    ExternalProject_Add(data_forwarder_lib
+        GIT_REPOSITORY https://git.zib.de/ngreve/data_forwarder.git
+        GIT_TAG ${DATA_FORWARDER_COMMIT}
+        CMAKE_ARGS
+            -DLIBFABRIC_INSTALL_PATH=${LIBFABRIC_INSTALL_DIR}
+            -DCMAKE_INSTALL_PREFIX=${DATA_FORWARDER_INSTALL_DIR}
+        CMAKE_CACHE_ARGS
+            -DBoost_DIR:PATH=${Boost_DIR}
+        UPDATE_DISCONNECTED 1
+        BUILD_IN_SOURCE 1
+        BUILD_BYPRODUCTS ${DATA_FORWARDER_LIBRARY}
+    )
+    add_dependencies(data_forwarder_lib libfabric)
+    add_dependencies(timeslice_forwarder data_forwarder_lib)
+ENDIF()
+
+# For OptionValues.hpp and TimesliceShmBuffer.hpp
+target_compile_features(timeslice_forwarder PRIVATE cxx_std_23)
+
+target_compile_definitions(timeslice_forwarder PUBLIC BOOST_ALL_DYN_LINK)
+target_include_directories(timeslice_forwarder SYSTEM PRIVATE
+    ${LIBFABRIC_INCLUDE_DIR}
+    ${DATA_FORWARDER_INCLUDE_DIR}
+    ${Boost_INCLUDE_DIRS}
+)
+
+target_include_directories(timeslice_forwarder PRIVATE
+    ./include
+    ${PROJECT_SOURCE_DIR}/config
+)
+
+target_link_libraries(timeslice_forwarder PRIVATE
+    ${DATA_FORWARDER_LIBRARY}
+    ${LIBFABRIC_LIBRARY}
+    rdmacm
+    ibverbs
+    fles_ipc
+    monitoring
+    logging
+    crcutil
+    git_revision
+    Boost::log
+    Boost::program_options
+    Boost::serialization
+    Boost::thread
+)
+
+file(GLOB timeslice_forwarder_SRC
+    "src/**/*.cpp"
+    "src/*.cpp"
+)
+
+target_sources(timeslice_forwarder PRIVATE ${timeslice_forwarder_SRC})
+install(TARGETS timeslice_forwarder DESTINATION bin)

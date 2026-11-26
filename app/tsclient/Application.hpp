@@ -5,8 +5,7 @@
 #include "Monitor.hpp"
 #include "Parameters.hpp"
 #include "Sink.hpp"
-#include "TimesliceSource.hpp"
-#include "log.hpp"
+#include "TimesliceAutoSource.hpp"
 #include <chrono>
 #include <csignal>
 #include <memory>
@@ -35,14 +34,12 @@ private:
   /// The application's ZeroMQ context
   zmq::context_t zmq_context_{1};
 
-  std::unique_ptr<fles::TimesliceSource> source_;
+  std::unique_ptr<fles::TimesliceAutoSource> source_;
   std::vector<std::unique_ptr<fles::TimesliceSink>> sinks_;
   std::unique_ptr<Benchmark> benchmark_;
 
   uint64_t count_ = 0;
 
-  logging::OstreamLog status_log_{status};
-  logging::OstreamLog debug_log_{debug};
   std::string output_prefix_;
 
   std::chrono::high_resolution_clock::time_point time_begin_;

@@ -13,7 +13,9 @@
 #include <boost/interprocess/managed_shared_memory.hpp>
 #include <boost/uuid/nil_generator.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <iostream>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -21,8 +23,12 @@ namespace fles {
 
 template <class Base, class Derived> class Receiver : public Source<Base> {
 public:
-  Receiver(const std::string&, WorkerParameters){};
+  Receiver(const std::string&, WorkerParameters) {};
   [[nodiscard]] bool eos() const override { return true; };
+  void set_state_callback(ItemWorker::StateCallback){};
+  [[nodiscard]] ConnectionState connection_state() const {
+    return ConnectionState::Disconnected;
+  };
 
 private:
   Derived* do_get() override { return nullptr; };
@@ -61,6 +67,34 @@ public:
 
   [[nodiscard]] bool eos() const override { return eos_; }
 
+  /**
+   * \brief Install a callback invoked on every connection state change.
+   *
+   * Must be called before the first call to get().
+   */
+  void set_state_callback(ItemWorker::StateCallback callback) {
+    worker_.set_state_callback(std::move(callback));
+  }
+
+  [[nodiscard]] ConnectionState connection_state() const {
+    return worker_.connection_state();
+  }
+
+  /// Identifier of the distributor instance this receiver is connected to.
+  [[nodiscard]] std::string distributor_instance_id() const {
+    return worker_.distributor_instance_id();
+  }
+
+  [[nodiscard]] size_t items_received() const {
+    return worker_.items_received();
+  }
+  [[nodiscard]] size_t items_completed() const {
+    return worker_.items_completed();
+  }
+  [[nodiscard]] size_t reconnect_count() const {
+    return worker_.reconnect_count();
+  }
+
 private:
   TimesliceView* do_get() override {
     if (eos_) {
@@ -70,9 +104,14 @@ private:
     while (auto item = worker_.get()) {
       fles::TimesliceShmWorkItem timeslice_item;
       std::istringstream istream(item->payload());
-      {
+      try {
         boost::archive::binary_iarchive iarchive(istream);
         iarchive >> timeslice_item;
+      } catch (const boost::archive::archive_exception& e) {
+        throw std::runtime_error(
+            std::string("TimesliceReceiver: cannot read work item, producer "
+                        "uses an incompatible format: ") +
+            e.what());
       }
 
       // connect to matching shared memory if not already connected
@@ -92,6 +131,13 @@ private:
                     << std::endl;
           continue;
         }
+      }
+
+      if (timeslice_item.tsc_desc.size() !=
+              timeslice_item.ts_desc.num_components ||
+          timeslice_item.data.size() != timeslice_item.ts_desc.num_components) {
+        throw std::runtime_error("TimesliceReceiver: invalid work item, "
+                                 "component count mismatch");
       }
 
       return new TimesliceView(managed_shm_, item, timeslice_item); // NOLINT

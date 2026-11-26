@@ -4,17 +4,48 @@
 file(GLOB LIB_SOURCES *.cpp)
 file(GLOB LIB_HEADERS *.hpp)
 
-#------------------------------------------------------------------------------#
-set(OLD_CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS})
-set(OLD_CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES})
-set(OLD_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
+# The shared memory producer classes need std::format, including formatters
+# that take std::format_context, which libc++ before version 19 rejects.
+# Projects building fles_ipc with an older standard library (e.g., GCC 12)
+# get it without them.
+include(CheckCXXSourceCompiles)
+block()
+  set(CMAKE_CXX_STANDARD 23)
+  check_cxx_source_compiles("
+#include <format>
+struct S {};
+template <> struct std::formatter<S> {
+  constexpr auto parse(std::format_parse_context& ctx) { return ctx.begin(); }
+  auto format(const S&, std::format_context& ctx) const {
+    return std::format_to(ctx.out(), \"s\");
+  }
+};
+int main() { return static_cast<int>(std::format(\"{}{}\", 1, S{}).size()); }"
+    FLES_IPC_HAS_STD_FORMAT)
 
-#set(CMAKE_REQUIRED_DEFINITIONS ${CMAKE_REQUIRED_DEFINITIONS} BOOST_ALL_DYN_LINK)
-set(CMAKE_REQUIRED_INCLUDES ${CMAKE_REQUIRED_INCLUDES} ${Boost_INCLUDE_DIRS})
-set(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${Boost_IOSTREAMS_LIBRARY})
+  # libc++ before version 20 has std::jthread only with -fexperimental-library
+  set(jthread_test_source "
+#include <thread>
+int main() { std::jthread t([] {}); }")
+  check_cxx_source_compiles("${jthread_test_source}" FLES_IPC_HAS_JTHREAD)
+  if(NOT FLES_IPC_HAS_JTHREAD)
+    string(APPEND CMAKE_REQUIRED_FLAGS " -fexperimental-library")
+    check_cxx_source_compiles("${jthread_test_source}"
+      FLES_IPC_JTHREAD_NEEDS_EXPERIMENTAL_LIBRARY)
+  endif()
+endblock()
+if(NOT FLES_IPC_HAS_STD_FORMAT)
+  message(STATUS "=> No std::format, building fles_ipc without TimesliceShmBuffer and TimesliceShmSink.")
+  list(REMOVE_ITEM LIB_SOURCES
+       ${CMAKE_CURRENT_SOURCE_DIR}/TimesliceShmBuffer.cpp
+       ${CMAKE_CURRENT_SOURCE_DIR}/TimesliceShmSink.cpp)
+endif()
 
 # Check if the Boost iostream was compiled with ZSTD (un)compression support
-CHECK_CXX_SOURCE_COMPILES("
+block()
+  list(APPEND CMAKE_REQUIRED_INCLUDES ${Boost_INCLUDE_DIRS})
+  list(APPEND CMAKE_REQUIRED_LIBRARIES ${Boost_IOSTREAMS_LIBRARY})
+  check_cxx_source_compiles("
 #include <boost/iostreams/filter/zstd.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 
@@ -26,6 +57,7 @@ int main(int argc, char *argv[])
 
   return 0;
 }" BOOST_IOS_HAS_ZSTD)
+endblock()
 
 if(BOOST_IOS_HAS_ZSTD)
   message(STATUS "=> Boost::iostream with ZSTD filter found.")
@@ -33,16 +65,20 @@ else()
   message(STATUS "=> Boost::iostream does not support ZSTD filter.")
 endif()
 
-set(CMAKE_REQUIRED_DEFINITIONS ${OLD_CMAKE_REQUIRED_DEFINITIONS})
-set(CMAKE_REQUIRED_INCLUDES ${OLD_CMAKE_REQUIRED_INCLUDES})
-set(CMAKE_REQUIRED_LIBRARIES ${OLD_CMAKE_REQUIRED_LIBRARIES})
-#------------------------------------------------------------------------------#
-
 add_library(fles_ipc ${LIB_SOURCES} ${LIB_HEADERS})
+
+# The headers used outside flesnet stay C++17; SubTimeslice.hpp,
+# OptionValues.hpp and TimesliceShm*.hpp need C++23
+target_compile_features(fles_ipc PUBLIC cxx_std_17 PRIVATE cxx_std_23)
 
 target_compile_definitions(fles_ipc PUBLIC BOOST_ALL_DYN_LINK)
 if(BOOST_IOS_HAS_ZSTD)
   target_compile_definitions(fles_ipc PUBLIC BOOST_IOS_HAS_ZSTD)
+endif()
+
+# Public, as AggregatingSource.hpp uses std::jthread in C++20 and later
+if(FLES_IPC_JTHREAD_NEEDS_EXPERIMENTAL_LIBRARY)
+  target_compile_options(fles_ipc PUBLIC -fexperimental-library)
 endif()
 
 target_include_directories(fles_ipc PUBLIC .)
@@ -55,4 +91,11 @@ target_link_libraries(fles_ipc
   PUBLIC shm_ipc
   PUBLIC zmq::cppzmq
   PUBLIC logging
+  PUBLIC Boost::serialization
+  PUBLIC Boost::iostreams
 )
+
+install(TARGETS fles_ipc DESTINATION lib COMPONENT dev)
+install(FILES ${LIB_HEADERS} DESTINATION include COMPONENT dev)
+
+add_library(fles::fles_ipc ALIAS fles_ipc)

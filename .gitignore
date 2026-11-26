@@ -1,10 +1,13 @@
 /build*/
-/lib/fles_core/Makefile
+/lib/fles_tools/Makefile
 /lib/fles_ipc/Makefile
 /lib/logging/Makefile
 project.xcworkspace/
 xcuserdata/
 .vscode/
+.claude/
 /.cproject
 /.project
 /.cache
+__pycache__/
+*.pyc

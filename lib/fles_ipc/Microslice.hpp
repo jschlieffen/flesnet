@@ -5,6 +5,7 @@
 
 #include "MicrosliceDescriptor.hpp"
 #include <boost/serialization/access.hpp>
+#include <cstdint>
 
 namespace fles {
 
@@ -30,12 +31,15 @@ public:
   /// Compare computed CRC-32 checksum to value in header
   [[nodiscard]] bool check_crc() const;
 
+  bool operator==(const Microslice& other) const;
+  bool operator!=(const Microslice& other) const;
+
 protected:
   Microslice() = default;
 
   /// Construct microslice with given content.
   Microslice(MicrosliceDescriptor* desc_ptr, uint8_t* content_ptr)
-      : desc_ptr_(desc_ptr), content_ptr_(content_ptr){};
+      : desc_ptr_(desc_ptr), content_ptr_(content_ptr) {};
 
   friend class StorableMicroslice;
 

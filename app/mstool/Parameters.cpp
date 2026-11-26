@@ -1,15 +1,15 @@
 // Copyright 2012-2013 Jan de Cuveland <cmail@cuveland.de>
 
 #include "Parameters.hpp"
-#include "GitRevision.hpp"
+#include "CommonOptions.hpp"
 #include "log.hpp"
-//#include <boost/program_options.hpp>
-#include <boost/log/sinks/syslog_constants.hpp>
-//#include <boost/program_options.hpp>
+#include "log_program_options.hpp"
+// #include <boost/program_options.hpp>
+// #include <boost/program_options.hpp>
 #include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
 #include <boost/program_options/value_semantic.hpp>
 #include <boost/program_options/variables_map.hpp>
-#include <boost/program_options/parsers.hpp>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -18,31 +18,14 @@
 namespace po = boost::program_options;
 
 void Parameters::parse_options(int argc, char* argv[]) {
-  unsigned log_level = 2;
-  unsigned log_syslog = 2;
-  std::string log_file;
 
   po::options_description general("General options");
   auto general_add = general.add_options();
-  general_add("version,V", "print version string");
-  general_add("help,h", "produce help message");
-  general_add("log-level,l",
-              po::value<unsigned>(&log_level)
-                  ->default_value(log_level)
-                  ->value_name("<n>"),
-              "set the file log level (all:0)");
-  general_add("log-file,L", po::value<std::string>(&log_file),
-              "name of target log file");
-  general_add("log-syslog,S",
-              po::value<unsigned>(&log_syslog)
-                  ->implicit_value(log_syslog)
-                  ->value_name("<n>"),
-              "enable logging to syslog at given log level");
+  fles::add_general_options(general);
+  logging::add_program_options(general);
   general_add("maximum-number,n", po::value<uint64_t>(&maximum_number),
               "set the maximum number of microslices to process (default: "
               "unlimited)");
-  general_add("exec,e", po::value<std::string>(&exec)->value_name("<string>"),
-              "name of an executable to run after startup");
 
   po::options_description source("Source options");
   auto source_add = source.add_options();
@@ -50,8 +33,6 @@ void Parameters::parse_options(int argc, char* argv[]) {
              "use pattern generator to produce timeslices");
   source_add("channel,c", po::value<size_t>(&channel_idx),
              "use given channel/component index for source/sink");
-  source_add("input-shm,I", po::value<std::string>(&input_shm),
-             "name of a shared memory to use as data source");
   source_add("input-archive,i", po::value<std::string>(&input_archive),
              "name of an input file archive to read");
 
@@ -61,8 +42,6 @@ void Parameters::parse_options(int argc, char* argv[]) {
            "enable/disable pattern check");
   sink_add("dump_verbosity,v", po::value<size_t>(&dump_verbosity),
            "set output debug dump verbosity");
-  sink_add("output-shm,O", po::value<std::string>(&output_shm),
-           "name of a shared memory to write to");
   sink_add("output-archive,o", po::value<std::string>(&output_archive),
            "name of an output file archive to write");
 
@@ -73,32 +52,14 @@ void Parameters::parse_options(int argc, char* argv[]) {
   po::store(po::parse_command_line(argc, argv, desc), vm);
   po::notify(vm);
 
-  if (vm.count("help") != 0u) {
-    std::cout << "mstool, git revision " << g_GIT_REVISION << std::endl;
-    std::cout << desc << std::endl;
-    exit(EXIT_SUCCESS);
-  }
+  fles::handle_general_options(vm, "mstool", desc);
 
-  if (vm.count("version") != 0u) {
-    std::cout << "mstool " << g_PROJECT_VERSION_GIT << ", git revision "
-              << g_GIT_REVISION << std::endl;
-    exit(EXIT_SUCCESS);
-  }
-
-  logging::add_console(static_cast<severity_level>(log_level));
-  if (vm.count("log-file") != 0u) {
-    L_(info) << "Logging output to " << log_file;
-    logging::add_file(log_file, static_cast<severity_level>(log_level));
-  }
-  if (vm.count("log-syslog") != 0u) {
-    logging::add_syslog(logging::syslog::local0,
-                        static_cast<severity_level>(log_syslog));
-  }
+  logging::setup(fles::log_options(vm));
 
   use_pattern_generator = vm.count("pattern-generator") != 0;
 
-  size_t input_sources = vm.count("pattern-generator") +
-                         vm.count("input-archive") + vm.count("input-shm");
+  size_t input_sources =
+      vm.count("pattern-generator") + vm.count("input-archive");
   if (input_sources == 0) {
     throw ParametersException("no input source specified");
   }

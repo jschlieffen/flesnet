@@ -3,10 +3,10 @@
 #include "Application.hpp"
 #include "ArchiveDescriptor.hpp"
 #include "Benchmark.hpp"
-#include "ManagedTimesliceBuffer.hpp"
 #include "Monitor.hpp"
+#include "OptionValues.hpp"
 #include "Parameters.hpp"
-#include "Sink.hpp"                     // TimesliceSink
+#include "Sink.hpp" // TimesliceSink
 #include "StorableTimeslice.hpp"
 #include "Timeslice.hpp"
 #include "TimesliceAnalyzer.hpp"
@@ -14,8 +14,9 @@
 #include "TimesliceDebugger.hpp"
 #include "TimesliceOutputArchive.hpp"
 #include "TimeslicePublisher.hpp"
+#include "TimesliceShmSink.hpp"
 #include "Utility.hpp"
-#include "log.hpp"
+#include "log_short.hpp"
 #include <chrono>
 #include <csignal>
 #include <cstdint>
@@ -41,21 +42,34 @@ Application::Application(Parameters const& par,
 
   source_ = std::make_unique<fles::TimesliceAutoSource>(par_.input_uri());
 
+  if (monitor_) {
+    // The callback runs on the source's communication thread, which is why it
+    // reports a connection loss even while the main loop is blocked in get().
+    const std::string prefix = output_prefix_.empty() ? ":" : output_prefix_;
+    source_->set_state_callback(
+        [this, prefix](ConnectionState state, const std::string& reason) {
+          monitor_->QueueMetric(
+              "timeslice_source_status",
+              {{"host", monitor_->HostName()}, {"output_prefix", prefix}},
+              {{"state", to_string(state)}, {"reason", reason}});
+        });
+  }
+
   if (par_.analyze()) {
     if (par_.histograms()) {
-      sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
-          new TimesliceAnalyzer(1000, status_log_.stream, output_prefix_,
-                                &std::cout, monitor_.get())));
+      sinks_.push_back(
+          std::unique_ptr<fles::TimesliceSink>(new TimesliceAnalyzer(
+              1000, output_prefix_, &std::cout, monitor_.get())));
     } else {
-      sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
-          new TimesliceAnalyzer(1000, status_log_.stream, output_prefix_,
-                                nullptr, monitor_.get())));
+      sinks_.push_back(
+          std::unique_ptr<fles::TimesliceSink>(new TimesliceAnalyzer(
+              1000, output_prefix_, nullptr, monitor_.get())));
     }
   }
 
   if (par_.verbosity() > 0) {
     sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
-        new TimesliceDumper(debug_log_.stream, par_.verbosity())));
+        new TimesliceDumper(par_.verbosity())));
   }
 
   bool has_shm_output = false;
@@ -112,16 +126,14 @@ Application::Application(Parameters const& par,
           new fles::TimeslicePublisher(address, hwm)));
 
     } else if (uri.scheme == "shm") {
-      uint32_t num_components = 1;
-      uint32_t datasize = 27; // 128 MiB
-      uint32_t descsize = 19; // 16 MiB
+      std::size_t size = UINT64_C(1) << 30; // 1 GiB
       for (auto& [key, value] : uri.query_components) {
-        if (key == "datasize") {
-          datasize = std::stoul(value);
-        } else if (key == "descsize") {
-          descsize = std::stoul(value);
-        } else if (key == "n") {
-          num_components = std::stoul(value);
+        if (key == "size") {
+          size = fles::SizeValue::parse(value);
+        } else if (key == "datasize" || key == "descsize" || key == "n") {
+          throw std::runtime_error("query parameter no longer supported for "
+                                   "scheme shm: " +
+                                   key + " (use size instead, e.g. size=4GiB)");
         } else {
           throw std::runtime_error(
               "query parameter not implemented for scheme " + uri.scheme +
@@ -129,9 +141,8 @@ Application::Application(Parameters const& par,
         }
       }
       const auto shm_identifier = split(uri.path, "/").at(0);
-      sinks_.push_back(std::unique_ptr<fles::TimesliceSink>(
-          new ManagedTimesliceBuffer(zmq_context_, shm_identifier, datasize,
-                                     descsize, num_components)));
+      sinks_.push_back(std::make_unique<fles::TimesliceShmSink>(
+          zmq_context_, shm_identifier, size));
       has_shm_output = true;
 
     } else {
@@ -140,7 +151,7 @@ Application::Application(Parameters const& par,
   }
 
   if (has_shm_output) {
-    // wait a moment to allow the ManagedTimesliceBuffer clients to connect
+    // wait a moment to allow the shared memory clients to connect
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
   }
 
@@ -149,13 +160,12 @@ Application::Application(Parameters const& par,
   }
 
   if (par_.rate_limit() != 0.0) {
-    L_(info) << output_prefix_ << "rate limit active: " << par_.rate_limit()
-             << " Hz";
+    INFO("rate limit active: {} Hz", par_.rate_limit());
   }
 }
 
 Application::~Application() {
-  L_(info) << output_prefix_ << "total timeslices processed: " << count_;
+  INFO("total timeslices processed: {}", count_);
 
   // delay to allow monitor to process pending messages
   constexpr auto destruct_delay = std::chrono::milliseconds(200);
@@ -185,20 +195,16 @@ void Application::native_speed_delay(uint64_t ts_start_time) {
 
 void Application::try_delay(std::chrono::nanoseconds sleep_duration) const {
   if (sleep_duration.count() > 0) {
-    L_(debug) << output_prefix_ << "maintaining replay rate, sleeping for "
-              << std::chrono::duration_cast<std::chrono::milliseconds>(
-                     sleep_duration)
-                         .count() /
-                     1000.
-              << " s";
+    DEBUG("maintaining replay rate, sleeping for {} s",
+          std::chrono::duration_cast<std::chrono::milliseconds>(sleep_duration)
+                  .count() /
+              1000.);
     std::this_thread::sleep_for(sleep_duration);
   } else {
-    L_(warning) << output_prefix_ << "replay rate not maintained, lacking by "
-                << std::chrono::duration_cast<std::chrono::milliseconds>(
-                       sleep_duration)
-                           .count() /
-                       1000.
-                << " s";
+    WARN("replay rate not maintained, lacking by {} s",
+         std::chrono::duration_cast<std::chrono::milliseconds>(sleep_duration)
+                 .count() /
+             1000.);
   }
 }
 
@@ -247,23 +253,27 @@ void Application::run() {
     timeslice.reset();
   }
 
-  // Loop over sinks. For all sinks of type ManagedTimesliceBuffer, check if
-  // they are empty. If at least one of them is not empty, wait for 100 ms.
-  // Repeat until all sinks are empty.
+  // Tell the sinks that no timeslices will follow, so that consumers further
+  // downstream can finish instead of waiting for data that will not come.
+  for (auto& sink : sinks_) {
+    sink->end_stream();
+  }
+
+  // Wait until the shared memory workers have released all timeslices
   bool all_empty = false;
   bool first = true;
   *signal_status_ = 0;
   while (!all_empty && *signal_status_ == 0) {
     all_empty = true;
     for (auto& sink : sinks_) {
-      auto* mtb = dynamic_cast<ManagedTimesliceBuffer*>(sink.get());
-      if (mtb != nullptr) {
-        mtb->handle_timeslice_completions();
-        if (!mtb->empty()) {
+      auto* shm_sink = dynamic_cast<fles::TimesliceShmSink*>(sink.get());
+      if (shm_sink != nullptr) {
+        shm_sink->handle_completions();
+        if (!shm_sink->empty()) {
           all_empty = false;
           if (first) {
-            L_(info) << output_prefix_ << "waiting for shm buffer to empty";
-            L_(info) << output_prefix_ << "press Ctrl-C to abort";
+            INFO("waiting for shm buffer to empty");
+            INFO("press Ctrl-C to abort");
             first = false;
           }
           std::this_thread::sleep_for(std::chrono::milliseconds(100));

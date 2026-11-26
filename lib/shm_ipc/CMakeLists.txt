@@ -7,6 +7,7 @@ set(LIB_SOURCES
 set(LIB_HEADERS
   ItemDistributor.hpp
   ItemDistributorWorker.hpp
+  ItemID.hpp
   ItemProducer.hpp
   ItemWorker.hpp
   ItemWorkerProtocol.hpp
@@ -23,8 +24,5 @@ target_link_libraries(shm_ipc
   PUBLIC zmq::cppzmq
 )
 
-if(GNUTLS_FOUND)
-  target_link_libraries(shm_ipc
-                        INTERFACE ${GNUTLS_LIBRARIES}
-  )
-endif()
+install(TARGETS shm_ipc DESTINATION lib COMPONENT dev)
+install(FILES ${LIB_HEADERS} DESTINATION include COMPONENT dev)

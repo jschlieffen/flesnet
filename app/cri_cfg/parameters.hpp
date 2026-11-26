@@ -6,8 +6,11 @@
 
 #pragma once
 
+#include "CommonOptions.hpp"
 #include "cri.hpp"
 #include "log.hpp"
+#include "log_program_options.hpp"
+#include "log_short.hpp"
 #include <boost/numeric/conversion/cast.hpp>
 #include <boost/program_options.hpp>
 #include <fstream>
@@ -85,9 +88,7 @@ public:
   float pgen_rate() const { return _pgen_rate; }
   uint32_t mc_size_limit() const { return _mc_size_limit; }
 
-  struct channel_config channel(size_t i) const {
-    return _channels.at(i);
-  }
+  struct channel_config channel(size_t i) const { return _channels.at(i); }
 
 private:
   void parse_eq_id(const po::variables_map& vm, size_t i) {
@@ -107,41 +108,34 @@ private:
           vm["c" + std::to_string(i) + "_source"].as<std::string>();
       if (source == "flim") {
         _channels.at(i).source = flim;
-        L_(info) << " data source: flim";
+        INFO(" data source: flim");
       } else if (source == "pgen") {
         _channels.at(i).source = pgen;
         parse_eq_id(vm, i);
-        L_(info) << " data source: pgen (0x" << std::hex
-                 << _channels.at(i).eq_id << ")";
+        INFO(" data source: pgen (0x{:x})", _channels.at(i).eq_id);
       } else if (source == "disable") {
         _channels.at(i).source = disable;
-        L_(info) << " data source: disable";
+        INFO(" data source: disable");
       } else {
         throw ParametersException("No valid arg for data source.");
       }
     } else { // set default parameters
       _channels.at(i).source = disable;
-      L_(info) << " data source: disable (default)";
+      INFO(" data source: disable (default)");
     }
   }
 
   void parse_options(int argc, char* argv[]) {
 
     std::string config_file;
-    unsigned log_level;
-    std::string log_file;
 
     po::options_description generic("Generic options");
     auto generic_add = generic.add_options();
-    generic_add("help,h", "produce help message");
+    fles::add_general_options(generic);
     generic_add("config-file,c",
                 po::value<std::string>(&config_file)->implicit_value("cri.cfg"),
                 "name of a configuration file");
-    generic_add("log-level,l",
-                po::value<unsigned>(&log_level)->default_value(2),
-                "set the log level (all:0)");
-    generic_add("log-file,L", po::value<std::string>(&log_file),
-                "name of target log file");
+    logging::add_program_options(generic);
 
     po::options_description config("Configuration (cri.cfg or cmd line)");
     auto config_add = config.add_options();
@@ -200,11 +194,9 @@ private:
     po::store(po::parse_command_line(argc, argv, cmdline_options), vm);
     po::notify(vm);
 
-    logging::add_console(static_cast<severity_level>(log_level));
-    if (vm.count("log-file") != 0u) {
-      L_(info) << "Logging output to " << log_file;
-      logging::add_file(log_file, static_cast<severity_level>(log_level));
-    }
+    fles::handle_general_options(vm, "cri_cfg", cmdline_options);
+
+    logging::setup(fles::log_options(vm));
 
     if (!config_file.empty()) {
       std::ifstream ifs(config_file.c_str());
@@ -214,27 +206,21 @@ private:
       po::store(po::parse_config_file(ifs, config_file_options), vm);
       notify(vm);
     } else {
-      L_(info) << "No config file provided. " << log_file;
+      INFO("No config file provided.");
     }
 
-    if (vm.count("help") != 0u) {
-      std::cout << cmdline_options << "\n";
-      exit(EXIT_SUCCESS);
-    }
-
-    L_(info) << "Device config:";
+    INFO("Device config:");
 
     if (vm.count("pci-addr") != 0u) {
       _pci_addr = vm["pci-addr"].as<pci_addr>();
       _dev_autodetect = false;
-      L_(info) << " CRI address: " << std::hex << std::setw(2)
-               << std::setfill('0') << static_cast<unsigned>(_pci_addr.bus)
-               << ":" << std::setw(2) << std::setfill('0')
-               << static_cast<unsigned>(_pci_addr.dev) << "."
-               << static_cast<unsigned>(_pci_addr.func) << std::dec;
+      INFO(" CRI address: {:02x}:{:02x}.{:x}",
+           static_cast<unsigned>(_pci_addr.bus),
+           static_cast<unsigned>(_pci_addr.dev),
+           static_cast<unsigned>(_pci_addr.func));
     } else {
       _dev_autodetect = true;
-      L_(info) << " CRI address: autodetect";
+      INFO(" CRI address: autodetect");
     }
 
     if (vm.count("mc-size") != 0u) {
@@ -242,11 +228,11 @@ private:
       if (_mc_size > (2147483647 / cri::pgen_base_size_ns)) { // 31 bit check
         throw ParametersException("Pgen microslice size out of range");
       }
-      L_(info) << " Pgen microslice size: " << human_readable_mc_size(_mc_size);
+      INFO(" Pgen microslice size: {}", human_readable_mc_size(_mc_size));
 
     } else {
-      L_(info) << " Pgen microslice size: " << human_readable_mc_size(_mc_size)
-               << " (default)";
+      INFO(" Pgen microslice size: {} (default)",
+           human_readable_mc_size(_mc_size));
     }
 
     if (vm.count("pgen-rate") != 0u) {
@@ -254,13 +240,13 @@ private:
       if (_pgen_rate < 0 || _pgen_rate > 1) { // range check
         throw ParametersException("Pgen rate out of range");
       }
-      L_(info) << " Pgen rate: " << _pgen_rate;
+      INFO(" Pgen rate: {}", _pgen_rate);
     }
 
-    L_(info) << " microslice size limit: " << _mc_size_limit / 1000 << " kB";
+    INFO(" microslice size limit: {} kB", _mc_size_limit / 1000);
 
     for (size_t i = 0; i < num_max_channels; ++i) {
-      L_(info) << "Channel " << i << " config:";
+      INFO("Channel {} config:", i);
       parse_data_source(vm, i);
     } // end loop over channels
   }
